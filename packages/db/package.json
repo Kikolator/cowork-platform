@@ -1,0 +1,5 @@
+{
+  "name": "@cowork/db",
+  "private": true,
+  "main": "types/index.ts"
+}
