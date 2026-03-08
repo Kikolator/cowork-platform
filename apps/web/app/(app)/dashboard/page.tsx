@@ -68,7 +68,7 @@ export default async function DashboardPage() {
     {
       done: hasStripe,
       label: "Connect Stripe",
-      href: "/admin/settings",
+      href: "/admin/settings?tab=payments",
     },
     {
       done: memberCount > 0,

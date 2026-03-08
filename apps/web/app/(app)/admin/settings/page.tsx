@@ -1,11 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrandingForm } from "./branding-form";
 import { OperationsForm } from "./operations-form";
 import { FiscalForm } from "./fiscal-form";
 import { FeaturesForm } from "./features-form";
+import { StripeConnect } from "./stripe-connect";
 
-export default async function SettingsPage() {
+const VALID_TABS = ["branding", "operations", "fiscal", "features", "payments"] as const;
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const tabParam = typeof params.tab === "string" ? params.tab : undefined;
+  const defaultTab = VALID_TABS.includes(tabParam as (typeof VALID_TABS)[number])
+    ? tabParam!
+    : "branding";
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,6 +27,8 @@ export default async function SettingsPage() {
   const spaceId = user?.app_metadata?.space_id as string | undefined;
   if (!spaceId) return <p>No space context</p>;
 
+  const tenantId = user?.app_metadata?.tenant_id as string | undefined;
+
   const { data: space } = await supabase
     .from("spaces")
     .select("*")
@@ -21,6 +36,22 @@ export default async function SettingsPage() {
     .single();
 
   if (!space) return <p>Space not found</p>;
+
+  // Fetch tenant Stripe status
+  let stripeAccountId: string | null = null;
+  let stripeOnboardingComplete = false;
+
+  if (tenantId) {
+    const admin = createAdminClient();
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("stripe_account_id, stripe_onboarding_complete")
+      .eq("id", tenantId)
+      .single();
+
+    stripeAccountId = tenant?.stripe_account_id ?? null;
+    stripeOnboardingComplete = tenant?.stripe_onboarding_complete ?? false;
+  }
 
   const features = (space.features as Record<string, boolean> | null) ?? {};
 
@@ -31,12 +62,13 @@ export default async function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">Manage your space configuration.</p>
       </div>
 
-      <Tabs defaultValue="branding">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="operations">Operations</TabsTrigger>
           <TabsTrigger value="fiscal">Fiscal</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
         <TabsContent value="branding" className="mt-6">
@@ -53,6 +85,14 @@ export default async function SettingsPage() {
 
         <TabsContent value="features" className="mt-6">
           <FeaturesForm features={features} />
+        </TabsContent>
+
+        <TabsContent value="payments" className="mt-6">
+          <StripeConnect
+            stripeAccountId={stripeAccountId}
+            stripeOnboardingComplete={stripeOnboardingComplete}
+            platformFeePercent={process.env.STRIPE_PLATFORM_FEE_PERCENT ?? "3"}
+          />
         </TabsContent>
       </Tabs>
     </div>

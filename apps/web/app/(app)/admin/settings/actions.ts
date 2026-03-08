@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { brandingSchema, operationsSchema, fiscalSchema } from "./schemas";
+import {
+  getOrCreateConnectAccount,
+  createAccountLink,
+  isAccountOnboarded,
+} from "@/lib/stripe/connect";
 
 async function getSpaceId() {
   const supabase = await createClient();
@@ -12,7 +18,18 @@ async function getSpaceId() {
   if (!user) throw new Error("Not authenticated");
   const spaceId = user.app_metadata?.space_id as string | undefined;
   if (!spaceId) throw new Error("No space context");
-  return { supabase, spaceId };
+  return { supabase, user, spaceId };
+}
+
+async function getOwnerContext() {
+  const ctx = await getSpaceId();
+  const role = ctx.user.app_metadata?.space_role as string | undefined;
+  if (role !== "owner") {
+    throw new Error("Only the space owner can manage Stripe Connect");
+  }
+  const tenantId = ctx.user.app_metadata?.tenant_id as string | undefined;
+  if (!tenantId) throw new Error("No tenant context");
+  return { ...ctx, tenantId };
 }
 
 export async function updateSpaceBranding(input: unknown) {
@@ -130,4 +147,134 @@ export async function updateFeatureFlag(key: string, value: boolean) {
 
   revalidatePath("/admin/settings");
   return { success: true as const };
+}
+
+// --- Stripe Connect ---
+
+export async function initiateStripeConnect(): Promise<
+  | { success: true; url: string }
+  | { success: false; error: string }
+> {
+  try {
+    const { tenantId, user } = await getOwnerContext();
+    const admin = createAdminClient();
+
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("id, name, billing_email, stripe_account_id, spaces(slug)")
+      .eq("id", tenantId)
+      .single();
+
+    if (!tenant) return { success: false, error: "Tenant not found" };
+
+    const accountId = await getOrCreateConnectAccount(
+      tenant.id,
+      tenant.stripe_account_id,
+      tenant.name,
+      tenant.billing_email ?? user.email ?? "",
+    );
+
+    // Persist the account ID if it's new
+    if (!tenant.stripe_account_id) {
+      await admin
+        .from("tenants")
+        .update({ stripe_account_id: accountId })
+        .eq("id", tenantId);
+    }
+
+    const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "https";
+    const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "cowork.app";
+    const spaces = tenant.spaces as unknown as Array<{ slug: string }>;
+    const slug = spaces?.[0]?.slug ?? "";
+
+    const baseUrl = `${protocol}://${slug}.${domain}`;
+    const returnUrl = `${baseUrl}/admin/settings?stripe=complete`;
+    const refreshUrl = `${baseUrl}/admin/settings?stripe=refresh`;
+
+    const url = await createAccountLink(accountId, returnUrl, refreshUrl);
+
+    revalidatePath("/admin/settings");
+    return { success: true, url };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to initiate Stripe Connect",
+    };
+  }
+}
+
+export async function checkStripeStatus(): Promise<{
+  connected: boolean;
+  accountId?: string;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  detailsSubmitted?: boolean;
+  onboardingComplete?: boolean;
+}> {
+  try {
+    const { supabase } = await getSpaceId();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const tenantId = user?.app_metadata?.tenant_id as string | undefined;
+    if (!tenantId) return { connected: false };
+
+    const admin = createAdminClient();
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("stripe_account_id, stripe_onboarding_complete")
+      .eq("id", tenantId)
+      .single();
+
+    if (!tenant?.stripe_account_id) return { connected: false };
+
+    const status = await isAccountOnboarded(tenant.stripe_account_id);
+
+    // Update onboarding status in database
+    if (status.complete !== tenant.stripe_onboarding_complete) {
+      await admin
+        .from("tenants")
+        .update({ stripe_onboarding_complete: status.complete })
+        .eq("id", tenantId);
+    }
+
+    return {
+      connected: true,
+      accountId: tenant.stripe_account_id,
+      chargesEnabled: status.chargesEnabled,
+      payoutsEnabled: status.payoutsEnabled,
+      detailsSubmitted: status.detailsSubmitted,
+      onboardingComplete: status.complete,
+    };
+  } catch {
+    return { connected: false };
+  }
+}
+
+export async function disconnectStripe(): Promise<
+  | { success: true }
+  | { success: false; error: string }
+> {
+  try {
+    const { tenantId } = await getOwnerContext();
+    const admin = createAdminClient();
+
+    await admin
+      .from("tenants")
+      .update({
+        stripe_account_id: null,
+        stripe_onboarding_complete: false,
+      })
+      .eq("id", tenantId);
+
+    revalidatePath("/admin/settings");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to disconnect Stripe",
+    };
+  }
 }
