@@ -51,10 +51,32 @@ async function handleAccountUpdated(event: Stripe.Event) {
 
 async function handleCheckoutCompleted(event: Stripe.Event, spaceId: string) {
   const session = event.data.object as Stripe.Checkout.Session;
+  const category = session.metadata?.product_category;
 
-  // Only handle subscription checkouts
-  if (session.mode !== "subscription") return;
+  if (session.mode === "subscription") {
+    await handleSubscriptionCheckout(session, spaceId);
+  } else if (session.mode === "payment") {
+    switch (category) {
+      case "pass":
+        await handlePassCheckout(session, spaceId);
+        break;
+      case "hour_bundle":
+        await handleHourBundleCheckout(session, spaceId);
+        break;
+      case "deposit":
+      case "event":
+        // No special handling — payment is logged in payment_events by the main route handler
+        break;
+      default:
+        console.warn(`Unknown product category in checkout: ${category}`);
+    }
+  }
+}
 
+async function handleSubscriptionCheckout(
+  session: Stripe.Checkout.Session,
+  spaceId: string,
+) {
   const userId = session.metadata?.user_id;
   const planId = session.metadata?.plan_id;
   const metadataSpaceId = session.metadata?.space_id;
@@ -126,6 +148,106 @@ async function handleCheckoutCompleted(event: Stripe.Event, spaceId: string) {
     },
     { onConflict: "user_id,space_id", ignoreDuplicates: true },
   );
+}
+
+async function handlePassCheckout(
+  session: Stripe.Checkout.Session,
+  spaceId: string,
+) {
+  const passId = session.metadata?.pass_id;
+  const userId = session.metadata?.user_id;
+  if (!passId || !userId) {
+    console.error("Pass checkout missing metadata", { passId, userId });
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  // Activate the pass using the RPC
+  const { error: activateError } = await admin.rpc("activate_pass", {
+    p_space_id: spaceId,
+    p_user_id: userId,
+    p_stripe_session_id: session.id,
+  });
+
+  if (activateError) {
+    console.error("Failed to activate pass:", activateError);
+    return;
+  }
+
+  // Auto-assign desk
+  const { data: pass } = await admin
+    .from("passes")
+    .select("start_date, end_date")
+    .eq("id", passId)
+    .single();
+
+  if (pass) {
+    const { data: deskId } = await admin.rpc("auto_assign_desk", {
+      p_space_id: spaceId,
+      p_start_date: pass.start_date,
+      p_end_date: pass.end_date,
+    });
+
+    if (deskId) {
+      await admin
+        .from("passes")
+        .update({ assigned_desk_id: deskId })
+        .eq("id", passId);
+    } else {
+      console.warn(`No desk available for pass ${passId} — pass still active`);
+    }
+  }
+}
+
+async function handleHourBundleCheckout(
+  session: Stripe.Checkout.Session,
+  spaceId: string,
+) {
+  const productId = session.metadata?.product_id;
+  const userId = session.metadata?.user_id;
+  if (!productId || !userId) {
+    console.error("Hour bundle checkout missing metadata", { productId, userId });
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  // Fetch product credit grant config
+  const { data: product } = await admin
+    .from("products")
+    .select("credit_grant_config")
+    .eq("id", productId)
+    .single();
+
+  if (!product?.credit_grant_config) {
+    console.error(`Product ${productId} has no credit_grant_config`);
+    return;
+  }
+
+  const config = product.credit_grant_config as unknown as {
+    resource_type_id: string;
+    minutes: number;
+  };
+
+  if (!config.resource_type_id || !config.minutes) {
+    console.error(`Product ${productId} has invalid credit_grant_config`, config);
+    return;
+  }
+
+  // Get a line item ID for idempotency
+  const lineItemId = session.id; // Use session ID as idempotency key for one-off purchases
+
+  await admin.rpc("grant_credits", {
+    p_space_id: spaceId,
+    p_user_id: userId,
+    p_resource_type_id: config.resource_type_id,
+    p_amount_minutes: config.minutes,
+    p_source: "purchase",
+    p_valid_from: new Date().toISOString(),
+    // Purchased credits don't expire
+    p_stripe_line_item_id: lineItemId,
+  });
 }
 
 async function handleInvoicePaid(event: Stripe.Event, spaceId: string) {
