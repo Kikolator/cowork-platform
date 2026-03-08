@@ -72,11 +72,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    // Extract customer ID and user ID from event payload when available
+    const eventObject = event.data.object as unknown as Record<string, unknown>;
+    const stripeCustomerId =
+      (typeof eventObject.customer === "string" ? eventObject.customer : null) ?? null;
+    const eventUserId =
+      ((eventObject.metadata as Record<string, unknown> | undefined)?.user_id as string | undefined) ?? null;
+
     await admin.from("payment_events").upsert(
       {
         stripe_event_id: event.id,
         event_type: event.type,
         stripe_account_id: connectedAccountId ?? null,
+        stripe_customer_id: stripeCustomerId,
+        user_id: eventUserId,
         space_id: spaceId,
         payload: event.data as unknown as Record<string, never>,
         processed: false,
