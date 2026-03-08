@@ -46,14 +46,16 @@ supabase gen types typescript --local > types/database.ts
 - Small files (~200 lines max). One component per file.
 - Colocate related files: page, components, actions, hooks in the same directory.
 
-## Database
+## DB Schema Spec
 
-- Single Supabase project, multi-tenant via `tenant_id` on every table.
-- RLS enforces tenant isolation.
-- Plans, resource types, and business config are data (table rows), not enums.
-- Enums only for universal status values (booking_status, member_status).
-- Migrations are sequential, 5-digit zero-padded: `00001_name.sql`.
-- Every table gets `id` (uuid), `created_at`, `updated_at`, `tenant_id`.
+The database schema spec is at `packages/db/docs/MT-SCHEMA-SPEC.md`. 
+Use it as the source of truth when implementing migrations. 
+Implement one migration at a time. Never skip RLS or rollback comments.
+
+## Database
+- Migration version: 5 digits increment +1 from previous version.
+- Security first.
+- Creating a multi-tenant platform.
 
 ## Auth
 
