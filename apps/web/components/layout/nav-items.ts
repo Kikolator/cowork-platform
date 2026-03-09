@@ -12,6 +12,7 @@ import {
   Box,
   Settings,
   DollarSign,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -54,6 +55,12 @@ export const navItems: NavItem[] = [
     label: "Plans & Pricing",
     href: "/admin/plans",
     icon: DollarSign,
+    adminOnly: true,
+  },
+  {
+    label: "Products",
+    href: "/admin/products",
+    icon: Package,
     adminOnly: true,
   },
   {

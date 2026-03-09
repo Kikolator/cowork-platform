@@ -25,6 +25,9 @@ coverage
 # Vercel
 .vercel
 
+# Supabase
+packages/db/supabase/snippets/
+
 # Build Outputs
 .next/
 out/
