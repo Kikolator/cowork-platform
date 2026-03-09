@@ -9,14 +9,16 @@ export default async function AuthLayout({
   const spaceName = headersList.get("x-space-name");
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
+    <div className="glass-gradient-bg flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {spaceName ?? "Cowork"}
           </h1>
         </div>
-        {children}
+        <div className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] p-8 shadow-[var(--glass-shadow)] backdrop-blur-xl">
+          {children}
+        </div>
       </div>
     </div>
   );

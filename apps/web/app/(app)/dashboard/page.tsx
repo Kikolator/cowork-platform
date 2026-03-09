@@ -82,10 +82,10 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2 className="text-2xl font-semibold text-foreground">
           Welcome to {spaceName}
         </h2>
-        <p className="mt-1 text-sm text-zinc-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           {isAdmin ? "Here's an overview of your space." : "Here's your summary."}
         </p>
       </div>
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
         <>
           {/* Quick stats */}
           <div>
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h3 className="text-lg font-medium text-foreground">
               Quick Stats
             </h3>
             <div className="mt-3 grid gap-4 sm:grid-cols-3">
@@ -115,21 +115,21 @@ export default async function DashboardPage() {
           {/* Setup checklist */}
           {!allDone && (
             <div>
-              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+              <h3 className="text-lg font-medium text-foreground">
                 Setup Checklist
               </h3>
-              <div className="mt-3 rounded-md border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mt-3 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow)] backdrop-blur-xl">
                 {checklist.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 text-sm transition-colors last:border-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                    className="flex items-center gap-3 border-b border-[var(--glass-border)] px-4 py-3 text-sm transition-all duration-200 last:border-0 hover:bg-white/40 dark:hover:bg-white/5"
                   >
                     <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                         item.done
                           ? "border-green-500 bg-green-500 text-white"
-                          : "border-zinc-300 dark:border-zinc-600"
+                          : "border-[var(--glass-border)]"
                       }`}
                     >
                       {item.done && (
@@ -151,8 +151,8 @@ export default async function DashboardPage() {
                     <span
                       className={
                         item.done
-                          ? "text-zinc-400 line-through"
-                          : "text-zinc-700 dark:text-zinc-300"
+                          ? "text-muted-foreground/50 line-through"
+                          : "text-foreground/80"
                       }
                     >
                       {item.label}
@@ -172,20 +172,20 @@ export default async function DashboardPage() {
 
 function InfoCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs font-medium text-zinc-500">{title}</p>
-      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">{value}</p>
+    <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-xl">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <p className="mt-1 text-sm text-foreground/80">{value}</p>
     </div>
   );
 }
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+    <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-xl">
+      <p className="text-2xl font-semibold text-foreground">
         {value}
       </p>
-      <p className="mt-1 text-xs text-zinc-500">{label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

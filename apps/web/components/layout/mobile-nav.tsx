@@ -17,7 +17,7 @@ export function MobileNav({ spaceRole, spaceName, logoUrl }: MobileNavProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-md p-1.5 text-zinc-600 hover:bg-zinc-100 lg:hidden dark:text-zinc-400 dark:hover:bg-zinc-800"
+        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/40 hover:text-foreground lg:hidden dark:hover:bg-white/10"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -26,13 +26,13 @@ export function MobileNav({ spaceRole, spaceName, logoUrl }: MobileNavProps) {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
           <div className="relative z-50 h-full w-60">
             <button
               onClick={() => setOpen(false)}
-              className="absolute right-2 top-3 rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50"
+              className="absolute right-2 top-3 rounded-lg p-1 text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>

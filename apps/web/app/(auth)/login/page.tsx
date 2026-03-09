@@ -25,7 +25,7 @@ export default async function LoginPage({
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-700 backdrop-blur-sm dark:text-red-300">
           {errorMessage}
         </div>
       )}
