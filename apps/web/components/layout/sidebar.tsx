@@ -32,7 +32,7 @@ export function Sidebar({ spaceRole, spaceName, logoUrl }: SidebarProps) {
             {spaceName.charAt(0).toUpperCase()}
           </div>
         )}
-        <span className="truncate text-sm font-semibold text-foreground">
+        <span className="truncate font-display text-sm font-semibold text-foreground">
           {spaceName}
         </span>
       </div>
