@@ -11,11 +11,11 @@ interface Space {
   role: string;
 }
 
-const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
 const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
 
 function spaceUrl(slug: string) {
-  return `${protocol}://${slug}.${platformDomain}/dashboard`;
+  const proto = typeof window !== "undefined" ? window.location.protocol : "http:";
+  return `${proto}//${slug}.${platformDomain}/dashboard`;
 }
 
 export function SpacesList({ spaces }: { spaces: Space[] }) {

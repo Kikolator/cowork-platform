@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getProto } from "@/lib/url";
 import { verifyStripeReady } from "@/lib/stripe/connect";
 import { findOrCreateCustomer } from "@/lib/stripe/subscriptions";
 import {
@@ -26,10 +28,11 @@ async function getSpaceContext() {
   return { supabase, user, spaceId, tenantId };
 }
 
-function getOrigin(slug: string): string {
-  const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "https";
-  const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "cowork.app";
-  return `${protocol}://${slug}.${domain}`;
+async function getSpaceOrigin(slug: string): Promise<string> {
+  const h = await headers();
+  const proto = getProto(h);
+  const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
+  return `${proto}://${slug}.${domain}`;
 }
 
 export async function getDateAvailability(date: string): Promise<{
@@ -184,7 +187,7 @@ export async function purchasePass(
     // Ensure one-time Stripe price
     const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
 
-    const origin = getOrigin(space?.slug ?? "");
+    const origin = await getSpaceOrigin(space?.slug ?? "");
     const session = await createOneTimeCheckoutSession({
       customerId,
       priceId,
@@ -295,7 +298,7 @@ export async function purchaseProduct(
     // Ensure one-time Stripe price
     const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
 
-    const origin = getOrigin(space?.slug ?? "");
+    const origin = await getSpaceOrigin(space?.slug ?? "");
     const session = await createOneTimeCheckoutSession({
       customerId,
       priceId,

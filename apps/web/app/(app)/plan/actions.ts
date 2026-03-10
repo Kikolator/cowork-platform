@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getProto } from "@/lib/url";
 import { verifyStripeReady } from "@/lib/stripe/connect";
 import {
   ensureStripePriceExists,
@@ -129,15 +131,16 @@ export async function subscribeToPlan(
     }
 
     // Build URLs
-    const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "https";
-    const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "cowork.app";
+    const h = await headers();
+    const proto = getProto(h);
+    const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
     const { data: spaceData } = await admin
       .from("spaces")
       .select("slug")
       .eq("id", spaceId)
       .single();
     const slug = spaceData?.slug ?? "";
-    const origin = `${protocol}://${slug}.${domain}`;
+    const origin = `${proto}://${slug}.${domain}`;
 
     // Create checkout session
     const session = await createCheckoutSession({

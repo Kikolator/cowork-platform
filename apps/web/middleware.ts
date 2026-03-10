@@ -1,14 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { resolveSpaceFromHostname } from "@/lib/space/resolve";
+import { getOrigin } from "@/lib/url";
 
 const SPACE_PUBLIC_PATHS = new Set(["/login", "/auth/callback"]);
 const PLATFORM_PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/"]);
 
 function redirectTo(request: NextRequest, path: string) {
-  const host = request.headers.get("host") ?? "localhost:3000";
-  const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
-  return NextResponse.redirect(new URL(path, `${protocol}://${host}`));
+  return NextResponse.redirect(new URL(path, getOrigin(request.headers)));
 }
 
 export async function middleware(request: NextRequest) {
