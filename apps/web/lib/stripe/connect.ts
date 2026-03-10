@@ -1,5 +1,5 @@
 import "server-only";
-import { stripe } from "./client";
+import { getStripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -14,14 +14,14 @@ export async function getOrCreateConnectAccount(
 ): Promise<string> {
   if (existingAccountId) {
     try {
-      await stripe.accounts.retrieve(existingAccountId);
+      await getStripe().accounts.retrieve(existingAccountId);
       return existingAccountId;
     } catch {
       // Account was deleted in Stripe — create a new one
     }
   }
 
-  const account = await stripe.accounts.create({
+  const account = await getStripe().accounts.create({
     type: "standard",
     business_profile: {
       name: businessName,
@@ -43,7 +43,7 @@ export async function createAccountLink(
   returnUrl: string,
   refreshUrl: string,
 ): Promise<string> {
-  const accountLink = await stripe.accountLinks.create({
+  const accountLink = await getStripe().accountLinks.create({
     account: accountId,
     return_url: returnUrl,
     refresh_url: refreshUrl,
@@ -62,7 +62,7 @@ export async function isAccountOnboarded(accountId: string): Promise<{
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
 }> {
-  const account = await stripe.accounts.retrieve(accountId);
+  const account = await getStripe().accounts.retrieve(accountId);
 
   return {
     complete: account.charges_enabled && account.payouts_enabled,

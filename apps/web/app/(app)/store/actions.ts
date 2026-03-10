@@ -10,7 +10,7 @@ import {
   ensureRecurringAddonPriceExists,
   createOneTimeCheckoutSession,
 } from "@/lib/stripe/checkout";
-import { stripe } from "@/lib/stripe/client";
+import { getStripe } from "@/lib/stripe/client";
 import { isProductVisible } from "@/lib/products/visibility";
 
 async function getSpaceContext() {
@@ -367,7 +367,7 @@ export async function purchaseAddon(
     );
 
     // Add line item to existing subscription
-    const subscription = await stripe.subscriptions.retrieve(
+    const subscription = await getStripe().subscriptions.retrieve(
       member.stripe_subscription_id,
       { stripeAccount: connectedAccountId },
     );
@@ -376,7 +376,7 @@ export async function purchaseAddon(
       id: item.id,
     }));
 
-    await stripe.subscriptions.update(
+    await getStripe().subscriptions.update(
       member.stripe_subscription_id,
       {
         items: [...existingItems, { price: priceId }],
