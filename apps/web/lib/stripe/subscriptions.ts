@@ -1,6 +1,6 @@
 import "server-only";
 import type Stripe from "stripe";
-import { stripe } from "./client";
+import { getStripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const PLATFORM_FEE_PERCENT = parseInt(
@@ -26,7 +26,7 @@ export async function ensureStripePriceExists(
 ): Promise<string> {
   if (plan.stripe_price_id) return plan.stripe_price_id;
 
-  const product = await stripe.products.create(
+  const product = await getStripe().products.create(
     {
       name: plan.name,
       metadata: { space_id: spaceId, plan_id: plan.id },
@@ -34,7 +34,7 @@ export async function ensureStripePriceExists(
     { stripeAccount: connectedAccountId },
   );
 
-  const price = await stripe.prices.create(
+  const price = await getStripe().prices.create(
     {
       product: product.id,
       unit_amount: plan.price_cents,
@@ -70,7 +70,7 @@ export async function createCheckoutSession(params: {
   successUrl: string;
   cancelUrl: string;
 }): Promise<Stripe.Checkout.Session> {
-  return stripe.checkout.sessions.create(
+  return getStripe().checkout.sessions.create(
     {
       mode: "subscription",
       customer: params.customerId,
@@ -108,7 +108,7 @@ export async function findOrCreateCustomer(params: {
 }): Promise<string> {
   if (params.existingCustomerId) {
     try {
-      await stripe.customers.retrieve(params.existingCustomerId, {
+      await getStripe().customers.retrieve(params.existingCustomerId, {
         stripeAccount: params.connectedAccountId,
       });
       return params.existingCustomerId;
@@ -117,7 +117,7 @@ export async function findOrCreateCustomer(params: {
     }
   }
 
-  const customer = await stripe.customers.create(
+  const customer = await getStripe().customers.create(
     {
       email: params.email,
       name: params.name ?? undefined,
@@ -138,7 +138,7 @@ export async function updateSubscriptionPrice(params: {
   newPlanId: string;
   connectedAccountId: string;
 }): Promise<Stripe.Subscription> {
-  const subscription = await stripe.subscriptions.retrieve(
+  const subscription = await getStripe().subscriptions.retrieve(
     params.subscriptionId,
     { stripeAccount: params.connectedAccountId },
   );
@@ -146,7 +146,7 @@ export async function updateSubscriptionPrice(params: {
   const itemId = subscription.items.data[0]?.id;
   if (!itemId) throw new Error("Subscription has no items");
 
-  return stripe.subscriptions.update(
+  return getStripe().subscriptions.update(
     params.subscriptionId,
     {
       items: [{ id: itemId, price: params.newPriceId }],
@@ -164,7 +164,7 @@ export async function cancelSubscriptionAtPeriodEnd(
   subscriptionId: string,
   connectedAccountId: string,
 ): Promise<Stripe.Subscription> {
-  return stripe.subscriptions.update(
+  return getStripe().subscriptions.update(
     subscriptionId,
     { cancel_at_period_end: true },
     { stripeAccount: connectedAccountId },
@@ -178,7 +178,7 @@ export async function resumeSubscriptionCancellation(
   subscriptionId: string,
   connectedAccountId: string,
 ): Promise<Stripe.Subscription> {
-  return stripe.subscriptions.update(
+  return getStripe().subscriptions.update(
     subscriptionId,
     { cancel_at_period_end: false },
     { stripeAccount: connectedAccountId },

@@ -1,6 +1,6 @@
 import "server-only";
 import type Stripe from "stripe";
-import { stripe } from "./client";
+import { getStripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateApplicationFee } from "./fees";
 
@@ -25,7 +25,7 @@ export async function ensureOneTimePriceExists(
   let stripeProductId = product.stripe_product_id;
 
   if (!stripeProductId) {
-    const stripeProduct = await stripe.products.create(
+    const stripeProduct = await getStripe().products.create(
       {
         name: product.name,
         metadata: { space_id: spaceId, product_id: product.id },
@@ -35,7 +35,7 @@ export async function ensureOneTimePriceExists(
     stripeProductId = stripeProduct.id;
   }
 
-  const price = await stripe.prices.create(
+  const price = await getStripe().prices.create(
     {
       product: stripeProductId,
       unit_amount: product.price_cents,
@@ -77,7 +77,7 @@ export async function ensureRecurringAddonPriceExists(
   let stripeProductId = product.stripe_product_id;
 
   if (!stripeProductId) {
-    const stripeProduct = await stripe.products.create(
+    const stripeProduct = await getStripe().products.create(
       {
         name: product.name,
         metadata: { space_id: spaceId, product_id: product.id },
@@ -87,7 +87,7 @@ export async function ensureRecurringAddonPriceExists(
     stripeProductId = stripeProduct.id;
   }
 
-  const price = await stripe.prices.create(
+  const price = await getStripe().prices.create(
     {
       product: stripeProductId,
       unit_amount: product.price_cents,
@@ -126,7 +126,7 @@ export async function createOneTimeCheckoutSession(params: {
   cancelUrl: string;
   extraMetadata?: Record<string, string>;
 }): Promise<Stripe.Checkout.Session> {
-  return stripe.checkout.sessions.create(
+  return getStripe().checkout.sessions.create(
     {
       mode: "payment",
       customer: params.customerId,
