@@ -17,14 +17,14 @@ export function Header({
   spaceRole,
 }: HeaderProps) {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-zinc-200 bg-white px-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <header className="flex h-14 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] px-4 backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <MobileNav
           spaceRole={spaceRole}
           spaceName={spaceName}
           logoUrl={logoUrl}
         />
-        <span className="text-sm font-semibold text-zinc-900 lg:hidden dark:text-zinc-50">
+        <span className="text-sm font-semibold text-foreground lg:hidden">
           {spaceName}
         </span>
       </div>
