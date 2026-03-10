@@ -65,7 +65,6 @@ export function PassPurchaseDialog({
     if (!open || !selectedDate) return;
 
     let cancelled = false;
-    setCheckingAvailability(true);
 
     getDateAvailability(selectedDate).then((result) => {
       if (!cancelled) {
@@ -79,17 +78,18 @@ export function PassPurchaseDialog({
     };
   }, [selectedDate, open]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
       setSelectedDate(getTodayString());
       setIsGuest(false);
       setGuestName("");
       setGuestEmail("");
       setError(null);
       setAvailability(null);
+      setCheckingAvailability(true);
     }
-  }, [open]);
+    onOpenChange(nextOpen);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,7 +135,7 @@ export function PassPurchaseDialog({
   if (!product) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -160,7 +160,7 @@ export function PassPurchaseDialog({
               type="date"
               value={selectedDate}
               min={getTodayString()}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => { setSelectedDate(e.target.value); setAvailability(null); setCheckingAvailability(true); }}
             />
           </div>
 
@@ -227,7 +227,7 @@ export function PassPurchaseDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
             >
               Cancel
             </Button>
