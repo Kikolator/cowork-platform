@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { LoginForm } from "./login-form";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -16,8 +15,6 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const headersList = await headers();
-  const spaceName = headersList.get("x-space-name") ?? "this workspace";
   const params = await searchParams;
   const errorCode = typeof params.error === "string" ? params.error : null;
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
@@ -29,7 +26,7 @@ export default async function LoginPage({
           {errorMessage}
         </div>
       )}
-      <LoginForm spaceName={spaceName} />
+      <LoginForm />
     </div>
   );
 }
