@@ -34,10 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+    <html lang="en" className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
+      <body className="antialiased">
         {children}
       </body>
     </html>
