@@ -1,0 +1,203 @@
+# CI pipeline — runs on every PR to main and dev
+# Validates code quality, types, build, tests, and database integrity
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  # Turborepo remote cache (optional — works without these)
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  # Filter to only packages affected since the PR base branch
+  TURBO_FILTER: --filter=...[origin/${{ github.base_ref }}]
+
+jobs:
+  # ─── Lint & Type-check (parallel) ─────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fetch base branch so turbo filter can diff against it
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Turbo lint
+        run: npx turbo run lint ${{ env.TURBO_FILTER }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Lint ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  typecheck:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Turbo check-types
+        run: npx turbo run check-types ${{ env.TURBO_FILTER }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Type-check ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── Build & Test (parallel, after lint+typecheck) ────────────
+  build:
+    name: Build
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Turbo build
+        run: npx turbo run build ${{ env.TURBO_FILTER }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Build ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: Test
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Turbo test
+        # turbo silently skips packages without a test script — safe to run now
+        run: npx turbo run test ${{ env.TURBO_FILTER }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Test ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── Supabase database checks ────────────────────────────────
+  db-lint:
+    name: DB Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to dev project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Lint migrations
+        run: supabase db lint --linked
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: echo "### DB Lint ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  schema-drift:
+    name: Schema Drift Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to dev project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Check for schema drift
+        # Warn-only — non-zero exit is informational, not blocking
+        continue-on-error: true
+        run: |
+          OUTPUT=$(supabase db diff --linked 2>&1) || true
+          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
+            echo "::warning::Schema drift detected against dev project"
+            echo "### ⚠️ Schema Drift Detected" >> "$GITHUB_STEP_SUMMARY"
+            echo '```sql' >> "$GITHUB_STEP_SUMMARY"
+            echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Schema Drift — None ✅" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DEV_DB_PASSWORD }}
+
+  migration-dry-run:
+    name: Migration Dry Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase (db only)
+        # Only start the db service — skip realtime, storage, studio, etc. for speed
+        run: supabase start -x realtime,storage,imgproxy,inbucket,postgrest,gotrue,studio,edge-runtime,logflare,vector,supavisor
+        working-directory: packages/db
+
+      - name: Reset DB (replay all migrations + seed)
+        run: supabase db reset
+        working-directory: packages/db
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+        working-directory: packages/db
+
+      - name: Summary
+        if: always()
+        run: echo "### Migration Dry Run ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
