@@ -10,7 +10,9 @@ export default async function AdminBookingsPage() {
   } = await supabase.auth.getUser();
 
   const spaceId = user?.app_metadata?.space_id as string | undefined;
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Fetch space, today's bookings, all recent bookings, passes, and fixed desk members
   const [
@@ -41,7 +43,7 @@ export default async function AdminBookingsPage() {
         "id, user_id, start_time, end_time, status, credits_deducted, resource:resources!inner(name, resource_type:resource_types!inner(slug, name))",
       )
       .eq("space_id", spaceId!)
-      .gte("start_time", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .gte("start_time", thirtyDaysAgo)
       .order("start_time", { ascending: false })
       .limit(200),
 
