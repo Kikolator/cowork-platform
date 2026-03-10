@@ -5,7 +5,6 @@ import { createTenantAndSpace, checkSlugAvailable } from "./actions";
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
-const PROTOCOL = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
 
 const COUNTRIES = [
   { code: "ES", name: "Spain", timezone: "Europe/Madrid", currency: "eur" },
@@ -200,7 +199,7 @@ export function OnboardForm() {
     });
 
     if (result.success && result.spaceSlug) {
-      window.location.href = `${PROTOCOL}://${result.spaceSlug}.${PLATFORM_DOMAIN}/dashboard`;
+      window.location.href = `${window.location.protocol}//${result.spaceSlug}.${PLATFORM_DOMAIN}/dashboard`;
     } else {
       setError(result.error ?? "Something went wrong");
       setPending(false);
