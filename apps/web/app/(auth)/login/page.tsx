@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { LoginForm } from "./login-form";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -19,6 +20,9 @@ export default async function LoginPage({
   const errorCode = typeof params.error === "string" ? params.error : null;
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
 
+  const headersList = await headers();
+  const spaceName = headersList.get("x-space-name");
+
   return (
     <div className="space-y-6">
       {errorMessage && (
@@ -26,7 +30,7 @@ export default async function LoginPage({
           {errorMessage}
         </div>
       )}
-      <LoginForm />
+      <LoginForm spaceName={spaceName ?? undefined} />
     </div>
   );
 }

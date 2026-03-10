@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const spaceName = headersList.get("x-space-name");
+  return {
+    title: spaceName ?? undefined,
+  };
+}
 
 export default async function AppLayout({
   children,
@@ -19,7 +28,7 @@ export default async function AppLayout({
   }
 
   const headersList = await headers();
-  const spaceName = headersList.get("x-space-name") ?? "Cowork";
+  const spaceName = headersList.get("x-space-name") ?? "RogueOps";
   const spaceRole =
     (user.app_metadata?.space_role as string | undefined) ?? "member";
 
