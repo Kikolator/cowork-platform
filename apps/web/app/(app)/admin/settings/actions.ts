@@ -12,6 +12,13 @@ import {
   isAccountOnboarded,
 } from "@/lib/stripe/connect";
 
+function extractStoragePath(publicUrl: string, bucket: string): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return publicUrl.slice(idx + marker.length);
+}
+
 async function getSpaceId() {
   const supabase = await createClient();
   const {
@@ -45,7 +52,7 @@ export async function updateSpaceBranding(input: unknown) {
   // Check slug uniqueness if changed
   const { data: current } = await supabase
     .from("spaces")
-    .select("slug, tenant_id")
+    .select("slug, tenant_id, logo_url, favicon_url")
     .eq("id", spaceId)
     .single();
 
@@ -76,6 +83,23 @@ export async function updateSpaceBranding(input: unknown) {
     .eq("id", spaceId);
 
   if (error) return { success: false as const, error: error.message };
+
+  // Clean up old storage files when logo/favicon URLs change
+  if (current) {
+    const oldLogo = current.logo_url;
+    const newLogo = parsed.data.logoUrl || null;
+    if (oldLogo && oldLogo !== newLogo) {
+      const path = extractStoragePath(oldLogo, "space-assets");
+      if (path) await supabase.storage.from("space-assets").remove([path]);
+    }
+
+    const oldFavicon = current.favicon_url;
+    const newFavicon = parsed.data.faviconUrl || null;
+    if (oldFavicon && oldFavicon !== newFavicon) {
+      const path = extractStoragePath(oldFavicon, "space-assets");
+      if (path) await supabase.storage.from("space-assets").remove([path]);
+    }
+  }
 
   revalidatePath("/admin/settings");
   return { success: true as const, slugChanged: current?.slug !== parsed.data.slug };
