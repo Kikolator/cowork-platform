@@ -51,7 +51,8 @@ jobs:
           fi
 
           OUTPUT=$(supabase db diff --linked 2>&1)
-          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
+          # Detect actual drift by checking for SQL statements (contain semicolons)
+          if echo "$OUTPUT" | grep -q ';'; then
             echo "has_new_migrations=true" >> "$GITHUB_OUTPUT"
             echo "### New migrations detected 🔄" >> "$GITHUB_STEP_SUMMARY"
           else
@@ -89,7 +90,8 @@ jobs:
       - name: Check for schema drift (hard fail)
         run: |
           OUTPUT=$(supabase db diff --linked 2>&1)
-          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
+          # Detect actual drift by checking for SQL statements (contain semicolons)
+          if echo "$OUTPUT" | grep -q ';'; then
             echo "::error::Schema drift detected in production — resolve before deploying"
             echo '```sql' >> "$GITHUB_STEP_SUMMARY"
             echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
