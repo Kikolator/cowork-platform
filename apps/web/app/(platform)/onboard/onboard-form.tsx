@@ -48,7 +48,7 @@ interface Room {
   clientId: string;
   type: string;
   name: string;
-  capacity: number;
+  capacity: number | string;
 }
 
 function slugify(text: string): string {
@@ -79,7 +79,7 @@ export function OnboardForm() {
   const [countryCode, setCountryCode] = useState("ES");
   const [timezone, setTimezone] = useState("Europe/Madrid");
   const [currency, setCurrency] = useState("eur");
-  const [deskCount, setDeskCount] = useState(10);
+  const [deskCount, setDeskCount] = useState<number | string>(10);
 
   const [rooms, setRooms] = useState<Room[]>([]);
 
@@ -193,11 +193,11 @@ export function OnboardForm() {
         DayKey,
         { open: string; close: string } | null
       >,
-      deskCount,
+      deskCount: Number(deskCount) || 1,
       rooms: rooms.map((r) => ({
         type: r.type,
         name: r.name,
-        capacity: r.capacity,
+        capacity: Number(r.capacity) || 1,
       })),
     });
 
@@ -339,7 +339,12 @@ export function OnboardForm() {
               min={1}
               max={200}
               value={deskCount}
-              onChange={(e) => setDeskCount(parseInt(e.target.value) || 1)}
+              onChange={(e) =>
+                setDeskCount(e.target.value === "" ? "" : parseInt(e.target.value) || 1)
+              }
+              onBlur={() => {
+                if (deskCount === "" || Number(deskCount) < 1) setDeskCount(1);
+              }}
               className={inputClass}
             />
           </div>
@@ -420,9 +425,13 @@ export function OnboardForm() {
                         value={room.capacity}
                         onChange={(e) =>
                           updateRoom(room.clientId, {
-                            capacity: parseInt(e.target.value) || 1,
+                            capacity: e.target.value === "" ? "" : parseInt(e.target.value) || 1,
                           })
                         }
+                        onBlur={() => {
+                          if (room.capacity === "" || Number(room.capacity) < 1)
+                            updateRoom(room.clientId, { capacity: 1 });
+                        }}
                         className={smallInputClass}
                       />
                     </div>
