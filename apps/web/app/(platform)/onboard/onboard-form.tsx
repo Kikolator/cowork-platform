@@ -252,7 +252,7 @@ export function OnboardForm() {
               value={businessName}
               onChange={(e) => handleNameChange(e.target.value)}
               className={inputClass}
-              placeholder="Savage Coworking"
+              placeholder="Savage Studios"
             />
           </div>
 
