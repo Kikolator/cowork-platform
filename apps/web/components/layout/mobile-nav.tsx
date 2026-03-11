@@ -24,12 +24,12 @@ export function MobileNav({ spaceRole, spaceName, logoUrl }: MobileNavProps) {
 
       {/* Overlay */}
       {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-50 h-full w-60">
+          <div className="relative h-full w-60">
             <button
               onClick={() => setOpen(false)}
               className="absolute right-2 top-3 rounded-lg p-1 text-muted-foreground transition-colors hover:text-foreground"
