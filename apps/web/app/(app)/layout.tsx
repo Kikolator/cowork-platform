@@ -1,8 +1,18 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { hexToOklch, contrastForeground } from "@/lib/color";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const spaceName = headersList.get("x-space-name");
+  return {
+    title: spaceName ?? undefined,
+  };
+}
 
 export default async function AppLayout({
   children,
@@ -19,7 +29,7 @@ export default async function AppLayout({
   }
 
   const headersList = await headers();
-  const spaceName = headersList.get("x-space-name") ?? "Cowork";
+  const spaceName = headersList.get("x-space-name") ?? "RogueOps";
   const spaceRole =
     (user.app_metadata?.space_role as string | undefined) ?? "member";
 
@@ -45,11 +55,18 @@ export default async function AppLayout({
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
+      className="glass-gradient-bg flex h-screen overflow-hidden"
       style={
         {
           "--brand-primary": primaryColor,
           "--brand-accent": accentColor,
+          "--primary": hexToOklch(primaryColor),
+          "--primary-foreground": contrastForeground(primaryColor),
+          "--sidebar-primary": hexToOklch(primaryColor),
+          "--sidebar-primary-foreground": contrastForeground(primaryColor),
+          "--accent": hexToOklch(accentColor),
+          "--accent-foreground": contrastForeground(accentColor),
+          "--ring": hexToOklch(primaryColor),
         } as React.CSSProperties
       }
     >
@@ -70,7 +87,7 @@ export default async function AppLayout({
           userEmail={user.email ?? ""}
           spaceRole={spaceRole}
         />
-        <main className="flex-1 overflow-y-auto bg-zinc-50 p-6 dark:bg-zinc-950">
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>

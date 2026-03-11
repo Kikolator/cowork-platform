@@ -10,7 +10,7 @@ const TTL_MS = 60_000;
 function getSupabase() {
   return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_PUB_KEY!
   );
 }
 
@@ -63,6 +63,18 @@ async function lookupSpace(hostname: string): Promise<SpaceContext | null> {
   const { data, error } = await query.limit(1).single();
   if (error || !data) return null;
 
+  return toSpaceContext(data);
+}
+
+function toSpaceContext(data: {
+  id: string;
+  tenant_id: string;
+  slug: string;
+  name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+}): SpaceContext {
   return {
     id: data.id,
     tenantId: data.tenant_id,
@@ -72,4 +84,28 @@ async function lookupSpace(hostname: string): Promise<SpaceContext | null> {
     primaryColor: data.primary_color ?? "#000000",
     accentColor: data.accent_color ?? "#3b82f6",
   };
+}
+
+/** Resolve a space directly by slug (used for ?space= query param on preview deployments). */
+export async function resolveSpaceBySlug(
+  slug: string,
+): Promise<SpaceContext | null> {
+  const cacheKey = `slug:${slug}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.space;
+  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("spaces")
+    .select("id, tenant_id, slug, name, logo_url, primary_color, accent_color")
+    .eq("active", true)
+    .eq("slug", slug)
+    .limit(1)
+    .single();
+
+  const space = error || !data ? null : toSpaceContext(data);
+  cache.set(cacheKey, { space, expiresAt: Date.now() + TTL_MS });
+  return space;
 }

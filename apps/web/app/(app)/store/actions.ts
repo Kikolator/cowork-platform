@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { verifyStripeReady } from "@/lib/stripe/connect";
 import { findOrCreateCustomer } from "@/lib/stripe/subscriptions";
 import {
@@ -10,7 +12,7 @@ import {
   ensureRecurringAddonPriceExists,
   createOneTimeCheckoutSession,
 } from "@/lib/stripe/checkout";
-import { stripe } from "@/lib/stripe/client";
+import { getStripe } from "@/lib/stripe/client";
 import { isProductVisible } from "@/lib/products/visibility";
 
 async function getSpaceContext() {
@@ -26,10 +28,9 @@ async function getSpaceContext() {
   return { supabase, user, spaceId, tenantId };
 }
 
-function getOrigin(slug: string): string {
-  const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "https";
-  const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "cowork.app";
-  return `${protocol}://${slug}.${domain}`;
+async function buildSpaceUrl(slug: string, path: string): Promise<string> {
+  const h = await headers();
+  return buildSpaceUrlFromHeaders(slug, path, h);
 }
 
 export async function getDateAvailability(date: string): Promise<{
@@ -184,7 +185,9 @@ export async function purchasePass(
     // Ensure one-time Stripe price
     const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
 
-    const origin = getOrigin(space?.slug ?? "");
+    const slug = space?.slug ?? "";
+    const successUrl = await buildSpaceUrl(slug, "/store/success?session_id={CHECKOUT_SESSION_ID}");
+    const cancelUrl = await buildSpaceUrl(slug, "/store");
     const session = await createOneTimeCheckoutSession({
       customerId,
       priceId,
@@ -194,8 +197,8 @@ export async function purchasePass(
       productId,
       productCategory: "pass",
       userId: user.id,
-      successUrl: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${origin}/store`,
+      successUrl,
+      cancelUrl,
       extraMetadata: {
         pass_id: passRecord.id,
         ...(isGuest && guestName ? { guest_name: guestName } : {}),
@@ -295,7 +298,9 @@ export async function purchaseProduct(
     // Ensure one-time Stripe price
     const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
 
-    const origin = getOrigin(space?.slug ?? "");
+    const slug = space?.slug ?? "";
+    const successUrl = await buildSpaceUrl(slug, "/store/success?session_id={CHECKOUT_SESSION_ID}");
+    const cancelUrl = await buildSpaceUrl(slug, "/store");
     const session = await createOneTimeCheckoutSession({
       customerId,
       priceId,
@@ -305,8 +310,8 @@ export async function purchaseProduct(
       productId,
       productCategory: product.category,
       userId: user.id,
-      successUrl: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${origin}/store`,
+      successUrl,
+      cancelUrl,
     });
 
     if (!session.url) {
@@ -367,7 +372,7 @@ export async function purchaseAddon(
     );
 
     // Add line item to existing subscription
-    const subscription = await stripe.subscriptions.retrieve(
+    const subscription = await getStripe().subscriptions.retrieve(
       member.stripe_subscription_id,
       { stripeAccount: connectedAccountId },
     );
@@ -376,7 +381,7 @@ export async function purchaseAddon(
       id: item.id,
     }));
 
-    await stripe.subscriptions.update(
+    await getStripe().subscriptions.update(
       member.stripe_subscription_id,
       {
         items: [...existingItems, { price: priceId }],

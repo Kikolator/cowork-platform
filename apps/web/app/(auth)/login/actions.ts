@@ -2,17 +2,17 @@
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { getOrigin } from "@/lib/url";
 
 export async function sendMagicLink(email: string) {
   const supabase = await createClient();
   const headersList = await headers();
-  const host = headersList.get("host") ?? "localhost:3000";
-  const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
+  const origin = getOrigin(headersList);
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${protocol}://${host}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback`,
     },
   });
 

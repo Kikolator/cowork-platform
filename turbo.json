@@ -1,6 +1,13 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalPassThroughEnv": [
+    "SUPABASE_SECRET_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_PLATFORM_FEE_PERCENT",
+    "STRIPE_WEBHOOK_SECRET",
+    "STRIPE_CONNECT_WEBHOOK_SECRET"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -12,6 +19,9 @@
     },
     "check-types": {
       "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
     },
     "dev": {
       "cache": false,

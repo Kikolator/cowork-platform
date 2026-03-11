@@ -1,0 +1,98 @@
+# Deploy to dev — pushes migrations and regenerates types on every push to dev
+name: Deploy Dev
+
+on:
+  push:
+    branches: [dev]
+
+# Never cancel in-flight migrations — wait for previous run to finish
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Push Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to dev project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Push migrations
+        run: supabase db push
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DEV_DB_PASSWORD }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Migrate ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  generate-types:
+    name: Generate Types
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to dev project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Generate TypeScript types
+        run: supabase gen types typescript --linked > types/database.ts
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DEV_DB_PASSWORD }}
+
+      - name: Commit types if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/db/types/database.ts
+          if git diff --cached --quiet; then
+            echo "No type changes detected"
+            echo "### Types — No changes ✅" >> "$GITHUB_STEP_SUMMARY"
+          else
+            git commit -m "chore(db): regenerate database types [skip ci]"
+            git push
+            echo "### Types — Updated and committed ✅" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  summary:
+    name: Summary
+    needs: [migrate, generate-types]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy dev summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## Deploy Dev Summary
+
+          | Job | Status |
+          |-----|--------|
+          | Migrations | ${{ needs.migrate.result }} |
+          | Generate Types | ${{ needs.generate-types.result }} |
+          EOF

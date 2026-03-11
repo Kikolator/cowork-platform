@@ -2,15 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveSpaceFromHostname } from "@/lib/space/resolve";
-
-function getOrigin(request: NextRequest): string {
-  const host = request.headers.get("host") ?? "localhost:3000";
-  const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
-  return `${protocol}://${host}`;
-}
+import { getOrigin } from "@/lib/url";
 
 export async function GET(request: NextRequest) {
-  const origin = getOrigin(request);
+  const origin = getOrigin(request.headers);
 
   // 1. Get the authenticated user from the session cookie
   const supabase = await createClient();
@@ -29,8 +24,8 @@ export async function GET(request: NextRequest) {
   if (!space) {
     const platformDomain =
       process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
-    const protocol = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
-    return NextResponse.redirect(`${protocol}://${platformDomain}/spaces`);
+    const proto = request.headers.get("x-forwarded-proto") ?? "http";
+    return NextResponse.redirect(`${proto}://${platformDomain}/spaces`);
   }
 
   // 3. Verify user is a member of this space

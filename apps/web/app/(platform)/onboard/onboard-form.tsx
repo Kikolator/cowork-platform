@@ -2,10 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { createTenantAndSpace, checkSlugAvailable } from "./actions";
+import { buildSpaceUrlClient } from "@/lib/url";
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
-const PROTOCOL = process.env.NEXT_PUBLIC_PROTOCOL ?? "http";
 
 const COUNTRIES = [
   { code: "ES", name: "Spain", timezone: "Europe/Madrid", currency: "eur" },
@@ -60,9 +60,11 @@ function slugify(text: string): string {
 }
 
 const inputClass =
-  "mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
+  "mt-1 block w-full rounded-xl border border-[var(--glass-border)] bg-white/50 px-3 py-2.5 text-sm shadow-sm backdrop-blur-sm transition-all duration-200 placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 dark:bg-white/5";
 const labelClass =
-  "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
+  "block text-sm font-medium text-foreground/80";
+const smallInputClass =
+  "block w-full rounded-xl border border-[var(--glass-border)] bg-white/50 px-2 py-1.5 text-sm backdrop-blur-sm transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 dark:bg-white/5";
 
 export function OnboardForm() {
   const [step, setStep] = useState(1);
@@ -200,7 +202,7 @@ export function OnboardForm() {
     });
 
     if (result.success && result.spaceSlug) {
-      window.location.href = `${PROTOCOL}://${result.spaceSlug}.${PLATFORM_DOMAIN}/dashboard`;
+      window.location.href = buildSpaceUrlClient(result.spaceSlug, "/dashboard");
     } else {
       setError(result.error ?? "Something went wrong");
       setPending(false);
@@ -213,22 +215,22 @@ export function OnboardForm() {
   return (
     <div className="space-y-6">
       {/* Step indicator */}
-      <div className="flex items-center justify-center gap-2 text-sm text-zinc-500">
+      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
         <span
           className={
             step === 1
-              ? "font-medium text-zinc-900 dark:text-zinc-50"
-              : "text-zinc-400"
+              ? "font-medium text-foreground"
+              : "text-muted-foreground/50"
           }
         >
           1. Business
         </span>
-        <span>→</span>
+        <span className="text-muted-foreground/40">→</span>
         <span
           className={
             step === 2
-              ? "font-medium text-zinc-900 dark:text-zinc-50"
-              : "text-zinc-400"
+              ? "font-medium text-foreground"
+              : "text-muted-foreground/50"
           }
         >
           2. Configure
@@ -236,7 +238,7 @@ export function OnboardForm() {
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-700 backdrop-blur-sm dark:text-red-300">
           {error}
         </div>
       )}
@@ -261,16 +263,16 @@ export function OnboardForm() {
                 type="text"
                 value={slug}
                 onChange={(e) => handleSlugChange(e.target.value)}
-                className="block w-full rounded-l-md border border-zinc-300 px-3 py-2 text-sm shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                className="block w-full rounded-l-xl border border-[var(--glass-border)] bg-white/50 px-3 py-2.5 text-sm shadow-sm backdrop-blur-sm transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 dark:bg-white/5"
                 placeholder="savage"
               />
-              <span className="inline-flex items-center rounded-r-md border border-l-0 border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
+              <span className="inline-flex items-center rounded-r-xl border border-l-0 border-[var(--glass-border)] bg-white/30 px-3 py-2.5 text-sm text-muted-foreground dark:bg-white/5">
                 .{PLATFORM_DOMAIN.split(":")[0]}
               </span>
             </div>
             <p className="mt-1 text-xs">
               {slugStatus === "checking" && (
-                <span className="text-zinc-500">Checking...</span>
+                <span className="text-muted-foreground">Checking...</span>
               )}
               {slugStatus === "available" && (
                 <span className="text-green-600">Available</span>
@@ -303,7 +305,7 @@ export function OnboardForm() {
                 type="text"
                 value={timezone}
                 readOnly
-                className="mt-1 block w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+                className="mt-1 block w-full rounded-xl border border-[var(--glass-border)] bg-white/30 px-3 py-2.5 text-sm text-muted-foreground dark:bg-white/5"
               />
             </div>
             <div>
@@ -312,7 +314,7 @@ export function OnboardForm() {
                 type="text"
                 value={currency.toUpperCase()}
                 readOnly
-                className="mt-1 block w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+                className="mt-1 block w-full rounded-xl border border-[var(--glass-border)] bg-white/30 px-3 py-2.5 text-sm text-muted-foreground dark:bg-white/5"
               />
             </div>
           </div>
@@ -320,7 +322,7 @@ export function OnboardForm() {
           <button
             onClick={() => setStep(2)}
             disabled={!canProceed}
-            className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md disabled:opacity-50"
           >
             Next
           </button>
@@ -349,14 +351,14 @@ export function OnboardForm() {
               <button
                 type="button"
                 onClick={addRoom}
-                className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 + Add room
               </button>
             </div>
 
             {rooms.length === 0 && (
-              <p className="mt-2 text-sm text-zinc-400">
+              <p className="mt-2 text-sm text-muted-foreground/60">
                 No rooms added yet. Click &quot;+ Add room&quot; to add meeting
                 rooms, podcast rooms, etc.
               </p>
@@ -366,7 +368,7 @@ export function OnboardForm() {
               {rooms.map((room) => (
                 <div
                   key={room.clientId}
-                  className="rounded-md border border-zinc-200 p-3 dark:border-zinc-700"
+                  className="rounded-xl border border-[var(--glass-border)] bg-white/40 p-3 backdrop-blur-sm dark:bg-white/5"
                 >
                   <div className="flex items-start gap-3">
                     {/* Type */}
@@ -376,7 +378,7 @@ export function OnboardForm() {
                         onChange={(e) =>
                           handleRoomTypeChange(room.clientId, e.target.value)
                         }
-                        className="block w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                        className={smallInputClass}
                       >
                         {ROOM_TYPES.map((rt) => (
                           <option key={rt.value} value={rt.value}>
@@ -389,7 +391,7 @@ export function OnboardForm() {
                     <button
                       type="button"
                       onClick={() => removeRoom(room.clientId)}
-                      className="mt-1 text-sm text-zinc-400 hover:text-red-500"
+                      className="mt-1 text-sm text-muted-foreground/60 transition-colors hover:text-red-500"
                     >
                       Remove
                     </button>
@@ -397,20 +399,20 @@ export function OnboardForm() {
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     {/* Name */}
                     <div>
-                      <label className="text-xs text-zinc-500">Name</label>
+                      <label className="text-xs text-muted-foreground">Name</label>
                       <input
                         type="text"
                         value={room.name}
                         onChange={(e) =>
                           updateRoom(room.clientId, { name: e.target.value })
                         }
-                        className="block w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                        className={smallInputClass}
                         placeholder="Room name"
                       />
                     </div>
                     {/* Capacity */}
                     <div>
-                      <label className="text-xs text-zinc-500">Capacity</label>
+                      <label className="text-xs text-muted-foreground">Capacity</label>
                       <input
                         type="number"
                         min={1}
@@ -421,7 +423,7 @@ export function OnboardForm() {
                             capacity: parseInt(e.target.value) || 1,
                           })
                         }
-                        className="block w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                        className={smallInputClass}
                       />
                     </div>
                   </div>
@@ -445,9 +447,9 @@ export function OnboardForm() {
                         onChange={(e) =>
                           updateDay(key, { enabled: e.target.checked })
                         }
-                        className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+                        className="h-4 w-4 rounded border-[var(--glass-border)]"
                       />
-                      <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                      <span className="text-sm text-foreground/80">
                         {label.slice(0, 3)}
                       </span>
                     </label>
@@ -459,20 +461,20 @@ export function OnboardForm() {
                           onChange={(e) =>
                             updateDay(key, { open: e.target.value })
                           }
-                          className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                          className="rounded-xl border border-[var(--glass-border)] bg-white/50 px-2 py-1 text-sm backdrop-blur-sm transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 dark:bg-white/5"
                         />
-                        <span className="text-sm text-zinc-400">–</span>
+                        <span className="text-sm text-muted-foreground/50">–</span>
                         <input
                           type="time"
                           value={day.close}
                           onChange={(e) =>
                             updateDay(key, { close: e.target.value })
                           }
-                          className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                          className="rounded-xl border border-[var(--glass-border)] bg-white/50 px-2 py-1 text-sm backdrop-blur-sm transition-all duration-200 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 dark:bg-white/5"
                         />
                       </div>
                     ) : (
-                      <span className="text-sm text-zinc-400">Closed</span>
+                      <span className="text-sm text-muted-foreground/50">Closed</span>
                     )}
                   </div>
                 );
@@ -483,14 +485,14 @@ export function OnboardForm() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep(1)}
-              className="flex-1 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="flex-1 rounded-xl border border-[var(--glass-border)] bg-white/40 px-4 py-2.5 text-sm font-medium text-foreground/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white/60 dark:bg-white/5 dark:hover:bg-white/10"
             >
               Back
             </button>
             <button
               onClick={handleSubmit}
               disabled={pending}
-              className="flex-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md disabled:opacity-50"
             >
               {pending ? "Creating..." : "Create space"}
             </button>

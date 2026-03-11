@@ -162,7 +162,7 @@ export function StripeConnect({
         </Button>
 
         <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">
-          You'll be redirected to Stripe to complete setup. Stripe handles all
+          You&apos;ll be redirected to Stripe to complete setup. Stripe handles all
           payment processing, payouts, and compliance.
         </p>
       </div>
@@ -195,7 +195,7 @@ export function StripeConnect({
         </div>
 
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Your account is connected but onboarding isn't finished. Payments
+          Your account is connected but onboarding isn&apos;t finished. Payments
           cannot be processed yet.
         </p>
 
@@ -312,7 +312,7 @@ function DisconnectButton({
           <AlertDialogTitle>Disconnect Stripe?</AlertDialogTitle>
           <AlertDialogDescription>
             This will prevent all payments. Active subscriptions will fail.
-            Members won't be able to make purchases until you reconnect.
+            Members won&apos;t be able to make purchases until you reconnect.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

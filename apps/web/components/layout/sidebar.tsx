@@ -18,21 +18,21 @@ export function Sidebar({ spaceRole, spaceName, logoUrl }: SidebarProps) {
   const adminItems = navItems.filter((item) => item.adminOnly);
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <aside className="flex h-full w-60 flex-col border-r border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] backdrop-blur-xl">
       {/* Space branding */}
-      <div className="flex h-14 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
+      <div className="flex h-14 items-center gap-2 border-b border-[var(--glass-border)] px-4">
         {logoUrl ? (
           <img
             src={logoUrl}
             alt={spaceName}
-            className="h-7 w-7 rounded object-cover"
+            className="h-7 w-7 rounded-lg object-cover shadow-sm"
           />
         ) : (
-          <div className="flex h-7 w-7 items-center justify-center rounded bg-zinc-900 text-xs font-bold text-white dark:bg-zinc-50 dark:text-zinc-900">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-sm">
             {spaceName.charAt(0).toUpperCase()}
           </div>
         )}
-        <span className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        <span className="truncate font-display text-sm font-semibold text-foreground">
           {spaceName}
         </span>
       </div>
@@ -43,8 +43,8 @@ export function Sidebar({ spaceRole, spaceName, logoUrl }: SidebarProps) {
 
         {isAdmin && (
           <>
-            <div className="mx-2 my-3 border-t border-zinc-200 dark:border-zinc-800" />
-            <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
+            <div className="mx-2 my-3 border-t border-[var(--glass-border)]" />
+            <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Administration
             </p>
             <NavSection items={adminItems} pathname={pathname} />
@@ -71,10 +71,10 @@ function NavSection({
           <li key={item.href}>
             <Link
               href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200 ${
                 active
-                  ? "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-                  : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-50"
+                  ? "bg-white/60 font-medium text-foreground shadow-sm dark:bg-white/10"
+                  : "text-muted-foreground hover:bg-white/40 hover:text-foreground dark:hover:bg-white/5"
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
