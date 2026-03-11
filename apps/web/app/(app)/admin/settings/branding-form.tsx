@@ -15,11 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ImageUpload } from "@/components/image-upload";
 import { brandingSchema, type BrandingFormValues } from "./schemas";
 import { updateSpaceBranding } from "./actions";
 
 interface BrandingFormProps {
   space: {
+    id: string;
     name: string;
     slug: string;
     logo_url: string | null;
@@ -114,13 +116,39 @@ export function BrandingForm({ space }: BrandingFormProps) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="brand-logo">Logo URL</Label>
-            <Input id="brand-logo" {...register("logoUrl")} placeholder="https://..." />
+            <Label>Logo</Label>
+            <ImageUpload
+              currentUrl={watch("logoUrl") || null}
+              spaceId={space.id}
+              bucket="space-assets"
+              pathPrefix="logo"
+              maxSizeMb={2}
+              maxWidth={512}
+              maxHeight={512}
+              label="Logo"
+              previewClassName="h-16 w-auto"
+              onUploaded={(url) => setValue("logoUrl", url, { shouldDirty: true })}
+              onCleared={() => setValue("logoUrl", "", { shouldDirty: true })}
+            />
             {errors.logoUrl && <p className="text-xs text-destructive">{errors.logoUrl.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="brand-favicon">Favicon URL</Label>
-            <Input id="brand-favicon" {...register("faviconUrl")} placeholder="https://..." />
+            <Label>Favicon</Label>
+            <ImageUpload
+              currentUrl={watch("faviconUrl") || null}
+              spaceId={space.id}
+              bucket="space-assets"
+              pathPrefix="favicon"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,image/vnd.microsoft.icon"
+              maxSizeMb={1}
+              maxWidth={256}
+              maxHeight={256}
+              label="Favicon"
+              hint="PNG, JPG, WebP, SVG or ICO. Max 1MB, 256×256px."
+              previewClassName="h-8 w-8"
+              onUploaded={(url) => setValue("faviconUrl", url, { shouldDirty: true })}
+              onCleared={() => setValue("faviconUrl", "", { shouldDirty: true })}
+            />
             {errors.faviconUrl && <p className="text-xs text-destructive">{errors.faviconUrl.message}</p>}
           </div>
         </div>
