@@ -26,11 +26,23 @@ jobs:
       has_new_migrations: ${{ steps.check.outputs.has_new_migrations }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Check for new migrations
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to prod project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROD_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Check for pending migrations
         id: check
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_migrations }}" = "true" ]; then
             echo "has_new_migrations=true" >> "$GITHUB_OUTPUT"
@@ -38,7 +50,8 @@ jobs:
             exit 0
           fi
 
-          if git diff HEAD~1 --name-only | grep -q '^packages/db/supabase/migrations/'; then
+          OUTPUT=$(supabase db diff --linked 2>&1)
+          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
             echo "has_new_migrations=true" >> "$GITHUB_OUTPUT"
             echo "### New migrations detected 🔄" >> "$GITHUB_STEP_SUMMARY"
           else
