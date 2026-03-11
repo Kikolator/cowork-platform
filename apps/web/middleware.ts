@@ -22,6 +22,11 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
 
+  // Let the health-check endpoint through without auth or space resolution
+  if (pathname === "/api/health") {
+    return NextResponse.next();
+  }
+
   // Resolve space from subdomain (returns null for bare platform domain)
   let space = await resolveSpaceFromHostname(hostname);
 
