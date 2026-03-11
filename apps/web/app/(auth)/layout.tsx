@@ -9,7 +9,10 @@ async function getSpaceName() {
 export async function generateMetadata(): Promise<Metadata> {
   const spaceName = await getSpaceName();
   return {
-    title: spaceName && spaceName !== "RogueOps" ? `${spaceName} | RogueOps` : "RogueOps",
+    title:
+      spaceName && spaceName !== "RogueOps"
+        ? { absolute: `${spaceName} | RogueOps` }
+        : { absolute: "RogueOps" },
   };
 }
 
