@@ -1,15 +1,32 @@
-const platformDomain =
-  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
+const PLATFORM_DOMAIN = (
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000"
+)
+  .split(":")[0]!;
 
-// Extract base domain without port — e.g. "localhost" from "localhost:3000"
-const baseDomain = platformDomain.split(":")[0]!;
+/**
+ * Derive the cookie domain from the actual request hostname.
+ *
+ * - Platform domain / its subdomains → `.platformDomain` (cross-subdomain sharing)
+ * - Localhost, Vercel previews, custom domains → `undefined` (exact-host scoping)
+ */
+function getCookieDomain(hostname: string): string | undefined {
+  const host = hostname.split(":")[0]!; // strip port
 
-// Chrome rejects ".localhost" as a cookie domain (treats localhost as a TLD).
-// Only set domain for real domains so cookies are shared across subdomains.
-const isLocalhost = baseDomain === "localhost";
-export const cookieDomain = isLocalhost ? undefined : `.${baseDomain}`;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return undefined;
+  }
 
-export const cookieOptions = {
-  ...(cookieDomain ? { domain: cookieDomain } : {}),
-  path: "/",
-} as const;
+  if (host === PLATFORM_DOMAIN || host.endsWith(`.${PLATFORM_DOMAIN}`)) {
+    return `.${PLATFORM_DOMAIN}`;
+  }
+
+  return undefined;
+}
+
+export function getCookieOptions(hostname: string) {
+  const domain = getCookieDomain(hostname);
+  return {
+    ...(domain ? { domain } : {}),
+    path: "/",
+  } as const;
+}
