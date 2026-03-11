@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { hexToOklch, contrastForeground } from "@/lib/color";
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
@@ -59,6 +60,13 @@ export default async function AppLayout({
         {
           "--brand-primary": primaryColor,
           "--brand-accent": accentColor,
+          "--primary": hexToOklch(primaryColor),
+          "--primary-foreground": contrastForeground(primaryColor),
+          "--sidebar-primary": hexToOklch(primaryColor),
+          "--sidebar-primary-foreground": contrastForeground(primaryColor),
+          "--accent": hexToOklch(accentColor),
+          "--accent-foreground": contrastForeground(accentColor),
+          "--ring": hexToOklch(primaryColor),
         } as React.CSSProperties
       }
     >
