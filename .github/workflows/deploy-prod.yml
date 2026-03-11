@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force_migrations:
+        description: 'Force-push migrations (skip preflight diff check)'
+        type: boolean
+        default: true
 
 # Never cancel in-flight migrations
 concurrency:
@@ -27,6 +32,12 @@ jobs:
       - name: Check for new migrations
         id: check
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_migrations }}" = "true" ]; then
+            echo "has_new_migrations=true" >> "$GITHUB_OUTPUT"
+            echo "### Forced migrations via workflow_dispatch 🔄" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           if git diff HEAD~1 --name-only | grep -q '^packages/db/supabase/migrations/'; then
             echo "has_new_migrations=true" >> "$GITHUB_OUTPUT"
             echo "### New migrations detected 🔄" >> "$GITHUB_STEP_SUMMARY"
