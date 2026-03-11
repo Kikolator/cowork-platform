@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     default: "RogueOps",
     template: "%s | RogueOps",
   },
-  description: "Coworking management platform",
+  description: "Space management platform",
 };
 
 export default function RootLayout({

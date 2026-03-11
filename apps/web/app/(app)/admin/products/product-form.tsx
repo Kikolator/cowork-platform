@@ -240,7 +240,7 @@ export function ProductForm({
               <Textarea
                 id="description"
                 {...register("description")}
-                placeholder="A full day of coworking access..."
+                placeholder="A full day of workspace access..."
                 rows={2}
               />
             </div>

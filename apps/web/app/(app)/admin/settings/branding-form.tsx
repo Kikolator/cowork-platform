@@ -208,8 +208,8 @@ export function BrandingForm({ space }: BrandingFormProps) {
             <AlertDialogTitle>Change workspace URL?</AlertDialogTitle>
             <AlertDialogDescription>
               Changing the slug will change your workspace URL from{" "}
-              <strong>{space.slug}.cowork.app</strong> to{" "}
-              <strong>{slugConfirm?.slug}.cowork.app</strong>.
+              <strong>{space.slug}.{process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000"}</strong> to{" "}
+              <strong>{slugConfirm?.slug}.{process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000"}</strong>.
               Members will need to use the new URL.
             </AlertDialogDescription>
           </AlertDialogHeader>

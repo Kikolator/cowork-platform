@@ -21,10 +21,10 @@ export default async function PlatformLayout({
       <div className="w-full max-w-lg space-y-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Cowork
+            RogueOps
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Launch your coworking space
+            Launch your space
           </p>
         </div>
         <div className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] p-8 shadow-[var(--glass-shadow)] backdrop-blur-xl">
