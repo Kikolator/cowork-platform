@@ -16,11 +16,12 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const headersList = await headers();
-  const spaceName = headersList.get("x-space-name") ?? "this workspace";
   const params = await searchParams;
   const errorCode = typeof params.error === "string" ? params.error : null;
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : null;
+
+  const headersList = await headers();
+  const spaceName = headersList.get("x-space-name");
 
   return (
     <div className="space-y-6">
@@ -29,7 +30,7 @@ export default async function LoginPage({
           {errorMessage}
         </div>
       )}
-      <LoginForm spaceName={spaceName} />
+      <LoginForm spaceName={spaceName ?? undefined} />
     </div>
   );
 }

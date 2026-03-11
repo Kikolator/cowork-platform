@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { sendMagicLink } from "./actions";
 
-export function LoginForm({ spaceName }: { spaceName: string }) {
+export function LoginForm({ spaceName }: { spaceName?: string }) {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export function LoginForm({ spaceName }: { spaceName: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-center text-sm text-muted-foreground">
-        Sign in to {spaceName}
+        {spaceName ? `Sign in to ${spaceName}` : "Start managing your space"}
       </p>
       <div>
         <label
