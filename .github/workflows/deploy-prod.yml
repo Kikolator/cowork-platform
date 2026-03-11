@@ -5,6 +5,7 @@ name: Deploy Prod
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Never cancel in-flight migrations
 concurrency:
