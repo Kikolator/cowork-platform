@@ -11,11 +11,12 @@ interface Space {
   role: string;
 }
 
+import { buildSpaceUrlClient } from "@/lib/url";
+
 const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
 
 function spaceUrl(slug: string) {
-  const proto = typeof window !== "undefined" ? window.location.protocol : "http:";
-  return `${proto}//${slug}.${platformDomain}/dashboard`;
+  return buildSpaceUrlClient(slug, "/dashboard");
 }
 
 export function SpacesList({ spaces }: { spaces: Space[] }) {

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProto } from "@/lib/url";
+import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { brandingSchema, operationsSchema, fiscalSchema } from "./schemas";
 import {
   getOrCreateConnectAccount,
@@ -185,14 +185,11 @@ export async function initiateStripeConnect(): Promise<
     }
 
     const h = await headers();
-    const proto = getProto(h);
-    const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
     const spaces = tenant.spaces as unknown as Array<{ slug: string }>;
     const slug = spaces?.[0]?.slug ?? "";
 
-    const baseUrl = `${proto}://${slug}.${domain}`;
-    const returnUrl = `${baseUrl}/admin/settings?stripe=complete`;
-    const refreshUrl = `${baseUrl}/admin/settings?stripe=refresh`;
+    const returnUrl = buildSpaceUrlFromHeaders(slug, "/admin/settings?stripe=complete", h);
+    const refreshUrl = buildSpaceUrlFromHeaders(slug, "/admin/settings?stripe=refresh", h);
 
     const url = await createAccountLink(accountId, returnUrl, refreshUrl);
 

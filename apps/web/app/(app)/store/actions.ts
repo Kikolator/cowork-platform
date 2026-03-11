@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProto } from "@/lib/url";
+import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { verifyStripeReady } from "@/lib/stripe/connect";
 import { findOrCreateCustomer } from "@/lib/stripe/subscriptions";
 import {
@@ -28,11 +28,9 @@ async function getSpaceContext() {
   return { supabase, user, spaceId, tenantId };
 }
 
-async function getSpaceOrigin(slug: string): Promise<string> {
+async function buildSpaceUrl(slug: string, path: string): Promise<string> {
   const h = await headers();
-  const proto = getProto(h);
-  const domain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
-  return `${proto}://${slug}.${domain}`;
+  return buildSpaceUrlFromHeaders(slug, path, h);
 }
 
 export async function getDateAvailability(date: string): Promise<{
@@ -187,7 +185,9 @@ export async function purchasePass(
     // Ensure one-time Stripe price
     const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
 
-    const origin = await getSpaceOrigin(space?.slug ?? "");
+    const slug = space?.slug ?? "";
+    const successUrl = await buildSpaceUrl(slug, "/store/success?session_id={CHECKOUT_SESSION_ID}");
+    const cancelUrl = await buildSpaceUrl(slug, "/store");
     const session = await createOneTimeCheckoutSession({
       customerId,
       priceId,
@@ -197,8 +197,8 @@ export async function purchasePass(
       productId,
       productCategory: "pass",
       userId: user.id,
-      successUrl: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${origin}/store`,
+      successUrl,
+      cancelUrl,
       extraMetadata: {
         pass_id: passRecord.id,
         ...(isGuest && guestName ? { guest_name: guestName } : {}),
@@ -298,7 +298,9 @@ export async function purchaseProduct(
     // Ensure one-time Stripe price
     const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
 
-    const origin = await getSpaceOrigin(space?.slug ?? "");
+    const slug = space?.slug ?? "";
+    const successUrl = await buildSpaceUrl(slug, "/store/success?session_id={CHECKOUT_SESSION_ID}");
+    const cancelUrl = await buildSpaceUrl(slug, "/store");
     const session = await createOneTimeCheckoutSession({
       customerId,
       priceId,
@@ -308,8 +310,8 @@ export async function purchaseProduct(
       productId,
       productCategory: product.category,
       userId: user.id,
-      successUrl: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${origin}/store`,
+      successUrl,
+      cancelUrl,
     });
 
     if (!session.url) {

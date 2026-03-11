@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { createTenantAndSpace, checkSlugAvailable } from "./actions";
+import { buildSpaceUrlClient } from "@/lib/url";
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
@@ -201,7 +202,7 @@ export function OnboardForm() {
     });
 
     if (result.success && result.spaceSlug) {
-      window.location.href = `${window.location.protocol}//${result.spaceSlug}.${PLATFORM_DOMAIN}/dashboard`;
+      window.location.href = buildSpaceUrlClient(result.spaceSlug, "/dashboard");
     } else {
       setError(result.error ?? "Something went wrong");
       setPending(false);
