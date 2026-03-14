@@ -17,7 +17,7 @@ packages/db       → Supabase: migrations, edge functions, generated types
 - **Backend**: Supabase (Postgres, Auth, Edge Functions, RLS)
 - **Payments**: Stripe (Connect for multi-tenant)
 - **Validation**: Zod at API boundaries
-- **Data fetching**: TanStack Query v5 (client), Supabase JS (server)
+- **Data fetching**: Supabase JS (server + client via `@supabase/ssr`)
 - **Deployment**: Vercel
 
 ## Commands
@@ -25,7 +25,8 @@ packages/db       → Supabase: migrations, edge functions, generated types
 ```bash
 turbo dev                  # Run all apps
 turbo build                # Build all
-turbo type-check           # Type-check all
+turbo check-types          # Type-check all
+turbo lint                 # Lint all
 
 # Database (from packages/db/)
 supabase start             # Local Supabase
@@ -54,6 +55,7 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 
 ## Database
 - Migration version: 5 digits increment +1 from previous version.
+- Current latest: `00015`. Next: `00016`.
 - Security first.
 - Creating a multi-tenant platform.
 
@@ -62,6 +64,22 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 - Magic link only (Supabase Auth).
 - Tenant resolved from subdomain or custom domain in middleware.
 - Admin role checked via `tenant_users` table, not JWT claims.
+
+## Terminology
+
+- **Tenant**: billing entity (org/company). Has Stripe Connect account.
+- **Space**: a workspace within a tenant. Resolved from subdomain or custom domain.
+- One tenant can have multiple spaces.
+
+## Environment
+
+- Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in values.
+- Node >= 24 required (see root `package.json` engines).
+- See `CICD_SETUP.md` for CI/CD secrets and GitHub environment configuration.
+
+## Git Commits
+
+`feat:` · `fix:` · `refactor:` · `docs:` · `test:` · `chore:` · `db:` (migrations)
 
 ## Don't
 
@@ -72,3 +90,7 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 - Don't use Pages Router.
 - Don't hardcode business logic that should be tenant-configurable (plans, hours, pricing).
 - Don't use TypeScript enums. Use `as const` objects.
+
+## Skills
+
+@docs/skills/commit-push-pr.md
