@@ -36,6 +36,10 @@ supabase db push           # Push to remote
 
 # Type generation (from packages/db/)
 supabase gen types typescript --local > types/database.ts
+
+# Testing (from apps/web/)
+turbo test                 # Unit tests (Vitest)
+turbo test:e2e             # E2E tests (Playwright)
 ```
 
 ## Conventions
@@ -75,7 +79,7 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 
 - Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in values.
 - Node >= 24 required (see root `package.json` engines).
-- See `CICD_SETUP.md` for CI/CD secrets and GitHub environment configuration.
+- See `.github/CICD_SETUP.md` for CI/CD secrets and GitHub environment configuration.
 
 ## Git Commits
 
@@ -90,7 +94,3 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 - Don't use Pages Router.
 - Don't hardcode business logic that should be tenant-configurable (plans, hours, pricing).
 - Don't use TypeScript enums. Use `as const` objects.
-
-## Skills
-
-@docs/skills/commit-push-pr.md
