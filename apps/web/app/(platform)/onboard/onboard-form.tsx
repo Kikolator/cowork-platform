@@ -157,9 +157,13 @@ export function OnboardForm() {
 
   function handleRoomTypeChange(clientId: string, type: string) {
     const preset = ROOM_TYPES.find((rt) => rt.value === type);
+    const room = rooms.find((r) => r.clientId === clientId);
+    const previousPreset = ROOM_TYPES.find((rt) => rt.value === room?.type);
+    const nameIsDefault = room?.name === previousPreset?.label;
+
     updateRoom(clientId, {
       type,
-      name: preset?.label ?? type,
+      ...(nameIsDefault ? { name: preset?.label ?? type } : {}),
       capacity: preset?.defaultCapacity ?? 4,
     });
   }
