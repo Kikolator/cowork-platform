@@ -13,6 +13,7 @@ import {
   Settings,
   DollarSign,
   Package,
+  Upload,
   type LucideIcon,
 } from "lucide-react";
 
@@ -61,6 +62,12 @@ export const navItems: NavItem[] = [
     label: "Products",
     href: "/admin/products",
     icon: Package,
+    adminOnly: true,
+  },
+  {
+    label: "Import Data",
+    href: "/admin/import",
+    icon: Upload,
     adminOnly: true,
   },
   {
