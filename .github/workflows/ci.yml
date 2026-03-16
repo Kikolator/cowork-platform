@@ -104,9 +104,25 @@ jobs:
 
       - run: npm ci
 
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+        working-directory: packages/db
+
+      - name: Reset DB (migrations + seed)
+        run: supabase db reset
+        working-directory: packages/db
+
       - name: Turbo test
-        # turbo silently skips packages without a test script — safe to run now
         run: npx turbo run test ${{ env.TURBO_FILTER }}
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+        working-directory: packages/db
 
       - name: Summary
         if: always()

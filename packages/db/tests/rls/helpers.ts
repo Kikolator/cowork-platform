@@ -137,7 +137,17 @@ export function userClient(userId: string, spaceId?: string): SupabaseClient {
 // SQL helper via psql (for seeding/cleanup)
 // ---------------------------------------------------------------------------
 
-const PSQL = '/opt/homebrew/opt/libpq/bin/psql';
+function findPsql(): string {
+  try {
+    return execFileSync('/usr/bin/which', ['psql'], {
+      encoding: 'utf-8',
+    }).trim();
+  } catch {
+    return '/opt/homebrew/opt/libpq/bin/psql';
+  }
+}
+
+const PSQL = findPsql();
 const PG_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 /**
