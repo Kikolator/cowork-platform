@@ -17,7 +17,7 @@ export function Header({
   spaceRole,
 }: HeaderProps) {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] px-4 backdrop-blur-xl">
+    <header className="relative z-30 flex h-14 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] px-4 backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <MobileNav
           spaceRole={spaceRole}
