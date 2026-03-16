@@ -8,7 +8,6 @@ import { StepUpload } from "./step-upload";
 import { StepPreview } from "./step-preview";
 import { StepSummary } from "./step-summary";
 import {
-  importResourceTypes,
   importResources,
   importPlans,
   importMembers,
@@ -20,7 +19,6 @@ import {
 import { IMPORT_ENTITIES, type ImportEntity } from "./mappings";
 
 const ENTITY_ACTIONS = {
-  resource_types: importResourceTypes,
   resources: importResources,
   plans: importPlans,
   members: importMembers,

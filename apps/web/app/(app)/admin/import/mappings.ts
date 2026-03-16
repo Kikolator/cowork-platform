@@ -14,7 +14,6 @@ export interface EntityMapping {
 }
 
 export const IMPORT_ENTITIES = [
-  "resource_types",
   "resources",
   "plans",
   "members",
@@ -25,26 +24,6 @@ export const IMPORT_ENTITIES = [
 export type ImportEntity = (typeof IMPORT_ENTITIES)[number];
 
 export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
-  resource_types: {
-    displayName: "Resource Types",
-    knownColumns: {
-      Name: "name",
-      name: "name",
-      Type: "slug",
-      type: "slug",
-      Slug: "slug",
-      slug: "slug",
-      _id: "external_id",
-      Id: "external_id",
-      id: "external_id",
-    },
-    required: ["name"],
-    availableFields: [
-      { value: "name", label: "Name" },
-      { value: "slug", label: "Slug" },
-      { value: "external_id", label: "External ID" },
-    ],
-  },
   resources: {
     displayName: "Resources",
     knownColumns: {

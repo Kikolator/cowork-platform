@@ -15,7 +15,6 @@ import type { ImportResult } from "./actions";
 import type { ImportEntity } from "./mappings";
 import { ENTITY_MAPPINGS } from "./mappings";
 import {
-  importResourceTypeSchema,
   importResourceSchema,
   importPlanSchema,
   importMemberSchema,
@@ -24,7 +23,6 @@ import {
 } from "./schemas";
 
 const SCHEMAS = {
-  resource_types: importResourceTypeSchema,
   resources: importResourceSchema,
   plans: importPlanSchema,
   members: importMemberSchema,

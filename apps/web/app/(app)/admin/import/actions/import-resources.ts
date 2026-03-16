@@ -1,5 +1,6 @@
 "use server";
 
+import { slugify } from "@/lib/csv";
 import { importResourceSchema } from "../schemas";
 import { getAdminContext, type ImportResult } from "./shared";
 
@@ -9,7 +10,32 @@ export async function importResources(
   const { admin, spaceId } = await getAdminContext();
   const result: ImportResult = { inserted: 0, skipped: 0, errors: [] };
 
-  // Pre-fetch resource types for name → id resolution
+  // Auto-create resource types from unique type names in the CSV
+  const typeNames = new Set<string>();
+  for (const row of rows) {
+    const typeName = row.resource_type_name?.trim();
+    if (typeName) typeNames.add(typeName);
+  }
+
+  for (const typeName of typeNames) {
+    const slug = slugify(typeName);
+    const { data: existing } = await admin
+      .from("resource_types")
+      .select("id")
+      .eq("space_id", spaceId)
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (!existing) {
+      await admin.from("resource_types").insert({
+        space_id: spaceId,
+        name: typeName,
+        slug,
+      });
+    }
+  }
+
+  // Fetch all resource types (including just-created ones)
   const { data: resourceTypes } = await admin
     .from("resource_types")
     .select("id, name, slug")
@@ -22,7 +48,6 @@ export async function importResources(
     (resourceTypes ?? []).map((rt) => [rt.slug.toLowerCase(), rt.id]),
   );
 
-  // Default resource type (first available, or null)
   const defaultRtId = resourceTypes?.[0]?.id;
 
   for (let i = 0; i < rows.length; i++) {
@@ -61,7 +86,7 @@ export async function importResources(
     if (!resourceTypeId) {
       result.errors.push({
         row: i + 1,
-        message: "No resource type found. Import resource types first.",
+        message: "No resource type could be determined.",
       });
       continue;
     }
