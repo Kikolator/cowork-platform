@@ -12,7 +12,7 @@ const PLATFORM_DOMAIN = (
 function getCookieDomain(hostname: string): string | undefined {
   const host = hostname.split(":")[0]!; // strip port
 
-  if (host === "localhost" || host === "127.0.0.1") {
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost")) {
     return undefined;
   }
 
