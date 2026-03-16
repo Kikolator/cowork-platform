@@ -6,7 +6,7 @@ Complete setup instructions for the GitHub Actions CI/CD pipeline.
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| **CI** | PR to `main` or `dev` | Lint, type-check, build, test, DB validation |
+| **CI** | PR to `main` or `dev` | Lint, type-check, build, test, E2E, DB validation |
 | **Deploy Dev** | Push to `dev` | Push migrations + regenerate types for dev Supabase |
 | **Deploy Prod** | Push to `main` | Migration preflight, manual approval gate, push, smoke test |
 
