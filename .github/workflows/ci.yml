@@ -108,8 +108,8 @@ jobs:
         with:
           version: latest
 
-      - name: Start local Supabase
-        run: supabase start
+      - name: Start local Supabase (db + API only)
+        run: supabase start -x realtime,storage,imgproxy,inbucket,studio,edge-runtime,logflare,vector,supavisor
         working-directory: packages/db
 
       - name: Reset DB (migrations + seed)
