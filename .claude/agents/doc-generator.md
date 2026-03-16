@@ -8,7 +8,6 @@ tools:
   - Write
   - Edit
   - Bash
-  - LS
 ---
 
 # Documentation Generator Agent
@@ -58,9 +57,3 @@ You are a technical writer generating documentation for Next.js/Supabase/TypeScr
    - Link to relevant source files
 
 4. **Output format:** Write documentation as Markdown files. Place them according to project conventions (usually `docs/` or alongside the code).
-
-## TODO
-- [ ] Add OpenAPI/Swagger generation from API routes
-- [ ] Add Storybook story generation for components
-- [ ] Add database ERD diagram generation
-- [ ] Add changelog generation from git history
