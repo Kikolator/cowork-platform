@@ -94,3 +94,4 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 - Don't use Pages Router.
 - Don't hardcode business logic that should be tenant-configurable (plans, hours, pricing).
 - Don't use TypeScript enums. Use `as const` objects.
+- Don't weaken validation, types, or security to work around test/dev data issues — fix the root cause instead.
