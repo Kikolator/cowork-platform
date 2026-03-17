@@ -11,15 +11,11 @@ interface Space {
   role: string;
 }
 
-import { buildSpaceUrlClient } from "@/lib/url";
+import { buildSpaceUrl } from "@/lib/url";
 
 const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
 
-function spaceUrl(slug: string) {
-  return buildSpaceUrlClient(slug, "/dashboard");
-}
-
-export function SpacesList({ spaces }: { spaces: Space[] }) {
+export function SpacesList({ spaces, origin }: { spaces: Space[]; origin: string }) {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
@@ -29,7 +25,7 @@ export function SpacesList({ spaces }: { spaces: Space[] }) {
         {spaces.map((space) => (
           <a
             key={space.id}
-            href={spaceUrl(space.slug)}
+            href={buildSpaceUrl(space.slug, "/dashboard", origin)}
             className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">
