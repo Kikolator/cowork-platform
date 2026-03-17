@@ -13,6 +13,8 @@ concurrency:
 jobs:
   migrate:
     name: Push Migrations
+    # Skip if triggered by bot's type regeneration commit to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +77,7 @@ jobs:
             echo "No type changes detected"
             echo "### Types — No changes ✅" >> "$GITHUB_STEP_SUMMARY"
           else
-            git commit -m "chore(db): regenerate database types [skip ci]"
+            git commit -m "chore(db): regenerate database types"
             git push
             echo "### Types — Updated and committed ✅" >> "$GITHUB_STEP_SUMMARY"
           fi

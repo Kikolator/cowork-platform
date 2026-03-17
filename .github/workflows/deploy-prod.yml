@@ -87,25 +87,25 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Check for schema drift (hard fail)
+      - name: Push migrations
+        run: supabase db push
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
+
+      - name: Verify no schema drift after push
         run: |
           OUTPUT=$(supabase db diff --linked 2>&1)
-          # Detect actual drift by checking for SQL statements (contain semicolons)
+          # Detect remaining drift by checking for SQL statements (contain semicolons)
           if echo "$OUTPUT" | grep -q ';'; then
-            echo "::error::Schema drift detected in production — resolve before deploying"
+            echo "::error::Schema drift remains after push — production may have manual changes"
             echo '```sql' >> "$GITHUB_STEP_SUMMARY"
             echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           echo "### Schema drift check — Clean ✅" >> "$GITHUB_STEP_SUMMARY"
-        working-directory: packages/db
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
-
-      - name: Push migrations
-        run: supabase db push
         working-directory: packages/db
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -154,7 +154,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No type changes detected"
           else
-            git commit -m "chore(db): regenerate prod database types [skip ci]"
+            git commit -m "chore(db): regenerate prod database types"
             git push
           fi
 
