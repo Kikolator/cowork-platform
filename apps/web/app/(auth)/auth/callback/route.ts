@@ -103,6 +103,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // 5b. Track last login
+  await admin
+    .from("shared_profiles")
+    .update({ last_login_at: new Date().toISOString() })
+    .eq("id", user.id);
+
   // 6. Refresh session to pick up new claims
   await supabase.auth.refreshSession();
 

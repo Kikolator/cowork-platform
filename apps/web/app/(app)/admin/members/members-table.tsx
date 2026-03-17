@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, Users, MoreHorizontal, Pencil, Eye } from "lucide-react";
+import { useState, useMemo, useTransition } from "react";
+import {
+  Search,
+  Users,
+  MoreHorizontal,
+  Pencil,
+  Eye,
+  Plus,
+  Mail,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -29,12 +38,15 @@ import {
 } from "@/components/ui/select";
 import { MemberDetail } from "./member-detail";
 import { MemberForm } from "./member-form";
+import { AddMemberForm } from "./add-member-form";
+import { sendMemberInvite, sendBulkInvites } from "./actions";
 
 export interface ProfileEntry {
   full_name: string | null;
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  last_login_at: string | null;
 }
 
 export interface Member {
@@ -64,6 +76,7 @@ export interface Member {
   paused_at: string | null;
   cancel_requested_at: string | null;
   cancelled_at: string | null;
+  invited_at: string | null;
   plan: { id: string; name: string } | null;
 }
 
@@ -117,6 +130,21 @@ const STATUS_LABELS: Record<string, string> = {
   churned: "Churned",
 };
 
+const LOGIN_STATUS_CONFIG = {
+  logged_in: {
+    label: "Logged in",
+    className: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  },
+  invite_sent: {
+    label: "Invite sent",
+    className: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  },
+  not_invited: {
+    label: "Not invited",
+    className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+  },
+} as const;
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "-";
   return new Intl.DateTimeFormat("en-US", {
@@ -124,6 +152,29 @@ function formatDate(dateStr: string | null): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(dateStr));
+}
+
+function formatRelativeDate(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return formatDate(dateStr);
+}
+
+function getLoginStatus(
+  profile: ProfileEntry | undefined,
+  member: Member,
+): keyof typeof LOGIN_STATUS_CONFIG {
+  if (profile?.last_login_at) return "logged_in";
+  if (member.invited_at) return "invite_sent";
+  return "not_invited";
 }
 
 export function MembersTable({
@@ -138,6 +189,10 @@ export function MembersTable({
   const [planFilter, setPlanFilter] = useState<string | null>(null);
   const [detailMemberId, setDetailMemberId] = useState<string | null>(null);
   const [editMember, setEditMember] = useState<Member | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -154,6 +209,60 @@ export function MembersTable({
       return true;
     });
   }, [members, search, statusFilter, planFilter, profileMap]);
+
+  // Members eligible for invite (not yet logged in)
+  const uninvitedFiltered = useMemo(
+    () => filtered.filter((m) => !profileMap[m.user_id]?.last_login_at),
+    [filtered, profileMap],
+  );
+
+  const allUninvitedSelected =
+    uninvitedFiltered.length > 0 &&
+    uninvitedFiltered.every((m) => selectedIds.has(m.id));
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allUninvitedSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(uninvitedFiltered.map((m) => m.id)));
+    }
+  }
+
+  function handleSendInvite(memberId: string) {
+    setInviteMessage(null);
+    startTransition(async () => {
+      const result = await sendMemberInvite({ memberId });
+      if (result.success) {
+        setInviteMessage("Invite sent");
+      } else {
+        setInviteMessage(result.error);
+      }
+    });
+  }
+
+  function handleBulkInvite() {
+    setInviteMessage(null);
+    startTransition(async () => {
+      const result = await sendBulkInvites({
+        memberIds: Array.from(selectedIds),
+      });
+      if (result.success) {
+        setInviteMessage(`${result.sent} invite(s) sent${result.failed ? `, ${result.failed} failed` : ""}`);
+        setSelectedIds(new Set());
+      } else {
+        setInviteMessage(result.error);
+      }
+    });
+  }
 
   const detailMember = detailMemberId
     ? members.find((m) => m.id === detailMemberId) ?? null
@@ -179,6 +288,10 @@ export function MembersTable({
             View and manage your space members.
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          Add Member
+        </Button>
       </div>
 
       {/* Filters */}
@@ -240,6 +353,48 @@ export function MembersTable({
         </div>
       </div>
 
+      {/* Bulk selection toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-2.5">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <Button
+            size="sm"
+            onClick={handleBulkInvite}
+            disabled={isPending}
+          >
+            <Mail className="mr-1.5 h-3.5 w-3.5" />
+            {isPending ? "Sending..." : "Send invites"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear
+          </Button>
+          {inviteMessage && (
+            <span className="text-sm text-muted-foreground">{inviteMessage}</span>
+          )}
+        </div>
+      )}
+
+      {/* Inline invite feedback (when no selection) */}
+      {inviteMessage && selectedIds.size === 0 && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-2.5">
+          <span className="text-sm text-muted-foreground">{inviteMessage}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setInviteMessage(null)}
+            className="text-xs"
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {/* Table or empty state */}
       {members.length === 0 ? (
         <div className="mt-8 flex flex-col items-center rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center">
@@ -248,7 +403,7 @@ export function MembersTable({
           </div>
           <h3 className="mt-4 text-base font-medium">No members yet</h3>
           <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-            Members will appear here once they sign up for a plan in your space.
+            Add your first member or import members from a CSV file.
           </p>
         </div>
       ) : (
@@ -256,9 +411,17 @@ export function MembersTable({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[280px]">Member</TableHead>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allUninvitedSelected && uninvitedFiltered.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all uninvited members"
+                  />
+                </TableHead>
+                <TableHead className="w-[250px]">Member</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead className="w-28">Status</TableHead>
+                <TableHead className="w-28">Login</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -266,7 +429,7 @@ export function MembersTable({
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                     No members match your filters
                   </TableCell>
                 </TableRow>
@@ -274,9 +437,23 @@ export function MembersTable({
                 filtered.map((member) => {
                   const profile = profileMap[member.user_id];
                   const statusCfg = STATUS_CONFIG[member.status] ?? STATUS_CONFIG.active!;
+                  const loginStatus = getLoginStatus(profile, member);
+                  const loginCfg = LOGIN_STATUS_CONFIG[loginStatus];
+                  const canInvite = !profile?.last_login_at;
 
                   return (
                     <TableRow key={member.id}>
+                      <TableCell>
+                        {canInvite ? (
+                          <Checkbox
+                            checked={selectedIds.has(member.id)}
+                            onCheckedChange={() => toggleSelect(member.id)}
+                            aria-label={`Select ${profile?.full_name ?? profile?.email ?? "member"}`}
+                          />
+                        ) : (
+                          <span className="block h-4 w-4" />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="min-w-0">
                           <div className="font-medium truncate">
@@ -301,6 +478,21 @@ export function MembersTable({
                         >
                           {statusCfg.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          <Badge
+                            variant="outline"
+                            className={`border-transparent text-xs ${loginCfg.className}`}
+                          >
+                            {loginCfg.label}
+                          </Badge>
+                          {loginStatus === "invite_sent" && member.invited_at && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatRelativeDate(member.invited_at)}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="tabular-nums">
                         {formatDate(member.joined_at)}
@@ -328,6 +520,18 @@ export function MembersTable({
                               <Pencil className="mr-2 h-3.5 w-3.5" />
                               Edit member
                             </DropdownMenuItem>
+                            {canInvite && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleSendInvite(member.id)}
+                                  disabled={isPending}
+                                >
+                                  <Mail className="mr-2 h-3.5 w-3.5" />
+                                  {member.invited_at ? "Resend invite" : "Send invite"}
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -339,6 +543,13 @@ export function MembersTable({
           </Table>
         </div>
       )}
+
+      {/* Create dialog */}
+      <AddMemberForm
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        plans={plans}
+      />
 
       {/* Detail dialog */}
       {detailMember && detailProfile && (

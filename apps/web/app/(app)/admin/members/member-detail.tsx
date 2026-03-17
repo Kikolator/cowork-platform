@@ -160,6 +160,20 @@ export function MemberDetail({
               }
             />
             <DetailRow label="Joined" value={formatDate(member.joined_at)} />
+            <DetailRow
+              label="Last login"
+              value={
+                profile.last_login_at
+                  ? formatRelativeTime(profile.last_login_at)
+                  : <span className="text-muted-foreground">Never</span>
+              }
+            />
+            {member.invited_at && (
+              <DetailRow
+                label="Invite sent"
+                value={formatRelativeTime(member.invited_at)}
+              />
+            )}
             {member.paused_at && (
               <DetailRow label="Paused" value={formatDate(member.paused_at)} />
             )}
