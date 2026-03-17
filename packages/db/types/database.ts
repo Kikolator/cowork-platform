@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -472,6 +467,7 @@ export type Database = {
           fixed_desk_id: string | null
           has_twenty_four_seven: boolean | null
           id: string
+          invited_at: string | null
           joined_at: string | null
           paused_at: string | null
           plan_id: string
@@ -508,6 +504,7 @@ export type Database = {
           fixed_desk_id?: string | null
           has_twenty_four_seven?: boolean | null
           id?: string
+          invited_at?: string | null
           joined_at?: string | null
           paused_at?: string | null
           plan_id: string
@@ -544,6 +541,7 @@ export type Database = {
           fixed_desk_id?: string | null
           has_twenty_four_seven?: boolean | null
           id?: string
+          invited_at?: string | null
           joined_at?: string | null
           paused_at?: string | null
           plan_id?: string
@@ -1304,6 +1302,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          last_login_at: string | null
           phone: string | null
           preferred_lang: string | null
           updated_at: string | null
@@ -1314,6 +1313,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          last_login_at?: string | null
           phone?: string | null
           preferred_lang?: string | null
           updated_at?: string | null
@@ -1324,6 +1324,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          last_login_at?: string | null
           phone?: string | null
           preferred_lang?: string | null
           updated_at?: string | null
@@ -1905,3 +1906,4 @@ export const Constants = {
     },
   },
 } as const
+

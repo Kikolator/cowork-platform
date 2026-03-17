@@ -35,5 +35,23 @@ export const addMemberNoteSchema = z.object({
   category: z.enum(NOTE_CATEGORIES),
 });
 
+export const addMemberSchema = z.object({
+  email: z.string().email("Valid email required"),
+  fullName: z.string().max(200).optional().or(z.literal("")),
+  phone: z.string().max(50).optional().or(z.literal("")),
+  planId: z.string().uuid("Select a plan"),
+  company: z.string().max(200).optional().or(z.literal("")),
+  sendInvite: z.boolean(),
+});
+
+export const sendInviteSchema = z.object({
+  memberId: z.string().uuid(),
+});
+
+export const sendBulkInvitesSchema = z.object({
+  memberIds: z.array(z.string().uuid()).min(1, "Select at least one member"),
+});
+
 export type UpdateMemberValues = z.infer<typeof updateMemberSchema>;
 export type AddMemberNoteValues = z.infer<typeof addMemberNoteSchema>;
+export type AddMemberValues = z.infer<typeof addMemberSchema>;

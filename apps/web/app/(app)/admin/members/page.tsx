@@ -39,7 +39,7 @@ export default async function MembersPage() {
     allUserIds.length > 0
       ? await supabase
           .from("shared_profiles")
-          .select("id, full_name, email, phone, avatar_url")
+          .select("id, full_name, email, phone, avatar_url, last_login_at")
           .in("id", allUserIds)
       : { data: [] };
 
