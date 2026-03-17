@@ -23,12 +23,16 @@ export const IMPORT_ENTITIES = [
 
 export type ImportEntity = (typeof IMPORT_ENTITIES)[number];
 
+/** Internal-only mapping for teams CSV (used during member import, not a wizard step) */
+export type MappableEntity = ImportEntity | "teams";
+
 export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
   resources: {
     displayName: "Resources",
     knownColumns: {
       Name: "name",
       name: "name",
+      "Resource Name": "name",
       Type: "resource_type_name",
       type: "resource_type_name",
       "Resource Type": "resource_type_name",
@@ -59,6 +63,7 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       name: "name",
       Description: "description",
       description: "description",
+      Type: "description",
       Price: "price",
       price: "price",
       "Price (monthly)": "price",
@@ -67,8 +72,9 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       _id: "external_id",
       Id: "external_id",
       id: "external_id",
+      ID: "external_id",
     },
-    required: ["name", "price"],
+    required: ["name"],
     availableFields: [
       { value: "name", label: "Name" },
       { value: "description", label: "Description" },
@@ -82,6 +88,7 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
     knownColumns: {
       Email: "email",
       email: "email",
+      "Email Address": "email",
       Name: "full_name",
       name: "full_name",
       "Full Name": "full_name",
@@ -89,11 +96,15 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       "Last Name": "last_name",
       Company: "company",
       company: "company",
+      "Business Name": "company",
       Phone: "phone",
       phone: "phone",
+      "Phone Number": "phone",
+      phoneNumber: "phone",
       Plan: "plan_name",
       plan: "plan_name",
       "Plan Name": "plan_name",
+      Membership: "plan_name",
       Status: "status",
       status: "status",
       "Start Date": "joined_at",
@@ -101,6 +112,13 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       _id: "external_id",
       Id: "external_id",
       id: "external_id",
+      ID: "external_id",
+      VAT: "vat",
+      "Reg Number": "reg_number",
+      Address: "address",
+      City: "city",
+      Zip: "zip",
+      Country: "country",
     },
     required: ["email"],
     availableFields: [
@@ -113,6 +131,12 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       { value: "plan_name", label: "Plan Name" },
       { value: "status", label: "Status" },
       { value: "joined_at", label: "Join Date" },
+      { value: "vat", label: "VAT Number" },
+      { value: "reg_number", label: "Reg Number" },
+      { value: "address", label: "Address" },
+      { value: "city", label: "City" },
+      { value: "zip", label: "Postal Code" },
+      { value: "country", label: "Country" },
       { value: "external_id", label: "External ID" },
     ],
   },
@@ -126,19 +150,23 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       Email: "member_email",
       email: "member_email",
       "Member Name": "member_name",
+      Member: "member_name",
       "Start Time": "start_time",
       "Start Date": "start_time",
+      Start: "start_time",
       start: "start_time",
       "End Time": "end_time",
       "End Date": "end_time",
+      End: "end_time",
       end: "end_time",
+      "Reference Number": "external_id",
       Status: "status",
       status: "status",
       _id: "external_id",
       Id: "external_id",
       id: "external_id",
     },
-    required: ["resource_name", "member_email", "start_time", "end_time"],
+    required: ["resource_name", "start_time", "end_time"],
     availableFields: [
       { value: "resource_name", label: "Resource Name" },
       { value: "member_email", label: "Member Email" },
@@ -157,6 +185,7 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
       Name: "full_name",
       name: "full_name",
       "Full Name": "full_name",
+      Member: "full_name",
       Company: "company",
       company: "company",
       Phone: "phone",
@@ -182,23 +211,78 @@ export const ENTITY_MAPPINGS: Record<ImportEntity, EntityMapping> = {
   },
 };
 
+/** Teams column mapping (internal — used during member import, not a wizard step) */
+export const TEAMS_MAPPING: EntityMapping = {
+  displayName: "Teams",
+  knownColumns: {
+    Name: "name",
+    name: "name",
+    "Business Name": "business_name",
+    VAT: "vat",
+    "Reg Number": "reg_number",
+    Address: "address",
+    City: "city",
+    State: "state",
+    Zip: "zip",
+    Country: "country",
+    "Email Address": "email",
+    "Billing Address: Address": "billing_address",
+    "Billing Address: City": "billing_city",
+    "Billing Address: State": "billing_state",
+    "Billing Address: Zip": "billing_zip",
+    "Billing Address: Country": "billing_country",
+  },
+  required: ["name"],
+  availableFields: [
+    { value: "name", label: "Name" },
+    { value: "business_name", label: "Business Name" },
+    { value: "vat", label: "VAT" },
+    { value: "reg_number", label: "Reg Number" },
+    { value: "address", label: "Address" },
+    { value: "city", label: "City" },
+    { value: "state", label: "State" },
+    { value: "zip", label: "Postal Code" },
+    { value: "country", label: "Country" },
+    { value: "email", label: "Email" },
+    { value: "billing_address", label: "Billing Address" },
+    { value: "billing_city", label: "Billing City" },
+    { value: "billing_state", label: "Billing State" },
+    { value: "billing_zip", label: "Billing Postal Code" },
+    { value: "billing_country", label: "Billing Country" },
+  ],
+};
+
 /**
  * Auto-detect column mappings from CSV headers.
  * Returns a map of CSV header → platform field.
+ * Uses exact match first, then case-insensitive fallback.
  */
 export function autoDetectMappings(
   headers: string[],
-  entity: ImportEntity,
+  entity: MappableEntity,
 ): Record<string, string> {
-  const mapping = ENTITY_MAPPINGS[entity];
+  const mapping =
+    entity === "teams" ? TEAMS_MAPPING : ENTITY_MAPPINGS[entity];
   const result: Record<string, string> = {};
   const usedFields = new Set<string>();
 
   for (const header of headers) {
-    const match = mapping.knownColumns[header];
-    if (match && !usedFields.has(match)) {
-      result[header] = match;
-      usedFields.add(match);
+    // Exact match first
+    const exactMatch = mapping.knownColumns[header];
+    if (exactMatch && !usedFields.has(exactMatch)) {
+      result[header] = exactMatch;
+      usedFields.add(exactMatch);
+      continue;
+    }
+
+    // Case-insensitive fallback
+    const lowerHeader = header.toLowerCase();
+    for (const [known, field] of Object.entries(mapping.knownColumns)) {
+      if (known.toLowerCase() === lowerHeader && !usedFields.has(field)) {
+        result[header] = field;
+        usedFields.add(field);
+        break;
+      }
     }
   }
 
