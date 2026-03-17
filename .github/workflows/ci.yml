@@ -157,6 +157,21 @@ jobs:
         run: supabase db reset
         working-directory: packages/db
 
+      - name: Wait for Supabase services to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:54321/rest/v1/ -H "apikey: $SUPABASE_ANON_KEY" > /dev/null 2>&1; then
+              echo "Supabase is ready"
+              exit 0
+            fi
+            echo "Waiting for Supabase... ($i/30)"
+            sleep 2
+          done
+          echo "Supabase failed to start"
+          exit 1
+        env:
+          SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+
       - name: Install Playwright browsers (chromium)
         run: npx playwright install --with-deps chromium
         working-directory: apps/web
