@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrigin } from "@/lib/url";
 import { SpacesList } from "./spaces-list";
 
 export default async function SpacesPage() {
@@ -37,5 +39,7 @@ export default async function SpacesPage() {
     redirect("/onboard");
   }
 
-  return <SpacesList spaces={spaces} />;
+  const origin = getOrigin(await headers());
+
+  return <SpacesList spaces={spaces} origin={origin} />;
 }
