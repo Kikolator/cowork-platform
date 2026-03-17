@@ -47,11 +47,11 @@ export function ColumnMapper({
         <span>Maps to</span>
       </div>
 
-      {csvHeaders.map((header) => {
+      {csvHeaders.map((header, index) => {
         const currentValue = columnMap[header] ?? SKIP_VALUE;
         return (
           <div
-            key={header}
+            key={`${index}-${header}`}
             className="grid grid-cols-[1fr,auto,1fr] items-center gap-3"
           >
             <span className="truncate rounded bg-muted px-2 py-1.5 text-sm font-mono">

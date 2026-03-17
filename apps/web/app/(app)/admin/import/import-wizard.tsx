@@ -18,18 +18,29 @@ import {
 } from "./actions";
 import { IMPORT_ENTITIES, type ImportEntity } from "./mappings";
 
-const ENTITY_ACTIONS = {
+const ENTITY_ACTIONS: Record<
+  ImportEntity,
+  (
+    rows: Record<string, string>[],
+    teamRows?: Record<string, string>[],
+  ) => Promise<ImportResult>
+> = {
   resources: importResources,
   plans: importPlans,
   members: importMembers,
   bookings: importBookings,
   leads: importLeads,
-} as const;
+};
 
 type WizardStep =
   | { type: "welcome" }
   | { type: "upload"; entity: ImportEntity }
-  | { type: "preview"; entity: ImportEntity; rows: Record<string, string>[] }
+  | {
+      type: "preview";
+      entity: ImportEntity;
+      rows: Record<string, string>[];
+      teamRows?: Record<string, string>[];
+    }
   | { type: "summary" };
 
 export function ImportWizard() {
@@ -70,8 +81,12 @@ export function ImportWizard() {
     setStep({ type: "summary" });
   }
 
-  function handleDataReady(entity: ImportEntity, rows: Record<string, string>[]) {
-    setStep({ type: "preview", entity, rows });
+  function handleDataReady(
+    entity: ImportEntity,
+    rows: Record<string, string>[],
+    teamRows?: Record<string, string>[],
+  ) {
+    setStep({ type: "preview", entity, rows, teamRows });
   }
 
   function handleImportComplete(entity: ImportEntity, result: ImportResult) {
@@ -91,7 +106,9 @@ export function ImportWizard() {
         <StepUpload
           key={step.entity}
           entity={step.entity}
-          onDataReady={(rows) => handleDataReady(step.entity, rows)}
+          onDataReady={(rows, teamRows) =>
+            handleDataReady(step.entity, rows, teamRows)
+          }
           onSkip={() => nextEntity(step.entity)}
         />
       )}
@@ -101,6 +118,7 @@ export function ImportWizard() {
           key={step.entity}
           entity={step.entity}
           rows={step.rows}
+          teamRows={step.teamRows}
           onImport={ENTITY_ACTIONS[step.entity]}
           onComplete={(result) =>
             handleImportComplete(step.entity, result)

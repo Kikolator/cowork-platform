@@ -24,22 +24,23 @@ export async function importBookings(
       .map((r) => [r.external_id!, r.id]),
   );
 
-  // Pre-fetch members for email resolution
+  // Pre-fetch members for email + name resolution
   const { data: members } = await admin
     .from("members")
     .select("id, user_id")
     .eq("space_id", spaceId);
 
-  // Get emails from shared_profiles for these users
+  // Get emails and names from shared_profiles for these users
   const userIds = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = userIds.length
     ? await admin
         .from("shared_profiles")
-        .select("id, email")
+        .select("id, email, full_name")
         .in("id", userIds)
     : { data: [] };
 
   const memberByEmail = new Map<string, { memberId: string; userId: string }>();
+  const memberByName = new Map<string, { memberId: string; userId: string }>();
   for (const profile of profiles ?? []) {
     const member = members?.find((m) => m.user_id === profile.id);
     if (member) {
@@ -47,6 +48,13 @@ export async function importBookings(
         memberId: member.id,
         userId: member.user_id,
       });
+      if (profile.full_name) {
+        const normalized = profile.full_name.toLowerCase().replace(/\s+/g, " ").trim();
+        memberByName.set(normalized, {
+          memberId: member.id,
+          userId: member.user_id,
+        });
+      }
     }
   }
 
@@ -90,12 +98,18 @@ export async function importBookings(
       continue;
     }
 
-    // Resolve member
-    const member = memberByEmail.get(data.member_email);
+    // Resolve member by email first, then by name
+    const member = data.member_email
+      ? memberByEmail.get(data.member_email)
+      : data.member_name
+        ? memberByName.get(data.member_name.toLowerCase().replace(/\s+/g, " ").trim())
+        : undefined;
+
     if (!member) {
+      const identifier = data.member_email ?? data.member_name ?? "unknown";
       result.errors.push({
         row: i + 1,
-        message: `Member "${data.member_email}" not found. Import members first.`,
+        message: `Member "${identifier}" not found. Import members first.`,
       });
       continue;
     }

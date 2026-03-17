@@ -1,13 +1,25 @@
 "use server";
 
-import { importMemberSchema } from "../schemas";
+import { importMemberSchema, importTeamSchema, type ImportTeam } from "../schemas";
 import { getAdminContext, type ImportResult } from "./shared";
 
 export async function importMembers(
   rows: Record<string, string>[],
+  teamRows?: Record<string, string>[],
 ): Promise<ImportResult> {
   const { admin, spaceId } = await getAdminContext();
   const result: ImportResult = { inserted: 0, skipped: 0, errors: [] };
+
+  // Build team lookup map from optional teams CSV
+  const teamByName = new Map<string, ImportTeam>();
+  if (teamRows?.length) {
+    for (const row of teamRows) {
+      const parsed = importTeamSchema.safeParse(row);
+      if (parsed.success) {
+        teamByName.set(parsed.data.name.toLowerCase(), parsed.data);
+      }
+    }
+  }
 
   // Pre-fetch plans for name → id resolution
   const { data: plans } = await admin
@@ -135,6 +147,36 @@ export async function importMembers(
       continue;
     }
 
+    // Resolve billing data from teams CSV or member's own fields
+    const team = data.company
+      ? teamByName.get(data.company.toLowerCase())
+      : undefined;
+
+    let billingFields: Record<string, unknown> = {};
+    if (team) {
+      // Company billing — use team's data
+      billingFields = {
+        billing_entity_type: "company",
+        billing_company_name: team.business_name ?? team.name,
+        billing_company_tax_id: team.vat ?? null,
+        billing_address_line1: team.resolved_billing_address ?? null,
+        billing_city: team.resolved_billing_city ?? null,
+        billing_postal_code: team.resolved_billing_zip ?? null,
+        billing_state_province: team.resolved_billing_state ?? null,
+        billing_country: team.resolved_billing_country ?? null,
+      };
+    } else if (data.vat || data.address) {
+      // Individual billing — use member's own data
+      billingFields = {
+        billing_entity_type: "individual",
+        fiscal_id: data.vat ?? data.reg_number ?? null,
+        billing_address_line1: data.address ?? null,
+        billing_city: data.city ?? null,
+        billing_postal_code: data.zip ?? null,
+        billing_country: data.country ?? null,
+      };
+    }
+
     const { error } = await admin.from("members").insert({
       space_id: spaceId,
       user_id: userId,
@@ -143,6 +185,7 @@ export async function importMembers(
       company: data.company ?? null,
       joined_at: data.joined_at ?? new Date().toISOString(),
       external_id: data.external_id ?? null,
+      ...billingFields,
     });
 
     if (error) {

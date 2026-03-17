@@ -40,7 +40,11 @@ interface ValidatedRow {
 interface StepPreviewProps {
   entity: ImportEntity;
   rows: Record<string, string>[];
-  onImport: (rows: Record<string, string>[]) => Promise<ImportResult>;
+  teamRows?: Record<string, string>[];
+  onImport: (
+    rows: Record<string, string>[],
+    teamRows?: Record<string, string>[],
+  ) => Promise<ImportResult>;
   onComplete: (result: ImportResult) => void;
   onBack: () => void;
 }
@@ -48,6 +52,7 @@ interface StepPreviewProps {
 export function StepPreview({
   entity,
   rows,
+  teamRows,
   onImport,
   onComplete,
   onBack,
@@ -89,7 +94,7 @@ export function StepPreview({
     setError(null);
     startTransition(async () => {
       try {
-        const result = await onImport(rows);
+        const result = await onImport(rows, teamRows);
         onComplete(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Import failed");
