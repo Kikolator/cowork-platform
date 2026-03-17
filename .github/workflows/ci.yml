@@ -104,13 +104,102 @@ jobs:
 
       - run: npm ci
 
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase (db + API only)
+        run: supabase start -x realtime,storage,imgproxy,inbucket,studio,edge-runtime,logflare,vector,supavisor
+        working-directory: packages/db
+
+      - name: Reset DB (migrations + seed)
+        run: supabase db reset
+        working-directory: packages/db
+
       - name: Turbo test
-        # turbo silently skips packages without a test script — safe to run now
         run: npx turbo run test ${{ env.TURBO_FILTER }}
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+        working-directory: packages/db
 
       - name: Summary
         if: always()
         run: echo "### Test ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── E2E (after lint+typecheck) ───────────────────────────────
+  e2e:
+    name: E2E
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+        working-directory: packages/db
+
+      - name: Reset DB (migrations + seed)
+        run: supabase db reset
+        working-directory: packages/db
+
+      - name: Wait for Supabase services to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:54321/rest/v1/ -H "apikey: $SUPABASE_ANON_KEY" > /dev/null 2>&1; then
+              echo "Supabase is ready"
+              exit 0
+            fi
+            echo "Waiting for Supabase... ($i/30)"
+            sleep 2
+          done
+          echo "Supabase failed to start"
+          exit 1
+        env:
+          SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+
+      - name: Install Playwright browsers (chromium)
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUB_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+          SUPABASE_SECRET_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+        working-directory: packages/db
+
+      - name: Summary
+        if: always()
+        run: echo "### E2E ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
 
   # ─── Supabase database checks ────────────────────────────────
   db-lint:

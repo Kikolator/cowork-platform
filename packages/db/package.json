@@ -1,5 +1,15 @@
 {
   "name": "@cowork/db",
   "private": true,
-  "main": "types/index.ts"
+  "main": "types/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.99.2",
+    "@types/jsonwebtoken": "^9.0.10",
+    "jsonwebtoken": "^9.0.3",
+    "vitest": "^4.1.0"
+  }
 }

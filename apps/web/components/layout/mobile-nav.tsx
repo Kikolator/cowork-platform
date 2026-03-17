@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./sidebar";
 
@@ -22,31 +23,33 @@ export function MobileNav({ spaceRole, spaceName, logoUrl }: MobileNavProps) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Overlay */}
-      {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div className="relative h-full w-60">
-            <button
+      {/* Portal to document.body so overlay escapes header stacking context */}
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <div
+              className="absolute inset-0 bg-black/30 backdrop-blur-sm"
               onClick={() => setOpen(false)}
-              className="absolute right-2 top-3 rounded-lg p-1 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-            <div onClick={() => setOpen(false)} className="h-full">
-              <Sidebar
-                spaceRole={spaceRole}
-                spaceName={spaceName}
-                logoUrl={logoUrl}
-              />
+            />
+            <div className="relative z-50 h-full w-60">
+              <button
+                onClick={() => setOpen(false)}
+                className="absolute right-2 top-3 rounded-lg p-1 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+              <div onClick={() => setOpen(false)} className="h-full">
+                <Sidebar
+                  spaceRole={spaceRole}
+                  spaceName={spaceName}
+                  logoUrl={logoUrl}
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

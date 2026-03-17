@@ -14,10 +14,13 @@ node_modules
 
 # Claude
 .mcp.json
-.claude
+.claude/settings.local.json
 
 # Testing
 coverage
+playwright-report/
+test-results/
+**/e2e/.auth/
 
 # Turbo
 .turbo
@@ -43,3 +46,4 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+.temp/

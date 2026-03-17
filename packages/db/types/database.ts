@@ -90,6 +90,7 @@ export type Database = {
           credits_deducted: number | null
           duration_minutes: number | null
           end_time: string
+          external_id: string | null
           id: string
           recurring_rule_id: string | null
           reminded_at: string | null
@@ -112,6 +113,7 @@ export type Database = {
           credits_deducted?: number | null
           duration_minutes?: number | null
           end_time: string
+          external_id?: string | null
           id?: string
           recurring_rule_id?: string | null
           reminded_at?: string | null
@@ -134,6 +136,7 @@ export type Database = {
           credits_deducted?: number | null
           duration_minutes?: number | null
           end_time?: string
+          external_id?: string | null
           id?: string
           recurring_rule_id?: string | null
           reminded_at?: string | null
@@ -286,6 +289,47 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          admin_id: string
+          completed_at: string | null
+          id: string
+          source: string
+          space_id: string
+          started_at: string | null
+          status: string
+          summary: Json
+        }
+        Insert: {
+          admin_id: string
+          completed_at?: string | null
+          id?: string
+          source?: string
+          space_id: string
+          started_at?: string | null
+          status?: string
+          summary?: Json
+        }
+        Update: {
+          admin_id?: string
+          completed_at?: string | null
+          id?: string
+          source?: string
+          space_id?: string
+          started_at?: string | null
+          status?: string
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_jobs_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           admin_notes: string | null
@@ -294,6 +338,7 @@ export type Database = {
           converted_user_id: string | null
           created_at: string | null
           email: string
+          external_id: string | null
           follow_up_count: number | null
           full_name: string | null
           id: string
@@ -313,6 +358,7 @@ export type Database = {
           converted_user_id?: string | null
           created_at?: string | null
           email: string
+          external_id?: string | null
           follow_up_count?: number | null
           full_name?: string | null
           id?: string
@@ -332,6 +378,7 @@ export type Database = {
           converted_user_id?: string | null
           created_at?: string | null
           email?: string
+          external_id?: string | null
           follow_up_count?: number | null
           full_name?: string | null
           id?: string
@@ -419,11 +466,13 @@ export type Database = {
           cancelled_at: string | null
           company: string | null
           created_at: string | null
+          external_id: string | null
           fiscal_id: string | null
           fiscal_id_type: Database["public"]["Enums"]["fiscal_id_type"] | null
           fixed_desk_id: string | null
           has_twenty_four_seven: boolean | null
           id: string
+          invited_at: string | null
           joined_at: string | null
           paused_at: string | null
           plan_id: string
@@ -454,11 +503,13 @@ export type Database = {
           cancelled_at?: string | null
           company?: string | null
           created_at?: string | null
+          external_id?: string | null
           fiscal_id?: string | null
           fiscal_id_type?: Database["public"]["Enums"]["fiscal_id_type"] | null
           fixed_desk_id?: string | null
           has_twenty_four_seven?: boolean | null
           id?: string
+          invited_at?: string | null
           joined_at?: string | null
           paused_at?: string | null
           plan_id: string
@@ -489,11 +540,13 @@ export type Database = {
           cancelled_at?: string | null
           company?: string | null
           created_at?: string | null
+          external_id?: string | null
           fiscal_id?: string | null
           fiscal_id_type?: Database["public"]["Enums"]["fiscal_id_type"] | null
           fixed_desk_id?: string | null
           has_twenty_four_seven?: boolean | null
           id?: string
+          invited_at?: string | null
           joined_at?: string | null
           paused_at?: string | null
           plan_id?: string
@@ -700,6 +753,7 @@ export type Database = {
           assigned_desk_id: string | null
           created_at: string | null
           end_date: string
+          external_id: string | null
           id: string
           is_guest: boolean
           pass_type: Database["public"]["Enums"]["pass_type"]
@@ -716,6 +770,7 @@ export type Database = {
           assigned_desk_id?: string | null
           created_at?: string | null
           end_date: string
+          external_id?: string | null
           id?: string
           is_guest?: boolean
           pass_type: Database["public"]["Enums"]["pass_type"]
@@ -732,6 +787,7 @@ export type Database = {
           assigned_desk_id?: string | null
           created_at?: string | null
           end_date?: string
+          external_id?: string | null
           id?: string
           is_guest?: boolean
           pass_type?: Database["public"]["Enums"]["pass_type"]
@@ -872,6 +928,7 @@ export type Database = {
           created_at: string | null
           currency: string
           description: string | null
+          external_id: string | null
           has_fixed_desk: boolean | null
           id: string
           iva_rate: number
@@ -890,6 +947,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           description?: string | null
+          external_id?: string | null
           has_fixed_desk?: boolean | null
           id?: string
           iva_rate?: number
@@ -908,6 +966,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           description?: string | null
+          external_id?: string | null
           has_fixed_desk?: boolean | null
           id?: string
           iva_rate?: number
@@ -1139,6 +1198,7 @@ export type Database = {
           billable: boolean | null
           bookable: boolean | null
           created_at: string | null
+          external_id: string | null
           id: string
           name: string
           slug: string
@@ -1150,6 +1210,7 @@ export type Database = {
           billable?: boolean | null
           bookable?: boolean | null
           created_at?: string | null
+          external_id?: string | null
           id?: string
           name: string
           slug: string
@@ -1161,6 +1222,7 @@ export type Database = {
           billable?: boolean | null
           bookable?: boolean | null
           created_at?: string | null
+          external_id?: string | null
           id?: string
           name?: string
           slug?: string
@@ -1182,6 +1244,7 @@ export type Database = {
         Row: {
           capacity: number | null
           created_at: string | null
+          external_id: string | null
           floor: number | null
           id: string
           metadata: Json | null
@@ -1195,6 +1258,7 @@ export type Database = {
         Insert: {
           capacity?: number | null
           created_at?: string | null
+          external_id?: string | null
           floor?: number | null
           id?: string
           metadata?: Json | null
@@ -1208,6 +1272,7 @@ export type Database = {
         Update: {
           capacity?: number | null
           created_at?: string | null
+          external_id?: string | null
           floor?: number | null
           id?: string
           metadata?: Json | null
@@ -1242,6 +1307,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          last_login_at: string | null
           phone: string | null
           preferred_lang: string | null
           updated_at: string | null
@@ -1252,6 +1318,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          last_login_at?: string | null
           phone?: string | null
           preferred_lang?: string | null
           updated_at?: string | null
@@ -1262,6 +1329,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          last_login_at?: string | null
           phone?: string | null
           preferred_lang?: string | null
           updated_at?: string | null
