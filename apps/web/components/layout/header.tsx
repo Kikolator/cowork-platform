@@ -6,6 +6,7 @@ import { UserMenu } from "./user-menu";
 interface HeaderProps {
   spaceName: string;
   logoUrl: string | null;
+  logoDarkUrl?: string | null;
   userEmail: string;
   spaceRole: string;
 }
@@ -13,6 +14,7 @@ interface HeaderProps {
 export function Header({
   spaceName,
   logoUrl,
+  logoDarkUrl,
   userEmail,
   spaceRole,
 }: HeaderProps) {
@@ -23,6 +25,7 @@ export function Header({
           spaceRole={spaceRole}
           spaceName={spaceName}
           logoUrl={logoUrl}
+          logoDarkUrl={logoDarkUrl}
         />
         <span className="text-sm font-semibold text-foreground lg:hidden">
           {spaceName}

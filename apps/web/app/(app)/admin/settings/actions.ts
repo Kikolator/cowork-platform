@@ -52,7 +52,7 @@ export async function updateSpaceBranding(input: unknown) {
   // Check slug uniqueness if changed
   const { data: current } = await supabase
     .from("spaces")
-    .select("slug, tenant_id, logo_url, favicon_url")
+    .select("slug, tenant_id, logo_url, logo_dark_url, favicon_url")
     .eq("id", spaceId)
     .single();
 
@@ -76,6 +76,7 @@ export async function updateSpaceBranding(input: unknown) {
       name: parsed.data.name,
       slug: parsed.data.slug,
       logo_url: parsed.data.logoUrl || null,
+      logo_dark_url: parsed.data.logoDarkUrl || null,
       favicon_url: parsed.data.faviconUrl || null,
       primary_color: parsed.data.primaryColor,
       accent_color: parsed.data.accentColor,
@@ -90,6 +91,13 @@ export async function updateSpaceBranding(input: unknown) {
     const newLogo = parsed.data.logoUrl || null;
     if (oldLogo && oldLogo !== newLogo) {
       const path = extractStoragePath(oldLogo, "space-assets");
+      if (path) await supabase.storage.from("space-assets").remove([path]);
+    }
+
+    const oldLogoDark = current.logo_dark_url;
+    const newLogoDark = parsed.data.logoDarkUrl || null;
+    if (oldLogoDark && oldLogoDark !== newLogoDark) {
+      const path = extractStoragePath(oldLogoDark, "space-assets");
       if (path) await supabase.storage.from("space-assets").remove([path]);
     }
 
