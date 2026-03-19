@@ -6,6 +6,7 @@ import { OperationsForm } from "./operations-form";
 import { FiscalForm } from "./fiscal-form";
 import { FeaturesForm } from "./features-form";
 import { StripeConnect } from "./stripe-connect";
+import { getEffectiveFeePercent } from "@/lib/stripe/fees";
 
 const VALID_TABS = ["branding", "operations", "fiscal", "features", "payments"] as const;
 
@@ -41,16 +42,22 @@ export default async function SettingsPage({
   let stripeAccountId: string | null = null;
   let stripeOnboardingComplete = false;
 
+  let platformFeePercent = 5;
+
   if (tenantId) {
     const admin = createAdminClient();
     const { data: tenant } = await admin
       .from("tenants")
-      .select("stripe_account_id, stripe_onboarding_complete")
+      .select("stripe_account_id, stripe_onboarding_complete, platform_plan, platform_fee_percent")
       .eq("id", tenantId)
       .single();
 
     stripeAccountId = tenant?.stripe_account_id ?? null;
     stripeOnboardingComplete = tenant?.stripe_onboarding_complete ?? false;
+    platformFeePercent = getEffectiveFeePercent(
+      tenant?.platform_plan ?? "free",
+      tenant?.platform_fee_percent ?? null,
+    );
   }
 
   const features = (space.features as Record<string, boolean> | null) ?? {};
@@ -91,7 +98,7 @@ export default async function SettingsPage({
           <StripeConnect
             stripeAccountId={stripeAccountId}
             stripeOnboardingComplete={stripeOnboardingComplete}
-            platformFeePercent={process.env.STRIPE_PLATFORM_FEE_PERCENT ?? "3"}
+            platformFeePercent={platformFeePercent}
           />
         </TabsContent>
       </Tabs>

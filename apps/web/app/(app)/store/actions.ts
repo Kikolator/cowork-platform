@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { verifyStripeReady } from "@/lib/stripe/connect";
+import { getEffectiveFeePercent } from "@/lib/stripe/fees";
 import { findOrCreateCustomer } from "@/lib/stripe/subscriptions";
 import {
   ensureOneTimePriceExists,
@@ -170,20 +171,22 @@ export async function purchasePass(
     }
 
     // Stripe setup
-    const connectedAccountId = await verifyStripeReady(tenantId);
+    const { stripeAccountId, platformPlan, platformFeePercent } =
+      await verifyStripeReady(tenantId);
+    const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
     // Get or create customer (reuse member from visibility check above)
     const customerId = await findOrCreateCustomer({
       email: user.email ?? "",
       name: user.user_metadata?.full_name ?? null,
       existingCustomerId: member?.stripe_customer_id ?? null,
-      connectedAccountId,
+      connectedAccountId: stripeAccountId,
       spaceId,
       userId: user.id,
     });
 
     // Ensure one-time Stripe price
-    const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
+    const priceId = await ensureOneTimePriceExists(product, stripeAccountId, spaceId);
 
     const slug = space?.slug ?? "";
     const successUrl = await buildSpaceUrl(slug, "/store/success?session_id={CHECKOUT_SESSION_ID}");
@@ -192,7 +195,8 @@ export async function purchasePass(
       customerId,
       priceId,
       amountCents: product.price_cents,
-      connectedAccountId,
+      feePercent,
+      connectedAccountId: stripeAccountId,
       spaceId,
       productId,
       productCategory: "pass",
@@ -284,19 +288,21 @@ export async function purchaseProduct(
     }
 
     // Stripe setup
-    const connectedAccountId = await verifyStripeReady(tenantId);
+    const { stripeAccountId, platformPlan, platformFeePercent } =
+      await verifyStripeReady(tenantId);
+    const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
     const customerId = await findOrCreateCustomer({
       email: user.email ?? "",
       name: user.user_metadata?.full_name ?? null,
       existingCustomerId: member?.stripe_customer_id ?? null,
-      connectedAccountId,
+      connectedAccountId: stripeAccountId,
       spaceId,
       userId: user.id,
     });
 
     // Ensure one-time Stripe price
-    const priceId = await ensureOneTimePriceExists(product, connectedAccountId, spaceId);
+    const priceId = await ensureOneTimePriceExists(product, stripeAccountId, spaceId);
 
     const slug = space?.slug ?? "";
     const successUrl = await buildSpaceUrl(slug, "/store/success?session_id={CHECKOUT_SESSION_ID}");
@@ -305,7 +311,8 @@ export async function purchaseProduct(
       customerId,
       priceId,
       amountCents: product.price_cents,
-      connectedAccountId,
+      feePercent,
+      connectedAccountId: stripeAccountId,
       spaceId,
       productId,
       productCategory: product.category,
@@ -362,19 +369,19 @@ export async function purchaseAddon(
     if (!product.active) return { success: false, error: "Product is no longer available" };
     if (product.category !== "addon") return { success: false, error: "Invalid product category" };
 
-    const connectedAccountId = await verifyStripeReady(tenantId);
+    const { stripeAccountId } = await verifyStripeReady(tenantId);
 
     // Ensure recurring price for addon
     const priceId = await ensureRecurringAddonPriceExists(
       product,
-      connectedAccountId,
+      stripeAccountId,
       spaceId,
     );
 
     // Add line item to existing subscription
     const subscription = await getStripe().subscriptions.retrieve(
       member.stripe_subscription_id,
-      { stripeAccount: connectedAccountId },
+      { stripeAccount: stripeAccountId },
     );
 
     const existingItems = subscription.items.data.map((item) => ({
@@ -387,7 +394,7 @@ export async function purchaseAddon(
         items: [...existingItems, { price: priceId }],
         proration_behavior: "create_prorations",
       },
-      { stripeAccount: connectedAccountId },
+      { stripeAccount: stripeAccountId },
     );
 
     // For 24/7 access addon, update the member record

@@ -37,6 +37,7 @@ CREATE TABLE tenants (
   -- Platform billing (what the tenant pays us)
   platform_plan               text NOT NULL DEFAULT 'free'
                               CHECK (platform_plan IN ('free', 'pro', 'enterprise')),
+  platform_fee_percent        smallint CHECK (platform_fee_percent >= 0 AND platform_fee_percent <= 50),
   platform_subscription_id    text,
   trial_ends_at               timestamptz,
   -- Billing contact

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConnectedAccountDetails } from "@/lib/stripe/platform";
 import { cn } from "@/lib/utils";
 import { TenantActions } from "./actions-ui";
+import { PlatformFeeEditor } from "./platform-fee-editor";
 
 function formatCurrency(cents: number, currency = "eur") {
   return new Intl.NumberFormat("en-US", {
@@ -125,6 +126,11 @@ export default async function TenantDetailPage({
                 {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : "N/A"}
               </dd>
             </div>
+            <PlatformFeeEditor
+              tenantId={tenant.id}
+              platformPlan={tenant.platform_plan}
+              currentOverride={tenant.platform_fee_percent ?? null}
+            />
           </dl>
         </div>
 

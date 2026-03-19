@@ -138,7 +138,6 @@ The web app requires the following environment variables in `apps/web/.env.local
 | `STRIPE_SECRET_KEY` | Stripe platform secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe platform webhook signing secret |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | Stripe Connect webhook signing secret |
-| `STRIPE_PLATFORM_FEE_PERCENT` | Platform fee percentage on connected payments (default: `3`) |
 
 For local development with Supabase, the URL and keys are printed by `supabase start`.
 

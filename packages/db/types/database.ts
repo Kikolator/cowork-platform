@@ -1508,6 +1508,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          platform_fee_percent: number | null
           platform_plan: string
           platform_subscription_id: string | null
           slug: string
@@ -1523,6 +1524,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          platform_fee_percent?: number | null
           platform_plan?: string
           platform_subscription_id?: string | null
           slug: string
@@ -1538,6 +1540,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          platform_fee_percent?: number | null
           platform_plan?: string
           platform_subscription_id?: string | null
           slug?: string
