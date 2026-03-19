@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MemberDetail } from "./member-detail";
-import { MemberForm } from "./member-form";
+import { MemberForm, type DeskAssignment } from "./member-form";
 import { AddMemberForm } from "./add-member-form";
 import { sendMemberInvite, sendBulkInvites } from "./actions";
 
@@ -193,6 +193,21 @@ export function MembersTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+
+  // Map deskId → assigned member info (for conflict detection)
+  const deskAssignments = useMemo(() => {
+    const map: Record<string, DeskAssignment> = {};
+    for (const m of members) {
+      if (m.fixed_desk_id) {
+        const profile = profileMap[m.user_id];
+        map[m.fixed_desk_id] = {
+          memberId: m.id,
+          memberName: profile?.full_name ?? profile?.email ?? "Unknown",
+        };
+      }
+    }
+    return map;
+  }, [members, profileMap]);
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -581,6 +596,7 @@ export function MembersTable({
           member={editMember}
           plans={plans}
           desks={desks}
+          deskAssignments={deskAssignments}
         />
       )}
     </>
