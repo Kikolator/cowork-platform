@@ -33,7 +33,6 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_PUB_KEY: LOCAL_ANON_KEY,
       SUPABASE_SECRET_KEY: LOCAL_SERVICE_ROLE_KEY,
       NEXT_PUBLIC_PLATFORM_DOMAIN: "localhost:3000",
-      NEXT_PUBLIC_PROTOCOL: "http",
     },
   },
 });
