@@ -1428,6 +1428,7 @@ export type Database = {
           features: Json
           id: string
           logo_url: string | null
+          min_booking_minutes: number
           name: string
           primary_color: string | null
           require_fiscal_id: boolean | null
@@ -1452,6 +1453,7 @@ export type Database = {
           features?: Json
           id?: string
           logo_url?: string | null
+          min_booking_minutes?: number
           name: string
           primary_color?: string | null
           require_fiscal_id?: boolean | null
@@ -1476,6 +1478,7 @@ export type Database = {
           features?: Json
           id?: string
           logo_url?: string | null
+          min_booking_minutes?: number
           name?: string
           primary_color?: string | null
           require_fiscal_id?: boolean | null

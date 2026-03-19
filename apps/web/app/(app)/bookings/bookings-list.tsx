@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cancelBooking, checkIn, checkOut } from "./actions";
+import { formatCredits } from "@/lib/booking/format";
 
 interface Booking {
   id: string;
@@ -140,7 +141,7 @@ export function BookingsList({ upcoming, past, timezone }: BookingsListProps) {
             {booking.credits_deducted !== null && booking.credits_deducted > 0 && (
               <>
                 <span>·</span>
-                <span>{booking.credits_deducted} min</span>
+                <span>{formatCredits(booking.credits_deducted)}</span>
               </>
             )}
           </div>

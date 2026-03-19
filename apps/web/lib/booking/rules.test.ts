@@ -122,16 +122,29 @@ describe("validateBookingTime", () => {
     expect(result).toEqual({ valid: false, error: "End time is outside business hours" });
   });
 
-  it("rejects when duration is less than 30 minutes", () => {
-    // 09:00 UTC = 10:00 CET, 09:15 UTC = 10:15 CET (15 min)
+  it("rejects when duration is less than default minimum (60 min)", () => {
+    // 09:00 UTC = 10:00 CET, 09:30 UTC = 10:30 CET (30 min, under 60 min default)
     const result = validateBookingTime(
       "2026-03-12T09:00:00.000Z",
-      "2026-03-12T09:15:00.000Z",
+      "2026-03-12T09:30:00.000Z",
       WEEKDAY_HOURS,
       TZ,
       [],
     );
-    expect(result).toEqual({ valid: false, error: "Minimum booking is 30 minutes" });
+    expect(result).toEqual({ valid: false, error: "Minimum booking is 1 hour" });
+  });
+
+  it("rejects when duration is less than custom minimum (15 min)", () => {
+    // 09:00 UTC = 10:00 CET, 09:10 UTC = 10:10 CET (10 min, under 15 min custom)
+    const result = validateBookingTime(
+      "2026-03-12T09:00:00.000Z",
+      "2026-03-12T09:10:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+      15,
+    );
+    expect(result).toEqual({ valid: false, error: "Minimum booking is 15 minutes" });
   });
 
   it("rejects when duration exceeds 240 minutes", () => {
