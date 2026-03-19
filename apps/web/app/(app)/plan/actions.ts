@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { verifyStripeReady } from "@/lib/stripe/connect";
+import { getEffectiveFeePercent } from "@/lib/stripe/fees";
 import {
   ensureStripePriceExists,
   createCheckoutSession,
@@ -107,17 +108,19 @@ export async function subscribeToPlan(
     }
 
     // Verify Stripe is ready
-    const connectedAccountId = await verifyStripeReady(tenantId);
+    const { stripeAccountId, platformPlan, platformFeePercent } =
+      await verifyStripeReady(tenantId);
+    const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
     // Ensure Stripe price exists
-    const priceId = await ensureStripePriceExists(plan, connectedAccountId, spaceId);
+    const priceId = await ensureStripePriceExists(plan, stripeAccountId, spaceId);
 
     // Find or create customer
     const customerId = await findOrCreateCustomer({
       email: user.email ?? "",
       name: user.user_metadata?.full_name ?? null,
       existingCustomerId: existingMember?.stripe_customer_id ?? null,
-      connectedAccountId,
+      connectedAccountId: stripeAccountId,
       spaceId,
       userId: user.id,
     });
@@ -145,7 +148,8 @@ export async function subscribeToPlan(
     const session = await createCheckoutSession({
       customerId,
       priceId,
-      connectedAccountId,
+      connectedAccountId: stripeAccountId,
+      feePercent,
       spaceId,
       planId,
       userId: user.id,
@@ -204,14 +208,14 @@ export async function changePlan(newPlanId: string): Promise<
     if (!newPlan) return { success: false, error: "Plan not found" };
     if (!newPlan.active) return { success: false, error: "This plan is no longer available" };
 
-    const connectedAccountId = await verifyStripeReady(tenantId);
-    const priceId = await ensureStripePriceExists(newPlan, connectedAccountId, spaceId);
+    const { stripeAccountId } = await verifyStripeReady(tenantId);
+    const priceId = await ensureStripePriceExists(newPlan, stripeAccountId, spaceId);
 
     await updateSubscriptionPrice({
       subscriptionId: member.stripe_subscription_id,
       newPriceId: priceId,
       newPlanId,
-      connectedAccountId,
+      connectedAccountId: stripeAccountId,
     });
 
     revalidatePath("/plan");
@@ -247,10 +251,10 @@ export async function cancelSubscription(): Promise<
       return { success: false, error: "No subscription found" };
     }
 
-    const connectedAccountId = await verifyStripeReady(tenantId);
+    const { stripeAccountId } = await verifyStripeReady(tenantId);
     const subscription = await cancelSubscriptionAtPeriodEnd(
       member.stripe_subscription_id,
-      connectedAccountId,
+      stripeAccountId,
     );
 
     await admin
@@ -302,10 +306,10 @@ export async function resumeSubscription(): Promise<
       return { success: false, error: "No subscription found" };
     }
 
-    const connectedAccountId = await verifyStripeReady(tenantId);
+    const { stripeAccountId } = await verifyStripeReady(tenantId);
     await resumeSubscriptionCancellation(
       member.stripe_subscription_id,
-      connectedAccountId,
+      stripeAccountId,
     );
 
     await admin

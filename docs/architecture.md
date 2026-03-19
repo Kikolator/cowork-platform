@@ -287,7 +287,8 @@ graph LR
 
 ### Platform Fee
 
-The platform collects a configurable application fee (default 3%, set via `STRIPE_PLATFORM_FEE_PERCENT`):
+The platform collects a per-tenant application fee. Each tenant's fee is determined by their platform plan (free=5%, pro=3%, enterprise=1%) with an optional per-tenant override stored in `tenants.platform_fee_percent`. Platform admins can adjust the fee from the admin app.
+
 - **Subscriptions**: Percentage-based via `application_fee_percent`
 - **One-time payments**: Fixed amount via `application_fee_amount` calculated from the total
 

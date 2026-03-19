@@ -117,6 +117,7 @@ export async function createOneTimeCheckoutSession(params: {
   customerId: string;
   priceId: string;
   amountCents: number;
+  feePercent: number;
   connectedAccountId: string;
   spaceId: string;
   productId: string;
@@ -132,7 +133,10 @@ export async function createOneTimeCheckoutSession(params: {
       customer: params.customerId,
       line_items: [{ price: params.priceId, quantity: 1 }],
       payment_intent_data: {
-        application_fee_amount: calculateApplicationFee(params.amountCents),
+        application_fee_amount: calculateApplicationFee(
+          params.amountCents,
+          params.feePercent,
+        ),
       },
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
