@@ -60,7 +60,7 @@ Implement one migration at a time. Never skip RLS or rollback comments.
 
 ## Database
 - Migration version: 5 digits increment +1 from previous version.
-- Current latest: `00019`. Next: `00020`.
+- Current latest: `00020`. Next: `00021`.
 - Security first.
 - Creating a multi-tenant platform.
 
