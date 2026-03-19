@@ -9,6 +9,8 @@ import {
   Eye,
   Plus,
   Mail,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -193,8 +195,11 @@ export function MembersTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
 
   const filtered = useMemo(() => {
+    setPage(0);
     return members.filter((m) => {
       if (statusFilter && m.status !== statusFilter) return false;
       if (planFilter && m.plan_id !== planFilter) return false;
@@ -209,6 +214,9 @@ export function MembersTable({
       return true;
     });
   }, [members, search, statusFilter, planFilter, profileMap]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   // Members eligible for invite (not yet logged in)
   const uninvitedFiltered = useMemo(
@@ -427,14 +435,14 @@ export function MembersTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                     No members match your filters
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((member) => {
+                paginated.map((member) => {
                   const profile = profileMap[member.user_id];
                   const statusCfg = STATUS_CONFIG[member.status] ?? STATUS_CONFIG.active!;
                   const loginStatus = getLoginStatus(profile, member);
@@ -541,6 +549,37 @@ export function MembersTable({
               )}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of{" "}
+            {filtered.length} members
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-2 text-sm tabular-nums">
+              {page + 1} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
