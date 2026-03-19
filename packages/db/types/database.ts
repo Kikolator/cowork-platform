@@ -1662,6 +1662,7 @@ export type Database = {
           total_desks: number
         }[]
       }
+      get_platform_stats: { Args: never; Returns: Json }
       get_room_availability: {
         Args: { p_date: string; p_resource_id: string; p_space_id: string }
         Returns: {
