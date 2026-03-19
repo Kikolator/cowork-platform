@@ -58,7 +58,7 @@ export async function bookRoom(
   // 2. Get space config
   const { data: space } = await supabase
     .from("spaces")
-    .select("timezone, business_hours")
+    .select("timezone, business_hours, min_booking_minutes")
     .eq("id", spaceId)
     .single();
 
@@ -78,6 +78,7 @@ export async function bookRoom(
     businessHours,
     timezone,
     closures,
+    space.min_booking_minutes,
   );
 
   if (!validation.valid) {

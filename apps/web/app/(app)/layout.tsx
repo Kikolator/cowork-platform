@@ -36,18 +36,20 @@ export default async function AppLayout({
   // Fetch space branding
   const spaceId = headersList.get("x-space-id");
   let logoUrl: string | null = null;
+  let logoDarkUrl: string | null = null;
   let primaryColor = "#000000";
   let accentColor = "#3b82f6";
 
   if (spaceId) {
     const { data: space } = await supabase
       .from("spaces")
-      .select("logo_url, primary_color, accent_color")
+      .select("logo_url, logo_dark_url, primary_color, accent_color")
       .eq("id", spaceId)
       .single();
 
     if (space) {
       logoUrl = space.logo_url;
+      logoDarkUrl = space.logo_dark_url;
       primaryColor = space.primary_color ?? primaryColor;
       accentColor = space.accent_color ?? accentColor;
     }
@@ -76,6 +78,7 @@ export default async function AppLayout({
           spaceRole={spaceRole}
           spaceName={spaceName}
           logoUrl={logoUrl}
+          logoDarkUrl={logoDarkUrl}
         />
       </div>
 
@@ -84,6 +87,7 @@ export default async function AppLayout({
         <Header
           spaceName={spaceName}
           logoUrl={logoUrl}
+          logoDarkUrl={logoDarkUrl}
           userEmail={user.email ?? ""}
           spaceRole={spaceRole}
         />

@@ -9,9 +9,10 @@ interface MobileNavProps {
   spaceRole: string;
   spaceName: string;
   logoUrl: string | null;
+  logoDarkUrl?: string | null;
 }
 
-export function MobileNav({ spaceRole, spaceName, logoUrl }: MobileNavProps) {
+export function MobileNav({ spaceRole, spaceName, logoUrl, logoDarkUrl }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -44,6 +45,7 @@ export function MobileNav({ spaceRole, spaceName, logoUrl }: MobileNavProps) {
                   spaceRole={spaceRole}
                   spaceName={spaceName}
                   logoUrl={logoUrl}
+                  logoDarkUrl={logoDarkUrl}
                 />
               </div>
             </div>

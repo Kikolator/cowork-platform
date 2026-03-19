@@ -4,6 +4,7 @@ export interface SpaceContext {
   slug: string;
   name: string;
   logoUrl: string | null;
+  logoDarkUrl: string | null;
   primaryColor: string;
   accentColor: string;
 }

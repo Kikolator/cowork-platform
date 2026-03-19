@@ -60,12 +60,20 @@ interface BusinessHours {
   [key: string]: { open: string; close: string } | null;
 }
 
+const MIN_BOOKING_OPTIONS = [
+  { value: 15, label: "15 minutes" },
+  { value: 30, label: "30 minutes" },
+  { value: 60, label: "1 hour" },
+  { value: 120, label: "2 hours" },
+] as const;
+
 interface OperationsFormProps {
   space: {
     timezone: string;
     currency: string;
     default_locale: string;
     business_hours: unknown;
+    min_booking_minutes: number;
   };
 }
 
@@ -84,12 +92,14 @@ export function OperationsForm({ space }: OperationsFormProps) {
       currency: space.currency,
       defaultLocale: space.default_locale as OperationsFormValues["defaultLocale"],
       businessHours: initialHours,
+      minBookingMinutes: space.min_booking_minutes,
     },
   });
 
   const watchTimezone = watch("timezone");
   const watchCurrency = watch("currency");
   const watchLocale = watch("defaultLocale");
+  const watchMinBooking = watch("minBookingMinutes");
 
   function updateDay(day: string, value: { open: string; close: string } | null) {
     const next = { ...hours, [day]: value };
@@ -168,6 +178,26 @@ export function OperationsForm({ space }: OperationsFormProps) {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Minimum booking time</Label>
+        <Select
+          value={String(watchMinBooking)}
+          onValueChange={(v) => { if (v) setValue("minBookingMinutes", parseInt(v, 10)); }}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MIN_BOOKING_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Shortest duration a member can book.
+        </p>
       </div>
 
       <div className="space-y-3">

@@ -1427,7 +1427,9 @@ export type Database = {
           favicon_url: string | null
           features: Json
           id: string
+          logo_dark_url: string | null
           logo_url: string | null
+          min_booking_minutes: number
           name: string
           primary_color: string | null
           require_fiscal_id: boolean | null
@@ -1451,7 +1453,9 @@ export type Database = {
           favicon_url?: string | null
           features?: Json
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
+          min_booking_minutes?: number
           name: string
           primary_color?: string | null
           require_fiscal_id?: boolean | null
@@ -1475,7 +1479,9 @@ export type Database = {
           favicon_url?: string | null
           features?: Json
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
+          min_booking_minutes?: number
           name?: string
           primary_color?: string | null
           require_fiscal_id?: boolean | null
@@ -1502,6 +1508,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          platform_fee_percent: number | null
           platform_plan: string
           platform_subscription_id: string | null
           slug: string
@@ -1517,6 +1524,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          platform_fee_percent?: number | null
           platform_plan?: string
           platform_subscription_id?: string | null
           slug: string
@@ -1532,6 +1540,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          platform_fee_percent?: number | null
           platform_plan?: string
           platform_subscription_id?: string | null
           slug?: string
@@ -1656,6 +1665,7 @@ export type Database = {
           total_desks: number
         }[]
       }
+      get_platform_stats: { Args: never; Returns: Json }
       get_room_availability: {
         Args: { p_date: string; p_resource_id: string; p_space_id: string }
         Returns: {

@@ -72,15 +72,25 @@ export async function isAccountOnboarded(accountId: string): Promise<{
   };
 }
 
+export interface TenantStripeInfo {
+  stripeAccountId: string;
+  platformPlan: string;
+  platformFeePercent: number | null;
+}
+
 /**
  * Verify a tenant's Stripe account is ready for payments.
  * Call before any Stripe API call on a connected account.
  */
-export async function verifyStripeReady(tenantId: string): Promise<string> {
+export async function verifyStripeReady(
+  tenantId: string,
+): Promise<TenantStripeInfo> {
   const admin = createAdminClient();
   const { data: tenant } = await admin
     .from("tenants")
-    .select("stripe_account_id, stripe_onboarding_complete")
+    .select(
+      "stripe_account_id, stripe_onboarding_complete, platform_plan, platform_fee_percent",
+    )
     .eq("id", tenantId)
     .single();
 
@@ -96,5 +106,9 @@ export async function verifyStripeReady(tenantId: string): Promise<string> {
     );
   }
 
-  return tenant.stripe_account_id;
+  return {
+    stripeAccountId: tenant.stripe_account_id,
+    platformPlan: tenant.platform_plan,
+    platformFeePercent: tenant.platform_fee_percent ?? null,
+  };
 }

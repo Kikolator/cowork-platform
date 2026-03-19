@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/(app)/dashboard/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface UserMenuProps {
   userEmail: string;
@@ -65,6 +66,10 @@ export function UserMenu({ userEmail, spaceRole }: UserMenuProps) {
           >
             Profile
           </Link>
+          <div className="border-t border-[var(--glass-border)] px-3 py-2">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Theme</p>
+            <ThemeToggle />
+          </div>
           <form action={signOut}>
             <button
               type="submit"

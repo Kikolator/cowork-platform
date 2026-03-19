@@ -23,7 +23,7 @@ import {
 interface StripeConnectProps {
   stripeAccountId: string | null;
   stripeOnboardingComplete: boolean;
-  platformFeePercent: string;
+  platformFeePercent: number;
 }
 
 export function StripeConnect({

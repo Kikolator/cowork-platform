@@ -23,26 +23,69 @@ interface ImageUploadProps {
   previewClassName?: string;
 }
 
-function getExtension(filename: string): string {
-  const dot = filename.lastIndexOf(".");
-  return dot === -1 ? "png" : filename.slice(dot + 1).toLowerCase();
-}
-
-function loadImageDimensions(
-  file: File,
-): Promise<{ width: number; height: number }> {
+function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      resolve(img);
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
       reject(new Error("Failed to load image"));
     };
     img.src = url;
+  });
+}
+
+/**
+ * Resize and compress a raster image to fit within maxWidth×maxHeight
+ * and maxBytes. Uses Canvas API with WebP output for best compression.
+ * Progressively lowers quality until the file fits.
+ */
+async function processImage(
+  file: File,
+  maxWidth: number,
+  maxHeight: number,
+  maxBytes: number,
+): Promise<File> {
+  const img = await loadImage(file);
+  let { naturalWidth: w, naturalHeight: h } = img;
+
+  // Scale down to fit within max dimensions (preserve aspect ratio)
+  if (w > maxWidth || h > maxHeight) {
+    const scale = Math.min(maxWidth / w, maxHeight / h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  // Try WebP at decreasing quality until under maxBytes
+  const qualities = [0.9, 0.8, 0.7, 0.5, 0.3];
+  for (const quality of qualities) {
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", quality),
+    );
+    if (blob && blob.size <= maxBytes) {
+      return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
+        type: "image/webp",
+      });
+    }
+  }
+
+  // Final fallback: already at lowest quality, use whatever we got
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.2),
+  );
+  if (!blob) throw new Error("Failed to compress image");
+  return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
+    type: "image/webp",
   });
 }
 
@@ -66,8 +109,11 @@ export function ImageUpload({
   const [error, setError] = useState<string | null>(null);
 
   const acceptTypes = accept.split(",").map((t) => t.trim());
-  const isSvg = (type: string) =>
-    type === "image/svg+xml" || type === "image/svg";
+  const isVector = (type: string) =>
+    type === "image/svg+xml" ||
+    type === "image/svg" ||
+    type === "image/x-icon" ||
+    type === "image/vnd.microsoft.icon";
 
   async function handleFile(file: File) {
     setError(null);
@@ -80,25 +126,21 @@ export function ImageUpload({
       return;
     }
 
-    // Validate file size
     const maxBytes = maxSizeMb * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setError(`File is too large. Maximum size is ${maxSizeMb}MB.`);
-      return;
-    }
+    let fileToUpload = file;
 
-    // Validate dimensions (skip for SVG — vector format)
-    if (!isSvg(file.type)) {
+    if (isVector(file.type)) {
+      // Vectors can't be processed via Canvas — enforce size limit directly
+      if (file.size > maxBytes) {
+        setError(`File is too large. Maximum size is ${maxSizeMb}MB.`);
+        return;
+      }
+    } else {
+      // Raster images: auto-resize and compress to fit limits
       try {
-        const { width, height } = await loadImageDimensions(file);
-        if (width > maxWidth || height > maxHeight) {
-          setError(
-            `Image is too large. Maximum dimensions are ${maxWidth}\u00D7${maxHeight}px.`,
-          );
-          return;
-        }
+        fileToUpload = await processImage(file, maxWidth, maxHeight, maxBytes);
       } catch {
-        setError("Could not read image dimensions.");
+        setError("Could not process image. Try a different file.");
         return;
       }
     }
@@ -107,12 +149,12 @@ export function ImageUpload({
     setUploading(true);
     try {
       const supabase = createClient();
-      const ext = getExtension(file.name);
+      const ext = fileToUpload.name.split(".").pop() ?? "webp";
       const path = `${spaceId}/${pathPrefix}-${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(path, file, { upsert: false });
+        .upload(path, fileToUpload, { upsert: false });
 
       if (uploadError) {
         setError(uploadError.message);
@@ -139,7 +181,7 @@ export function ImageUpload({
     if (file) void handleFile(file);
   }
 
-  const defaultHint = `PNG, JPG, WebP or SVG. Max ${maxSizeMb}MB, ${maxWidth}\u00D7${maxHeight}px.`;
+  const defaultHint = `PNG, JPG, WebP or SVG. Images are auto-resized to ${maxWidth}\u00D7${maxHeight}px.`;
 
   return (
     <div className="space-y-2">

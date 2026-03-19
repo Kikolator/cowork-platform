@@ -9,11 +9,14 @@ import {
   Eye,
   Plus,
   Mail,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -37,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MemberDetail } from "./member-detail";
-import { MemberForm } from "./member-form";
+import { MemberForm, type DeskAssignment } from "./member-form";
 import { AddMemberForm } from "./add-member-form";
 import { sendMemberInvite, sendBulkInvites } from "./actions";
 
@@ -168,6 +171,13 @@ function formatRelativeDate(dateStr: string): string {
   return formatDate(dateStr);
 }
 
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0]![0]!.toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
 function getLoginStatus(
   profile: ProfileEntry | undefined,
   member: Member,
@@ -193,6 +203,23 @@ export function MembersTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
+
+  // Map deskId → assigned member info (for conflict detection)
+  const deskAssignments = useMemo(() => {
+    const map: Record<string, DeskAssignment> = {};
+    for (const m of members) {
+      if (m.fixed_desk_id) {
+        const profile = profileMap[m.user_id];
+        map[m.fixed_desk_id] = {
+          memberId: m.id,
+          memberName: profile?.full_name ?? profile?.email ?? "Unknown",
+        };
+      }
+    }
+    return map;
+  }, [members, profileMap]);
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -209,6 +236,11 @@ export function MembersTable({
       return true;
     });
   }, [members, search, statusFilter, planFilter, profileMap]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  // Clamp page to valid range (handles filter changes reducing total pages)
+  const safePage = totalPages > 0 ? Math.min(page, totalPages - 1) : 0;
+  const paginated = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
   // Members eligible for invite (not yet logged in)
   const uninvitedFiltered = useMemo(
@@ -301,13 +333,13 @@ export function MembersTable({
           <Input
             placeholder="Search by name, email, or company..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             className="pl-9"
           />
         </div>
         <Select
           value={planFilter}
-          onValueChange={(v) => setPlanFilter(v)}
+          onValueChange={(v) => { setPlanFilter(v); setPage(0); }}
         >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All plans">
@@ -326,7 +358,7 @@ export function MembersTable({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setPlanFilter(null)}
+            onClick={() => { setPlanFilter(null); setPage(0); }}
             className="text-xs text-muted-foreground"
           >
             Clear
@@ -336,7 +368,7 @@ export function MembersTable({
           <Button
             variant={statusFilter === null ? "default" : "outline"}
             size="sm"
-            onClick={() => setStatusFilter(null)}
+            onClick={() => { setStatusFilter(null); setPage(0); }}
           >
             All
           </Button>
@@ -345,7 +377,7 @@ export function MembersTable({
               key={s}
               variant={statusFilter === s ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setPage(0); }}
             >
               {STATUS_LABELS[s]}
             </Button>
@@ -427,14 +459,14 @@ export function MembersTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                     No members match your filters
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((member) => {
+                paginated.map((member) => {
                   const profile = profileMap[member.user_id];
                   const statusCfg = STATUS_CONFIG[member.status] ?? STATUS_CONFIG.active!;
                   const loginStatus = getLoginStatus(profile, member);
@@ -455,15 +487,25 @@ export function MembersTable({
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">
-                            {profile?.full_name ?? profile?.email ?? "Unknown"}
-                          </div>
-                          {profile?.full_name && (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {profile.email}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar size="sm">
+                            {profile?.avatar_url && (
+                              <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? profile.email} />
+                            )}
+                            <AvatarFallback>
+                              {getInitials(profile?.full_name ?? null)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">
+                              {profile?.full_name ?? profile?.email ?? "Unknown"}
                             </div>
-                          )}
+                            {profile?.full_name && (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {profile.email}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -544,6 +586,37 @@ export function MembersTable({
         </div>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, filtered.length)} of{" "}
+            {filtered.length} members
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-2 text-sm tabular-nums">
+              {safePage + 1} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={safePage >= totalPages - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Create dialog */}
       <AddMemberForm
         open={createOpen}
@@ -581,6 +654,7 @@ export function MembersTable({
           member={editMember}
           plans={plans}
           desks={desks}
+          deskAssignments={deskAssignments}
         />
       )}
     </>

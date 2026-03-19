@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { brandingSchema, operationsSchema, fiscalSchema } from "./schemas";
+import { isReservedSlug } from "@/lib/reserved-slugs";
 import {
   getOrCreateConnectAccount,
   createAccountLink,
@@ -52,11 +53,15 @@ export async function updateSpaceBranding(input: unknown) {
   // Check slug uniqueness if changed
   const { data: current } = await supabase
     .from("spaces")
-    .select("slug, tenant_id, logo_url, favicon_url")
+    .select("slug, tenant_id, logo_url, logo_dark_url, favicon_url")
     .eq("id", spaceId)
     .single();
 
   if (current && parsed.data.slug !== current.slug) {
+    if (isReservedSlug(parsed.data.slug)) {
+      return { success: false as const, error: "This slug is reserved and cannot be used" };
+    }
+
     const { data: existing } = await supabase
       .from("spaces")
       .select("id")
@@ -76,6 +81,7 @@ export async function updateSpaceBranding(input: unknown) {
       name: parsed.data.name,
       slug: parsed.data.slug,
       logo_url: parsed.data.logoUrl || null,
+      logo_dark_url: parsed.data.logoDarkUrl || null,
       favicon_url: parsed.data.faviconUrl || null,
       primary_color: parsed.data.primaryColor,
       accent_color: parsed.data.accentColor,
@@ -90,6 +96,13 @@ export async function updateSpaceBranding(input: unknown) {
     const newLogo = parsed.data.logoUrl || null;
     if (oldLogo && oldLogo !== newLogo) {
       const path = extractStoragePath(oldLogo, "space-assets");
+      if (path) await supabase.storage.from("space-assets").remove([path]);
+    }
+
+    const oldLogoDark = current.logo_dark_url;
+    const newLogoDark = parsed.data.logoDarkUrl || null;
+    if (oldLogoDark && oldLogoDark !== newLogoDark) {
+      const path = extractStoragePath(oldLogoDark, "space-assets");
       if (path) await supabase.storage.from("space-assets").remove([path]);
     }
 
@@ -120,6 +133,7 @@ export async function updateSpaceOperations(input: unknown) {
       currency: parsed.data.currency,
       default_locale: parsed.data.defaultLocale,
       business_hours: parsed.data.businessHours,
+      min_booking_minutes: parsed.data.minBookingMinutes,
     })
     .eq("id", spaceId);
 

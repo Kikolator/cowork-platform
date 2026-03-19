@@ -3,11 +3,6 @@ import type Stripe from "stripe";
 import { getStripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const PLATFORM_FEE_PERCENT = parseInt(
-  process.env.STRIPE_PLATFORM_FEE_PERCENT ?? "3",
-  10,
-);
-
 /**
  * Ensure a Stripe Product + Price exists for a plan on the connected account.
  * Creates them lazily if missing, then saves the IDs to the plan record.
@@ -64,6 +59,7 @@ export async function createCheckoutSession(params: {
   customerId: string;
   priceId: string;
   connectedAccountId: string;
+  feePercent: number;
   spaceId: string;
   planId: string;
   userId: string;
@@ -76,7 +72,7 @@ export async function createCheckoutSession(params: {
       customer: params.customerId,
       line_items: [{ price: params.priceId, quantity: 1 }],
       subscription_data: {
-        application_fee_percent: PLATFORM_FEE_PERCENT,
+        application_fee_percent: params.feePercent,
         metadata: {
           space_id: params.spaceId,
           plan_id: params.planId,
