@@ -167,7 +167,7 @@ export function BrandingForm({ space }: BrandingFormProps) {
               maxWidth={256}
               maxHeight={256}
               label="Favicon"
-              hint="PNG, JPG, WebP, SVG or ICO. Max 1MB, 256×256px."
+              hint="PNG, JPG, WebP, SVG or ICO. Images are auto-resized to 256×256px."
               previewClassName="h-8 w-8"
               onUploaded={(url) => setValue("faviconUrl", url, { shouldDirty: true })}
               onCleared={() => setValue("faviconUrl", "", { shouldDirty: true })}
