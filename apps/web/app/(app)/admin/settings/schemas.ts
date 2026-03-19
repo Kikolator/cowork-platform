@@ -4,6 +4,7 @@ export const brandingSchema = z.object({
   name: z.string().min(2).max(100),
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and hyphens only"),
   logoUrl: z.string().url().optional().or(z.literal("")),
+  logoDarkUrl: z.string().url().optional().or(z.literal("")),
   faviconUrl: z.string().url().optional().or(z.literal("")),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color"),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color"),

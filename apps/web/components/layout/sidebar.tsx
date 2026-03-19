@@ -8,9 +8,10 @@ interface SidebarProps {
   spaceRole: string;
   spaceName: string;
   logoUrl: string | null;
+  logoDarkUrl?: string | null;
 }
 
-export function Sidebar({ spaceRole, spaceName, logoUrl }: SidebarProps) {
+export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = spaceRole === "admin" || spaceRole === "owner";
 
@@ -22,11 +23,26 @@ export function Sidebar({ spaceRole, spaceName, logoUrl }: SidebarProps) {
       {/* Space branding */}
       <div className="flex h-14 items-center gap-2 border-b border-[var(--glass-border)] px-4">
         {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt={spaceName}
-            className="h-7 w-7 rounded-lg object-cover shadow-sm"
-          />
+          logoDarkUrl ? (
+            <>
+              <img
+                src={logoUrl}
+                alt={spaceName}
+                className="h-7 w-7 rounded-lg object-cover shadow-sm dark:hidden"
+              />
+              <img
+                src={logoDarkUrl}
+                alt={spaceName}
+                className="hidden h-7 w-7 rounded-lg object-cover shadow-sm dark:block"
+              />
+            </>
+          ) : (
+            <img
+              src={logoUrl}
+              alt={spaceName}
+              className="h-7 w-7 rounded-lg object-cover shadow-sm"
+            />
+          )
         ) : (
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-sm">
             {spaceName.charAt(0).toUpperCase()}

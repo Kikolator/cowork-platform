@@ -49,7 +49,7 @@ async function lookupSpace(hostname: string): Promise<SpaceContext | null> {
 
   const base = supabase
     .from("spaces")
-    .select("id, tenant_id, slug, name, logo_url, primary_color, accent_color")
+    .select("id, tenant_id, slug, name, logo_url, logo_dark_url, primary_color, accent_color")
     .eq("active", true);
 
   const query = isCustomDomain
@@ -72,6 +72,7 @@ function toSpaceContext(data: {
   slug: string;
   name: string;
   logo_url: string | null;
+  logo_dark_url: string | null;
   primary_color: string | null;
   accent_color: string | null;
 }): SpaceContext {
@@ -81,6 +82,7 @@ function toSpaceContext(data: {
     slug: data.slug,
     name: data.name,
     logoUrl: data.logo_url,
+    logoDarkUrl: data.logo_dark_url,
     primaryColor: data.primary_color ?? "#000000",
     accentColor: data.accent_color ?? "#3b82f6",
   };
@@ -99,7 +101,7 @@ export async function resolveSpaceBySlug(
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("spaces")
-    .select("id, tenant_id, slug, name, logo_url, primary_color, accent_color")
+    .select("id, tenant_id, slug, name, logo_url, logo_dark_url, primary_color, accent_color")
     .eq("active", true)
     .eq("slug", slug)
     .limit(1)

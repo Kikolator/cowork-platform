@@ -25,6 +25,7 @@ interface BrandingFormProps {
     name: string;
     slug: string;
     logo_url: string | null;
+    logo_dark_url: string | null;
     favicon_url: string | null;
     primary_color: string | null;
     accent_color: string | null;
@@ -49,6 +50,7 @@ export function BrandingForm({ space }: BrandingFormProps) {
       name: space.name,
       slug: space.slug,
       logoUrl: space.logo_url ?? "",
+      logoDarkUrl: space.logo_dark_url ?? "",
       faviconUrl: space.favicon_url ?? "",
       primaryColor: space.primary_color ?? "#000000",
       accentColor: space.accent_color ?? "#3b82f6",
@@ -133,6 +135,27 @@ export function BrandingForm({ space }: BrandingFormProps) {
             {errors.logoUrl && <p className="text-xs text-destructive">{errors.logoUrl.message}</p>}
           </div>
           <div className="space-y-1.5">
+            <Label>Dark Mode Logo</Label>
+            <ImageUpload
+              currentUrl={watch("logoDarkUrl") || null}
+              spaceId={space.id}
+              bucket="space-assets"
+              pathPrefix="logo-dark"
+              maxSizeMb={2}
+              maxWidth={512}
+              maxHeight={512}
+              label="Dark Mode Logo"
+              hint="Optional. Used when dark mode is active."
+              previewClassName="h-16 w-auto"
+              onUploaded={(url) => setValue("logoDarkUrl", url, { shouldDirty: true })}
+              onCleared={() => setValue("logoDarkUrl", "", { shouldDirty: true })}
+            />
+            {errors.logoDarkUrl && <p className="text-xs text-destructive">{errors.logoDarkUrl.message}</p>}
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <Label>Favicon</Label>
             <ImageUpload
               currentUrl={watch("faviconUrl") || null}
@@ -144,7 +167,7 @@ export function BrandingForm({ space }: BrandingFormProps) {
               maxWidth={256}
               maxHeight={256}
               label="Favicon"
-              hint="PNG, JPG, WebP, SVG or ICO. Max 1MB, 256×256px."
+              hint="PNG, JPG, WebP, SVG or ICO. Images are auto-resized to 256×256px."
               previewClassName="h-8 w-8"
               onUploaded={(url) => setValue("faviconUrl", url, { shouldDirty: true })}
               onCleared={() => setValue("faviconUrl", "", { shouldDirty: true })}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,12 +59,18 @@ function findLabel<T extends { value: string; label: string }>(
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
+export interface DeskAssignment {
+  memberId: string;
+  memberName: string;
+}
+
 interface MemberFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   member: Member;
   plans: { id: string; name: string }[];
   desks: { id: string; name: string }[];
+  deskAssignments: Record<string, DeskAssignment>;
 }
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -77,7 +84,7 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
-export function MemberForm({ open, onOpenChange, member, plans, desks }: MemberFormProps) {
+export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssignments }: MemberFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -124,6 +131,14 @@ export function MemberForm({ open, onOpenChange, member, plans, desks }: MemberF
   const deskLabel = watchFixedDeskId
     ? desks.find((d) => d.id === watchFixedDeskId)?.name ?? "Unknown"
     : "None";
+
+  // Conflict: selected desk is assigned to a different member
+  const deskConflict =
+    watchFixedDeskId &&
+    deskAssignments[watchFixedDeskId] &&
+    deskAssignments[watchFixedDeskId].memberId !== member.id
+      ? deskAssignments[watchFixedDeskId]
+      : null;
 
   function onSubmit(data: UpdateMemberValues) {
     setServerError(null);
@@ -215,11 +230,26 @@ export function MemberForm({ open, onOpenChange, member, plans, desks }: MemberF
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">None</SelectItem>
-                    {desks.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
+                    {desks.map((d) => {
+                      const assignee = deskAssignments[d.id];
+                      const isOccupied = assignee && assignee.memberId !== member.id;
+                      return (
+                        <SelectItem key={d.id} value={d.id}>
+                          <span className={isOccupied ? "text-amber-600 dark:text-amber-400" : ""}>
+                            {d.name}
+                            {isOccupied && ` (${assignee.memberName})`}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+                {deskConflict && (
+                  <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                    <TriangleAlert className="h-3 w-3 shrink-0" />
+                    Already assigned to {deskConflict.memberName}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="accessCode">Access code</Label>

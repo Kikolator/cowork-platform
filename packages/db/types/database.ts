@@ -1427,6 +1427,7 @@ export type Database = {
           favicon_url: string | null
           features: Json
           id: string
+          logo_dark_url: string | null
           logo_url: string | null
           min_booking_minutes: number
           name: string
@@ -1452,6 +1453,7 @@ export type Database = {
           favicon_url?: string | null
           features?: Json
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           min_booking_minutes?: number
           name: string
@@ -1477,6 +1479,7 @@ export type Database = {
           favicon_url?: string | null
           features?: Json
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           min_booking_minutes?: number
           name?: string

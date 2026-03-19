@@ -4,6 +4,7 @@ import { Pencil, Shield, Clock, Building2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -71,6 +72,13 @@ interface MemberDetailProps {
   onEdit: () => void;
 }
 
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0]![0]!.toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
@@ -121,16 +129,26 @@ export function MemberDetail({
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl" showCloseButton={false}>
         <DialogHeader>
           <div className="flex items-start justify-between">
-            <div>
-              <DialogTitle>
-                {profile.full_name ?? profile.email}
-              </DialogTitle>
-              {profile.full_name && (
-                <p className="mt-0.5 text-sm text-muted-foreground">{profile.email}</p>
-              )}
-              {profile.phone && (
-                <p className="text-sm text-muted-foreground">{profile.phone}</p>
-              )}
+            <div className="flex items-center gap-3">
+              <Avatar size="lg">
+                {profile.avatar_url && (
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? profile.email} />
+                )}
+                <AvatarFallback>
+                  {getInitials(profile.full_name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle>
+                  {profile.full_name ?? profile.email}
+                </DialogTitle>
+                {profile.full_name && (
+                  <p className="mt-0.5 text-sm text-muted-foreground">{profile.email}</p>
+                )}
+                {profile.phone && (
+                  <p className="text-sm text-muted-foreground">{profile.phone}</p>
+                )}
+              </div>
             </div>
             <Button variant="outline" size="sm" onClick={onEdit}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
