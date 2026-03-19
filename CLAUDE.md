@@ -59,8 +59,8 @@ Use it as the source of truth when implementing migrations.
 Implement one migration at a time. Never skip RLS or rollback comments.
 
 ## Database
-- Migration version: 5 digits increment +1 from previous version.
-- Current latest: `00020`. Next: `00021`.
+- Use `supabase migration new <name>` to create migrations (generates timestamp prefix, avoids version collisions across parallel branches/worktrees).
+- Legacy migrations use `00001`–`00021` sequential numbering. New migrations use timestamp format (`YYYYMMDDHHmmss_name.sql`).
 - Security first.
 - Creating a multi-tenant platform.
 
