@@ -1427,6 +1427,7 @@ export type Database = {
           favicon_url: string | null
           features: Json
           id: string
+          logo_dark_url: string | null
           logo_url: string | null
           name: string
           primary_color: string | null
@@ -1451,6 +1452,7 @@ export type Database = {
           favicon_url?: string | null
           features?: Json
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           name: string
           primary_color?: string | null
@@ -1475,6 +1477,7 @@ export type Database = {
           favicon_url?: string | null
           features?: Json
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           name?: string
           primary_color?: string | null
