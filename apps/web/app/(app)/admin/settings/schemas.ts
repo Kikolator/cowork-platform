@@ -23,6 +23,7 @@ export const operationsSchema = z.object({
       z.null(),
     ])
   ),
+  minBookingMinutes: z.number().int().min(15).max(480),
 });
 
 export type OperationsFormValues = z.infer<typeof operationsSchema>;

@@ -128,6 +128,7 @@ export async function updateSpaceOperations(input: unknown) {
       currency: parsed.data.currency,
       default_locale: parsed.data.defaultLocale,
       business_hours: parsed.data.businessHours,
+      min_booking_minutes: parsed.data.minBookingMinutes,
     })
     .eq("id", spaceId);
 

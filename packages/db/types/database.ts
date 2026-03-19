@@ -1429,6 +1429,7 @@ export type Database = {
           id: string
           logo_dark_url: string | null
           logo_url: string | null
+          min_booking_minutes: number
           name: string
           primary_color: string | null
           require_fiscal_id: boolean | null
@@ -1454,6 +1455,7 @@ export type Database = {
           id?: string
           logo_dark_url?: string | null
           logo_url?: string | null
+          min_booking_minutes?: number
           name: string
           primary_color?: string | null
           require_fiscal_id?: boolean | null
@@ -1479,6 +1481,7 @@ export type Database = {
           id?: string
           logo_dark_url?: string | null
           logo_url?: string | null
+          min_booking_minutes?: number
           name?: string
           primary_color?: string | null
           require_fiscal_id?: boolean | null
