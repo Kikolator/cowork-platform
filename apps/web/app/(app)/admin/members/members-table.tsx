@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -166,6 +167,13 @@ function formatRelativeDate(dateStr: string): string {
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 30) return `${diffDays}d ago`;
   return formatDate(dateStr);
+}
+
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0]![0]!.toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
 function getLoginStatus(
@@ -455,15 +463,25 @@ export function MembersTable({
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">
-                            {profile?.full_name ?? profile?.email ?? "Unknown"}
-                          </div>
-                          {profile?.full_name && (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {profile.email}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar size="sm">
+                            {profile?.avatar_url && (
+                              <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? profile.email} />
+                            )}
+                            <AvatarFallback>
+                              {getInitials(profile?.full_name ?? null)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">
+                              {profile?.full_name ?? profile?.email ?? "Unknown"}
                             </div>
-                          )}
+                            {profile?.full_name && (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {profile.email}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
