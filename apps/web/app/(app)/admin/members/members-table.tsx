@@ -199,7 +199,6 @@ export function MembersTable({
   const pageSize = 25;
 
   const filtered = useMemo(() => {
-    setPage(0);
     return members.filter((m) => {
       if (statusFilter && m.status !== statusFilter) return false;
       if (planFilter && m.plan_id !== planFilter) return false;
@@ -216,7 +215,9 @@ export function MembersTable({
   }, [members, search, statusFilter, planFilter, profileMap]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
-  const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  // Clamp page to valid range (handles filter changes reducing total pages)
+  const safePage = totalPages > 0 ? Math.min(page, totalPages - 1) : 0;
+  const paginated = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
   // Members eligible for invite (not yet logged in)
   const uninvitedFiltered = useMemo(
@@ -309,13 +310,13 @@ export function MembersTable({
           <Input
             placeholder="Search by name, email, or company..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             className="pl-9"
           />
         </div>
         <Select
           value={planFilter}
-          onValueChange={(v) => setPlanFilter(v)}
+          onValueChange={(v) => { setPlanFilter(v); setPage(0); }}
         >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All plans">
@@ -334,7 +335,7 @@ export function MembersTable({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setPlanFilter(null)}
+            onClick={() => { setPlanFilter(null); setPage(0); }}
             className="text-xs text-muted-foreground"
           >
             Clear
@@ -344,7 +345,7 @@ export function MembersTable({
           <Button
             variant={statusFilter === null ? "default" : "outline"}
             size="sm"
-            onClick={() => setStatusFilter(null)}
+            onClick={() => { setStatusFilter(null); setPage(0); }}
           >
             All
           </Button>
@@ -353,7 +354,7 @@ export function MembersTable({
               key={s}
               variant={statusFilter === s ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setPage(0); }}
             >
               {STATUS_LABELS[s]}
             </Button>
@@ -556,7 +557,7 @@ export function MembersTable({
       {totalPages > 1 && (
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of{" "}
+            {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, filtered.length)} of{" "}
             {filtered.length} members
           </p>
           <div className="flex items-center gap-1">
@@ -564,18 +565,18 @@ export function MembersTable({
               variant="outline"
               size="icon-xs"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
+              disabled={safePage === 0}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="px-2 text-sm tabular-nums">
-              {page + 1} / {totalPages}
+              {safePage + 1} / {totalPages}
             </span>
             <Button
               variant="outline"
               size="icon-xs"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
+              disabled={safePage >= totalPages - 1}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
