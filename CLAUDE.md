@@ -5,7 +5,8 @@ White-label coworking management platform. Turborepo monorepo.
 ## Structure
 
 ```
-apps/web          → Next.js 16 (App Router) — the product
+apps/web          → Next.js 16 (App Router) — tenant-facing product
+apps/admin        → Next.js 16 (App Router) — platform admin dashboard (admin.rogueops.app)
 packages/db       → Supabase: migrations, edge functions, generated types
 ```
 

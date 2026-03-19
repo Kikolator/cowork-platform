@@ -3,20 +3,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const RESERVED_SLUGS = [
-  "app",
-  "www",
-  "api",
-  "admin",
-  "auth",
-  "login",
-  "onboard",
-  "dashboard",
-  "static",
-  "assets",
-  "cdn",
-] as const;
+import { isReservedSlug } from "@/lib/reserved-slugs";
 
 const DEFAULT_RATE_CENTS: Record<string, number> = {
   meeting_room: 490,
@@ -65,7 +52,7 @@ const onboardSchema = z.object({
 type OnboardInput = z.infer<typeof onboardSchema>;
 
 export async function checkSlugAvailable(slug: string): Promise<boolean> {
-  if (RESERVED_SLUGS.includes(slug as (typeof RESERVED_SLUGS)[number])) {
+  if (isReservedSlug(slug)) {
     return false;
   }
 

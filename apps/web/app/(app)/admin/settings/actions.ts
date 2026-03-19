@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
 import { brandingSchema, operationsSchema, fiscalSchema } from "./schemas";
+import { isReservedSlug } from "@/lib/reserved-slugs";
 import {
   getOrCreateConnectAccount,
   createAccountLink,
@@ -57,6 +58,10 @@ export async function updateSpaceBranding(input: unknown) {
     .single();
 
   if (current && parsed.data.slug !== current.slug) {
+    if (isReservedSlug(parsed.data.slug)) {
+      return { success: false as const, error: "This slug is reserved and cannot be used" };
+    }
+
     const { data: existing } = await supabase
       .from("spaces")
       .select("id")
