@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDeskAvailabilityRange, getClosures } from "@/lib/booking/availability";
 import {
   validateDeskBookingDate,
+  validateBookingTime,
   getAdvanceBookingLimit,
 } from "@/lib/booking/rules";
 import {
@@ -46,8 +47,10 @@ export async function getDeskAvailability(
 
 export async function bookDesk(
   date: string,
+  startTime?: string,
+  endTime?: string,
 ): Promise<
-  | { success: true; bookingId: string; deskName: string }
+  | { success: true; bookingId: string; deskName: string; startTime: string; endTime: string }
   | { success: false; error: string }
 > {
   const { supabase, user, spaceId } = await getContext();
@@ -67,7 +70,7 @@ export async function bookDesk(
   // 2. Get space info
   const { data: space } = await supabase
     .from("spaces")
-    .select("timezone, business_hours")
+    .select("timezone, business_hours, min_booking_minutes")
     .eq("id", spaceId)
     .single();
 
@@ -94,6 +97,26 @@ export async function bookDesk(
 
   const dayStartUtc = toUTC(date, hours.open, timezone);
   const dayEndUtc = toUTC(date, hours.close, timezone);
+
+  // Determine actual booking times (custom or full day)
+  const bookingStartUtc = startTime ? toUTC(date, startTime, timezone) : dayStartUtc;
+  const bookingEndUtc = endTime ? toUTC(date, endTime, timezone) : dayEndUtc;
+
+  // Validate custom time range if provided
+  if (startTime && endTime) {
+    const timeValidation = validateBookingTime(
+      bookingStartUtc,
+      bookingEndUtc,
+      businessHours,
+      timezone,
+      closures,
+      space.min_booking_minutes,
+      null, // no max for desks
+    );
+    if (!timeValidation.valid) {
+      return { success: false, error: timeValidation.error! };
+    }
+  }
 
   const { data: existing } = await supabase
     .from("bookings")
@@ -147,14 +170,14 @@ export async function bookDesk(
       .filter((id): id is string => id !== null),
   );
 
-  // Exclude desks with bookings on this date
+  // Exclude desks with overlapping bookings for the selected time range
   const { data: bookedDesks } = await supabase
     .from("bookings")
     .select("resource_id")
     .eq("space_id", spaceId)
     .in("status", ["confirmed", "checked_in"])
-    .lt("start_time", dayEndUtc)
-    .gt("end_time", dayStartUtc);
+    .lt("start_time", bookingEndUtc)
+    .gt("end_time", bookingStartUtc);
 
   const bookedDeskIds = new Set((bookedDesks ?? []).map((b) => b.resource_id));
 
@@ -189,8 +212,8 @@ export async function bookDesk(
       p_space_id: spaceId,
       p_user_id: user.id,
       p_resource_id: availableDesk.id,
-      p_start_time: dayStartUtc,
-      p_end_time: dayEndUtc,
+      p_start_time: bookingStartUtc,
+      p_end_time: bookingEndUtc,
     },
   );
 
@@ -212,5 +235,7 @@ export async function bookDesk(
     success: true,
     bookingId: bookingId as string,
     deskName: availableDesk.name,
+    startTime: startTime ?? hours.open,
+    endTime: endTime ?? hours.close,
   };
 }

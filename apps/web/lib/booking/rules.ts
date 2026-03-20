@@ -34,6 +34,7 @@ export function validateBookingTime(
   timezone: string,
   closures: string[],
   minBookingMinutes = 60,
+  maxBookingMinutes: number | null = 240,
 ): ValidationResult {
   const now = new Date();
   const start = new Date(startTimeUtc);
@@ -91,8 +92,11 @@ export function validateBookingTime(
       : `${minBookingMinutes} minutes`;
     return { valid: false, error: `Minimum booking is ${label}` };
   }
-  if (durationMinutes > 240) {
-    return { valid: false, error: "Maximum booking is 4 hours" };
+  if (maxBookingMinutes !== null && durationMinutes > maxBookingMinutes) {
+    const label = maxBookingMinutes >= 60
+      ? `${maxBookingMinutes / 60} hour${maxBookingMinutes > 60 ? "s" : ""}`
+      : `${maxBookingMinutes} minutes`;
+    return { valid: false, error: `Maximum booking is ${label}` };
   }
 
   return { valid: true };
