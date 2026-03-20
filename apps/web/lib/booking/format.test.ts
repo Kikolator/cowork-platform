@@ -212,17 +212,20 @@ describe("formatDuration", () => {
 // ── formatCredits ───────────────────────────────────────────────────────
 
 describe("formatCredits", () => {
-  it("delegates to formatDuration", () => {
-    expect(formatCredits(90)).toBe("1h 30m");
-    expect(formatCredits(60)).toBe("1h");
+  it("converts minutes to credit count (1 credit = 1 hour)", () => {
+    expect(formatCredits(60)).toBe("1");
+    expect(formatCredits(90)).toBe("1.5");
+    expect(formatCredits(120)).toBe("2");
   });
 
   it("formats zero credits", () => {
-    expect(formatCredits(0)).toBe("0m");
+    expect(formatCredits(0)).toBe("0");
   });
 
-  it("formats small credit amounts", () => {
-    expect(formatCredits(15)).toBe("15m");
+  it("formats fractional credit amounts", () => {
+    expect(formatCredits(15)).toBe("0.25");
+    expect(formatCredits(30)).toBe("0.5");
+    expect(formatCredits(45)).toBe("0.75");
   });
 });
 
