@@ -80,6 +80,73 @@ test.describe("Admin Plans page", () => {
     // The PlanForm dialog should open
     await expect(page.getByRole("dialog")).toBeVisible();
   });
+
+  test("create plan dialog contains expected form fields", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: /create plan/i }).first().click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    // Dialog title and description
+    await expect(
+      dialog.getByRole("heading", { name: /create plan/i }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(/set up a new membership tier for your space/i),
+    ).toBeVisible();
+
+    // Basics section
+    await expect(dialog.getByLabel("Name")).toBeVisible();
+    await expect(dialog.getByLabel("Slug")).toBeVisible();
+    await expect(dialog.getByLabel(/description/i)).toBeVisible();
+
+    // Pricing section
+    await expect(dialog.getByLabel(/monthly price/i)).toBeVisible();
+    await expect(dialog.getByLabel(/tax rate/i)).toBeVisible();
+
+    // Access section
+    await expect(dialog.getByLabel(/access level/i)).toBeVisible();
+    await expect(dialog.getByText(/fixed desk included/i)).toBeVisible();
+
+    // Footer buttons
+    await expect(
+      dialog.getByRole("button", { name: /cancel/i }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: /create plan/i }),
+    ).toBeVisible();
+  });
+
+  test("create plan dialog can be closed with Cancel", async ({ page }) => {
+    await page.getByRole("button", { name: /create plan/i }).first().click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole("button", { name: /cancel/i }).click();
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test("empty state Create your first plan button opens dialog", async ({
+    page,
+  }) => {
+    const emptyButton = page.getByRole("button", {
+      name: /create your first plan/i,
+    });
+    const hasEmptyState = await emptyButton.isVisible().catch(() => false);
+
+    if (hasEmptyState) {
+      await emptyButton.click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await expect(
+        page
+          .getByRole("dialog")
+          .getByRole("heading", { name: /create plan/i }),
+      ).toBeVisible();
+    }
+  });
 });
 
 test.describe("Admin Resources page", () => {
@@ -160,5 +227,100 @@ test.describe("Admin Resources page", () => {
 
     // The ResourceTypeForm dialog should open
     await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("add resource type dialog contains expected form fields", async ({
+    page,
+  }) => {
+    await page
+      .getByRole("button", { name: /add resource type/i })
+      .first()
+      .click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    // Dialog title and description
+    await expect(
+      dialog.getByRole("heading", { name: /add resource type/i }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText(/create a new category for your bookable resources/i),
+    ).toBeVisible();
+
+    // Form fields
+    await expect(dialog.getByLabel("Name")).toBeVisible();
+    await expect(dialog.getByLabel("Slug")).toBeVisible();
+    await expect(dialog.getByText("Bookable")).toBeVisible();
+    await expect(dialog.getByText("Billable")).toBeVisible();
+
+    // Footer buttons
+    await expect(
+      dialog.getByRole("button", { name: /cancel/i }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: /create/i }),
+    ).toBeVisible();
+  });
+
+  test("add resource type dialog can be closed with Cancel", async ({
+    page,
+  }) => {
+    await page
+      .getByRole("button", { name: /add resource type/i })
+      .first()
+      .click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole("button", { name: /cancel/i }).click();
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test("empty state Add your first resource type button opens dialog", async ({
+    page,
+  }) => {
+    const emptyButton = page.getByRole("button", {
+      name: /add your first resource type/i,
+    });
+    const hasEmptyState = await emptyButton.isVisible().catch(() => false);
+
+    if (hasEmptyState) {
+      await emptyButton.click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      await expect(
+        dialog.getByRole("heading", { name: /add resource type/i }),
+      ).toBeVisible();
+    }
+  });
+
+  test("resource type groups show resource table when resources exist", async ({
+    page,
+  }) => {
+    const emptyHeading = page.getByText("No resource types configured");
+    const hasEmptyState = await emptyHeading.isVisible().catch(() => false);
+
+    if (!hasEmptyState) {
+      // Check if any resource table exists within the groups
+      const tables = page.getByRole("table");
+      const hasTable = await tables.first().isVisible().catch(() => false);
+
+      if (hasTable) {
+        // Verify table has Name column header
+        await expect(
+          page.getByRole("columnheader", { name: /name/i }).first(),
+        ).toBeVisible();
+        // Verify table has Floor column header
+        await expect(
+          page.getByRole("columnheader", { name: /floor/i }).first(),
+        ).toBeVisible();
+        // Verify table has Status column header
+        await expect(
+          page.getByRole("columnheader", { name: /status/i }).first(),
+        ).toBeVisible();
+      }
+    }
   });
 });
