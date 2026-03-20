@@ -25,7 +25,7 @@ export async function grantMonthlyCredits(params: {
     if (config.is_unlimited) continue;
     if (config.monthly_minutes === 0) continue;
 
-    await admin.rpc("grant_credits", {
+    const { error } = await admin.rpc("grant_credits", {
       p_space_id: params.spaceId,
       p_user_id: params.userId,
       p_resource_type_id: config.resource_type_id,
@@ -35,6 +35,10 @@ export async function grantMonthlyCredits(params: {
       p_valid_until: params.validUntil.toISOString(),
       p_stripe_invoice_id: params.stripeInvoiceId,
     });
+
+    if (error) {
+      throw new Error(`grant_credits failed for resource ${config.resource_type_id}: ${error.message}`);
+    }
   }
 }
 
