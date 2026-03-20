@@ -156,8 +156,9 @@ jobs:
       - name: Export Supabase keys
         id: supabase-keys
         run: |
-          echo "anon_key=$(supabase status -o env | grep ANON_KEY | cut -d= -f2-)" >> "$GITHUB_OUTPUT"
-          echo "service_role_key=$(supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2-)" >> "$GITHUB_OUTPUT"
+          eval "$(supabase status -o env)"
+          echo "anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
+          echo "service_role_key=${SERVICE_ROLE_KEY}" >> "$GITHUB_OUTPUT"
         working-directory: packages/db
 
       - name: Reset DB (migrations + seed)
