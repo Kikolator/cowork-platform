@@ -87,9 +87,9 @@ test.describe("Dashboard admin sections", () => {
       page.getByRole("heading", { name: "Quick Stats" }),
     ).toBeVisible();
 
-    await expect(page.getByText("Members")).toBeVisible();
-    await expect(page.getByText("Resources")).toBeVisible();
-    await expect(page.getByText("Plans configured")).toBeVisible();
+    await expect(page.locator("main").getByText("Members")).toBeVisible();
+    await expect(page.locator("main").getByText("Resources")).toBeVisible();
+    await expect(page.locator("main").getByText("Plans configured")).toBeVisible();
   });
 
   test("admin user sees Setup Checklist section", async ({ page }) => {

@@ -189,13 +189,13 @@ test.describe("My Bookings page (/bookings)", () => {
   });
 
   test("has a Book button linking to /book", async ({ page }) => {
-    const bookButton = page.getByRole("link", { name: /book/i });
+    const bookButton = page.locator("main").getByRole("link", { name: "Book", exact: true });
     await expect(bookButton).toBeVisible();
     await expect(bookButton).toHaveAttribute("href", "/book");
   });
 
   test("Book button navigates to /book", async ({ page }) => {
-    const bookButton = page.getByRole("link", { name: /book/i });
+    const bookButton = page.locator("main").getByRole("link", { name: "Book", exact: true });
     await bookButton.click();
     await page.waitForURL("**/book");
     expect(page.url()).toContain("/book");
@@ -223,7 +223,7 @@ test.describe("Booking flow navigation", () => {
     ).toBeVisible();
 
     // Click Book button to go to /book
-    const bookButton = page.getByRole("link", { name: /book/i });
+    const bookButton = page.locator("main").getByRole("link", { name: "Book", exact: true });
     await bookButton.click();
     await page.waitForURL("**/book");
     await expect(

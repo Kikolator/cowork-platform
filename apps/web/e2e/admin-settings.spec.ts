@@ -117,12 +117,13 @@ test.describe("Admin Settings - Tab Navigation via URL", () => {
     await expect(featuresTab).toHaveAttribute("aria-selected", "true");
 
     // Features form content - feature toggle labels
-    await expect(page.getByText("Passes")).toBeVisible();
-    await expect(page.getByText("Credits")).toBeVisible();
-    await expect(page.getByText("Leads")).toBeVisible();
-    await expect(page.getByText("Recurring Bookings")).toBeVisible();
-    await expect(page.getByText("Guest Passes")).toBeVisible();
-    await expect(page.getByText("Open Registration")).toBeVisible();
+    const main = page.locator("main");
+    await expect(main.getByText("Passes")).toBeVisible();
+    await expect(main.getByText("Credits")).toBeVisible();
+    await expect(main.getByText("Leads")).toBeVisible();
+    await expect(main.getByText("Recurring Bookings")).toBeVisible();
+    await expect(main.getByText("Guest Passes")).toBeVisible();
+    await expect(main.getByText("Open Registration")).toBeVisible();
   });
 
   test("navigates to Payments tab via ?tab=payments", async ({ page }) => {
@@ -182,7 +183,7 @@ test.describe("Admin Settings - Tab Switching via Click", () => {
     await expect(
       page.getByRole("tab", { name: "Features" }),
     ).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText("Passes")).toBeVisible();
+    await expect(page.locator("main").getByText("Passes")).toBeVisible();
 
     // Click Payments tab
     await page.getByRole("tab", { name: "Payments" }).click();
@@ -266,7 +267,7 @@ test.describe("Admin Settings - Features Tab Content", () => {
 
   test("each feature has a toggle switch", async ({ page }) => {
     await page.goto("/admin/settings?tab=features");
-    await expect(page.getByText("Passes")).toBeVisible();
+    await expect(page.locator("main").getByText("Passes")).toBeVisible();
 
     // There should be 6 switch toggles (one per feature flag)
     const switches = page.getByRole("switch");
