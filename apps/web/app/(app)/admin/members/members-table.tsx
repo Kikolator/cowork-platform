@@ -340,6 +340,7 @@ export function MembersTable({
         <Select
           value={planFilter}
           onValueChange={(v) => { setPlanFilter(v); setPage(0); }}
+          items={plans.map((p) => ({ value: p.id, label: p.name }))}
         >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All plans">

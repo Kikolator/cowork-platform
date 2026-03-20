@@ -290,6 +290,7 @@ export function PlanForm({
                   onValueChange={(v) => {
                     if (v) setValue("currency", v);
                   }}
+                  items={CURRENCIES.map((c) => ({ value: c, label: c.toUpperCase() }))}
                 >
                   <SelectTrigger id="currency">
                     <SelectValue />
@@ -333,6 +334,7 @@ export function PlanForm({
                       v as PlanFormValues["accessType"]
                     );
                 }}
+                items={ACCESS_TYPES.map((at) => ({ value: at.value, label: at.label }))}
               >
                 <SelectTrigger id="accessType">
                   <SelectValue />

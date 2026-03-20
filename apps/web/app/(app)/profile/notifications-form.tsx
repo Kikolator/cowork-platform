@@ -132,6 +132,7 @@ export function NotificationsForm({ preferences }: NotificationsFormProps) {
           onValueChange={(v) => {
             if (v) setPreferredChannel(v as NotificationsValues["preferredChannel"]);
           }}
+          items={CHANNELS.map((c) => ({ value: c.value, label: c.label }))}
         >
           <SelectTrigger className="w-[200px]">
             <SelectValue>

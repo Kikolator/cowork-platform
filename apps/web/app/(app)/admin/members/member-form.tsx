@@ -180,6 +180,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                 <Select
                   value={watchPlanId}
                   onValueChange={(v) => { if (v) setValue("planId", v); }}
+                  items={plans.map((p) => ({ value: p.id, label: p.name }))}
                 >
                   <SelectTrigger>
                     <SelectValue>{planLabel}</SelectValue>
@@ -198,6 +199,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                   onValueChange={(v) => {
                     if (v) setValue("status", v as UpdateMemberValues["status"]);
                   }}
+                  items={MEMBER_STATUSES.map((s) => ({ value: s.value, label: s.label }))}
                 >
                   <SelectTrigger>
                     <SelectValue>{findLabel(MEMBER_STATUSES, watchStatus)}</SelectValue>
@@ -224,6 +226,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                   onValueChange={(v) => {
                     setValue("fixedDeskId", v === "__none__" ? null : v);
                   }}
+                  items={[{ value: "__none__", label: "None" }, ...desks.map((d) => ({ value: d.id, label: d.name }))]}
                 >
                   <SelectTrigger>
                     <SelectValue>{deskLabel}</SelectValue>
@@ -318,6 +321,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                   onValueChange={(v) => {
                     if (v) setValue("billingEntityType", v as UpdateMemberValues["billingEntityType"]);
                   }}
+                  items={BILLING_ENTITY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
                 >
                   <SelectTrigger>
                     <SelectValue>{findLabel(BILLING_ENTITY_TYPES, watchBillingEntityType)}</SelectValue>
@@ -336,6 +340,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                   onValueChange={(v) => {
                     setValue("fiscalIdType", v === "__none__" ? null : v as UpdateMemberValues["fiscalIdType"]);
                   }}
+                  items={[{ value: "__none__", label: "None" }, ...FISCAL_ID_TYPES.map((t) => ({ value: t.value, label: t.label }))]}
                 >
                   <SelectTrigger>
                     <SelectValue>{findLabel(FISCAL_ID_TYPES, watchFiscalIdType)}</SelectValue>
@@ -373,6 +378,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                           v === "__none__" ? null : v as UpdateMemberValues["billingCompanyTaxIdType"],
                         );
                       }}
+                      items={[{ value: "__none__", label: "None" }, ...FISCAL_ID_TYPES.map((t) => ({ value: t.value, label: t.label }))]}
                     >
                       <SelectTrigger>
                         <SelectValue>{findLabel(FISCAL_ID_TYPES, watchBillingCompanyTaxIdType)}</SelectValue>
