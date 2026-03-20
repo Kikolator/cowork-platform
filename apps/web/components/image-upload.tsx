@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { Upload, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { processImage } from "@/lib/image-processing";
+import { CropDialog, type CropConfig } from "@/components/crop-dialog";
 
 const DEFAULT_ACCEPT = "image/png,image/jpeg,image/webp,image/svg+xml";
 
@@ -21,72 +23,7 @@ interface ImageUploadProps {
   maxHeight?: number;
   hint?: string;
   previewClassName?: string;
-}
-
-function loadImage(file: File): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Failed to load image"));
-    };
-    img.src = url;
-  });
-}
-
-/**
- * Resize and compress a raster image to fit within maxWidth×maxHeight
- * and maxBytes. Uses Canvas API with WebP output for best compression.
- * Progressively lowers quality until the file fits.
- */
-async function processImage(
-  file: File,
-  maxWidth: number,
-  maxHeight: number,
-  maxBytes: number,
-): Promise<File> {
-  const img = await loadImage(file);
-  let { naturalWidth: w, naturalHeight: h } = img;
-
-  // Scale down to fit within max dimensions (preserve aspect ratio)
-  if (w > maxWidth || h > maxHeight) {
-    const scale = Math.min(maxWidth / w, maxHeight / h);
-    w = Math.round(w * scale);
-    h = Math.round(h * scale);
-  }
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, w, h);
-
-  // Try WebP at decreasing quality until under maxBytes
-  const qualities = [0.9, 0.8, 0.7, 0.5, 0.3];
-  for (const quality of qualities) {
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/webp", quality),
-    );
-    if (blob && blob.size <= maxBytes) {
-      return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
-        type: "image/webp",
-      });
-    }
-  }
-
-  // Final fallback: already at lowest quality, use whatever we got
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/webp", 0.2),
-  );
-  if (!blob) throw new Error("Failed to compress image");
-  return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
-    type: "image/webp",
-  });
+  crop?: CropConfig;
 }
 
 export function ImageUpload({
@@ -103,10 +40,12 @@ export function ImageUpload({
   maxHeight = 512,
   hint,
   previewClassName = "h-16 w-auto",
+  crop,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const acceptTypes = accept.split(",").map((t) => t.trim());
   const isVector = (type: string) =>
@@ -178,7 +117,17 @@ export function ImageUpload({
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) void handleFile(file);
+    if (!file) return;
+
+    // If crop is enabled and file is a raster image, open crop dialog
+    if (crop && !isVector(file.type)) {
+      setPendingFile(file);
+    } else {
+      void handleFile(file);
+    }
+
+    // Reset input so re-selecting the same file triggers onChange
+    if (inputRef.current) inputRef.current.value = "";
   }
 
   const defaultHint = `PNG, JPG, WebP or SVG. Images are auto-resized to ${maxWidth}\u00D7${maxHeight}px.`;
@@ -250,6 +199,20 @@ export function ImageUpload({
 
       {/* Error */}
       {error && <p className="text-xs text-destructive">{error}</p>}
+
+      {/* Crop dialog */}
+      {crop && (
+        <CropDialog
+          open={!!pendingFile}
+          file={pendingFile}
+          config={crop}
+          onConfirm={(croppedFile) => {
+            setPendingFile(null);
+            void handleFile(croppedFile);
+          }}
+          onCancel={() => setPendingFile(null)}
+        />
+      )}
     </div>
   );
 }
