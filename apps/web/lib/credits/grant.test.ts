@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => mockAdminClient,
 }));
 
-import { grantMonthlyCredits, expireRenewableCredits } from "./grant";
+import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "./grant";
 
 // ── grantMonthlyCredits ──────────────────────────────────────────────────
 
@@ -149,6 +149,35 @@ describe("expireRenewableCredits", () => {
 
   it("calls the RPC exactly once", async () => {
     await expireRenewableCredits({
+      spaceId: "space-abc-123",
+      userId: "user-def-456",
+    });
+
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── expirePurchasedCredits ──────────────────────────────────────────────
+
+describe("expirePurchasedCredits", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("calls expire_purchased_credits RPC with correct params", async () => {
+    await expirePurchasedCredits({
+      spaceId: "space-abc-123",
+      userId: "user-def-456",
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith("expire_purchased_credits", {
+      p_space_id: "space-abc-123",
+      p_user_id: "user-def-456",
+    });
+  });
+
+  it("calls the RPC exactly once", async () => {
+    await expirePurchasedCredits({
       spaceId: "space-abc-123",
       userId: "user-def-456",
     });

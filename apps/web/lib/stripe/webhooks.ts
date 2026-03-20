@@ -1,7 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { grantMonthlyCredits, expireRenewableCredits } from "@/lib/credits/grant";
+import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -420,8 +420,13 @@ async function handleSubscriptionDeleted(
     })
     .eq("id", member.id);
 
-  // Expire all renewable credits
+  // Expire all credits — subscription credits and purchased credits
+  // Purchased credits are only valid while the plan is active
   await expireRenewableCredits({
+    spaceId,
+    userId: member.user_id,
+  });
+  await expirePurchasedCredits({
     spaceId,
     userId: member.user_id,
   });
