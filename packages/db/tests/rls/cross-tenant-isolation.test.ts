@@ -44,6 +44,7 @@ const SPACE_SCOPED_TABLES = [
   'notifications_log',
   'waitlist',
   'notification_preferences',
+  'import_jobs',
 ] as const;
 
 describe('cross-space read isolation for space admin', () => {
@@ -140,6 +141,91 @@ describe('cross-tenant write isolation', () => {
       .from('members')
       .delete()
       .eq('id', 'b0000006-0000-0000-0000-000000000001')
+      .select();
+    expect(data).toEqual([]);
+  });
+
+  it('Space A admin cannot insert plans in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { error } = await client.from('plans').insert({
+      space_id: SPACE_B_ID,
+      name: 'Hacked Plan',
+      slug: 'hacked-plan',
+      price_cents: 9900,
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('Space A admin cannot insert products in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { error } = await client.from('products').insert({
+      space_id: SPACE_B_ID,
+      name: 'Hacked Product',
+      slug: 'hacked-product',
+      category: 'pass',
+      price_cents: 5000,
+      purchase_flow: 'checkout',
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('Space A admin cannot insert import_jobs in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { error } = await client.from('import_jobs').insert({
+      space_id: SPACE_B_ID,
+      admin_id: SPACE_A_ADMIN_ID,
+      source: 'officernd',
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('Space A admin cannot update import_jobs in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { data } = await client
+      .from('import_jobs')
+      .update({ status: 'failed' })
+      .eq('id', 'b0000016-0000-0000-0000-000000000001')
+      .select();
+    expect(data).toEqual([]);
+  });
+
+  it('Space A admin cannot insert member_notes in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { error } = await client.from('member_notes').insert({
+      space_id: SPACE_B_ID,
+      member_id: 'b0000006-0000-0000-0000-000000000001',
+      author_id: SPACE_A_ADMIN_ID,
+      content: 'Hacked note from Space A admin',
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('Space A admin cannot update monthly_stats in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { data } = await client
+      .from('monthly_stats')
+      .update({ total_members: 999 })
+      .eq('id', 'b000000f-0000-0000-0000-000000000001')
+      .select();
+    expect(data).toEqual([]);
+  });
+
+  it('Space A admin cannot delete payment_events in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { data } = await client
+      .from('payment_events')
+      .delete()
+      .eq('id', 'b0000011-0000-0000-0000-000000000001')
+      .select();
+    expect(data).toEqual([]);
+  });
+
+  it('Space A admin cannot delete space_closures in Space B', async () => {
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { data } = await client
+      .from('space_closures')
+      .delete()
+      .eq('id', 'b0000012-0000-0000-0000-000000000001')
       .select();
     expect(data).toEqual([]);
   });

@@ -443,6 +443,17 @@ export function seedTestData(): void {
       ('a0000015-0000-0000-0000-000000000001', '${SPACE_A_ID}', '${SPACE_A_MEMBER_ID}'),
       ('b0000015-0000-0000-0000-000000000001', '${SPACE_B_ID}', '${SPACE_B_MEMBER_ID}')
     ON CONFLICT (space_id, user_id) DO NOTHING;
+
+    -- =====================================================================
+    -- Import jobs
+    -- =====================================================================
+    INSERT INTO import_jobs (id, space_id, admin_id, source, status, summary)
+    VALUES
+      ('a0000016-0000-0000-0000-000000000001', '${SPACE_A_ID}', '${SPACE_A_ADMIN_ID}',
+       'officernd', 'completed', '{"members": 10, "bookings": 25}'),
+      ('b0000016-0000-0000-0000-000000000001', '${SPACE_B_ID}', '${SPACE_B_ADMIN_ID}',
+       'officernd', 'completed', '{"members": 5, "bookings": 12}')
+    ON CONFLICT DO NOTHING;
   `;
   psqlMulti(sql);
 }
@@ -452,6 +463,7 @@ export function seedTestData(): void {
  */
 export function cleanupTestData(): void {
   const sql = `
+    DELETE FROM import_jobs WHERE space_id IN ('${SPACE_A_ID}', '${SPACE_B_ID}');
     DELETE FROM notification_preferences WHERE space_id IN ('${SPACE_A_ID}', '${SPACE_B_ID}');
     DELETE FROM waitlist WHERE space_id IN ('${SPACE_A_ID}', '${SPACE_B_ID}');
     DELETE FROM notifications_log WHERE space_id IN ('${SPACE_A_ID}', '${SPACE_B_ID}');
