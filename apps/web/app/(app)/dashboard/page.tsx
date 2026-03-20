@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SignOutButton } from "./sign-out-button";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -164,8 +163,6 @@ export default async function DashboardPage() {
           )}
         </>
       )}
-
-      <SignOutButton />
     </div>
   );
 }
