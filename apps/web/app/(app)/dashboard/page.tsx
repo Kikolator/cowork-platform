@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatCredits } from "@/lib/booking/format";
+import { CalendarPlus, CalendarDays, CreditCard, Store } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -180,6 +181,14 @@ export default async function DashboardPage() {
         <InfoCard title="Credits" value={creditsDisplay} />
       </div>
 
+      {/* Quick actions */}
+      <div className="flex flex-wrap gap-3">
+        <QuickAction href="/book" icon={<CalendarPlus className="h-4 w-4" />} label="Book a space" />
+        <QuickAction href="/bookings" icon={<CalendarDays className="h-4 w-4" />} label="My bookings" />
+        <QuickAction href="/plan" icon={<CreditCard className="h-4 w-4" />} label="My plan" />
+        <QuickAction href="/store" icon={<Store className="h-4 w-4" />} label="Store" />
+      </div>
+
       {/* Admin section */}
       {isAdmin && (
         <>
@@ -278,6 +287,26 @@ function LinkCard({
       <p className="mt-1 text-sm text-foreground/80 group-hover:text-foreground">
         {value}
       </p>
+    </Link>
+  );
+}
+
+function QuickAction({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-2.5 text-sm font-medium text-foreground/80 shadow-[var(--glass-shadow)] backdrop-blur-xl transition-colors hover:bg-white/40 hover:text-foreground dark:hover:bg-white/5"
+    >
+      {icon}
+      {label}
     </Link>
   );
 }
