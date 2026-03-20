@@ -57,3 +57,20 @@ export async function expireRenewableCredits(params: {
     p_user_id: params.userId,
   });
 }
+
+/**
+ * Expire all purchased/manual/refund credits for a member.
+ * Called when a subscription is deleted — purchased credits should only
+ * remain valid while the plan is active.
+ */
+export async function expirePurchasedCredits(params: {
+  spaceId: string;
+  userId: string;
+}) {
+  const admin = createAdminClient();
+
+  await admin.rpc("expire_purchased_credits", {
+    p_space_id: params.spaceId,
+    p_user_id: params.userId,
+  });
+}

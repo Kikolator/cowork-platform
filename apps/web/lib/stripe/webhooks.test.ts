@@ -64,11 +64,14 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 const mockGrantMonthlyCredits = vi.fn();
 const mockExpireRenewableCredits = vi.fn();
+const mockExpirePurchasedCredits = vi.fn();
 
 vi.mock("@/lib/credits/grant", () => ({
   grantMonthlyCredits: (...args: unknown[]) => mockGrantMonthlyCredits(...args),
   expireRenewableCredits: (...args: unknown[]) =>
     mockExpireRenewableCredits(...args),
+  expirePurchasedCredits: (...args: unknown[]) =>
+    mockExpirePurchasedCredits(...args),
 }));
 
 import { routeWebhookEvent } from "./webhooks";
@@ -889,8 +892,14 @@ describe("customer.subscription.deleted", () => {
       }),
     );
 
-    // Should expire credits
+    // Should expire subscription credits
     expect(mockExpireRenewableCredits).toHaveBeenCalledWith({
+      spaceId: "space-1",
+      userId: "user-abc",
+    });
+
+    // Should expire purchased credits
+    expect(mockExpirePurchasedCredits).toHaveBeenCalledWith({
       spaceId: "space-1",
       userId: "user-abc",
     });
@@ -907,5 +916,6 @@ describe("customer.subscription.deleted", () => {
 
     expect(updateCalls.find((c) => c.table === "members")).toBeUndefined();
     expect(mockExpireRenewableCredits).not.toHaveBeenCalled();
+    expect(mockExpirePurchasedCredits).not.toHaveBeenCalled();
   });
 });
