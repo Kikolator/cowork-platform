@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 interface UserMenuProps {
   userEmail: string;
   spaceRole: string;
+  avatarUrl: string | null;
 }
 
 const roleBadgeClass: Record<string, string> = {
@@ -19,7 +20,7 @@ const roleBadgeClass: Record<string, string> = {
     "bg-white/40 text-muted-foreground dark:bg-white/10",
 };
 
-export function UserMenu({ userEmail, spaceRole }: UserMenuProps) {
+export function UserMenu({ userEmail, spaceRole, avatarUrl }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -39,9 +40,17 @@ export function UserMenu({ userEmail, spaceRole }: UserMenuProps) {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-all duration-200 hover:bg-white/40 dark:hover:bg-white/10"
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-          {userEmail.charAt(0).toUpperCase()}
-        </div>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+            {userEmail.charAt(0).toUpperCase()}
+          </div>
+        )}
         <span className="hidden text-muted-foreground sm:inline">
           {userEmail}
         </span>
