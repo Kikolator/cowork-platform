@@ -22,8 +22,8 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
 
-  // Let the health-check endpoint through without auth or space resolution
-  if (pathname === "/api/health") {
+  // Let health-check and webhook endpoints through without auth or space resolution
+  if (pathname === "/api/health" || pathname.startsWith("/api/webhooks/")) {
     return NextResponse.next();
   }
 
