@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCredits, toUTC } from "@/lib/booking/format";
 import { CalendarPlus, CalendarDays, CreditCard, Store } from "lucide-react";
 import { TodaySchedule } from "./today-schedule";
+import { UpcomingClosures } from "./upcoming-closures";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -44,8 +45,8 @@ export default async function DashboardPage() {
     .slice(0, 10);
   const todayEnd = toUTC(tomorrow, "00:00", timezone);
 
-  // Fetch member data, upcoming count, and today's bookings in parallel
-  const [memberResult, upcomingResult, todayResult] = await Promise.all([
+  // Fetch member data, upcoming count, today's bookings, and closures in parallel
+  const [memberResult, upcomingResult, todayResult, closuresResult] = await Promise.all([
     spaceId
       ? supabase
           .from("members")
@@ -77,9 +78,19 @@ export default async function DashboardPage() {
           .order("start_time", { ascending: true })
           .limit(10)
       : Promise.resolve({ data: null }),
+    spaceId
+      ? supabase
+          .from("space_closures")
+          .select("id, date, all_day, start_time, end_time, reason")
+          .eq("space_id", spaceId)
+          .gte("date", todayLocal)
+          .order("date", { ascending: true })
+          .limit(5)
+      : Promise.resolve({ data: null }),
   ]);
 
   const member = memberResult.data;
+  const closures = closuresResult.data ?? [];
   const upcomingCount = upcomingResult.data?.length ?? 0;
 
   // Cast today's bookings
@@ -234,6 +245,11 @@ export default async function DashboardPage() {
 
       {/* Today's schedule */}
       <TodaySchedule bookings={todayBookings} timezone={timezone} />
+
+      {/* Upcoming closures */}
+      {closures.length > 0 && (
+        <UpcomingClosures closures={closures} timezone={timezone} />
+      )}
 
       {/* Admin section */}
       {isAdmin && (
