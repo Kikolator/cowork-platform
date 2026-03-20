@@ -64,6 +64,40 @@ describe("getCookieOptions", () => {
         path: "/",
       });
     });
+
+    it("returns platform domain cookie for deeply nested subdomain", async () => {
+      const { getCookieOptions } = await importCookies();
+      expect(getCookieOptions("deep.sub.example.com")).toEqual({
+        domain: ".example.com",
+        path: "/",
+      });
+    });
+
+    it("does not match a host that contains the domain as a substring", async () => {
+      const { getCookieOptions } = await importCookies();
+      // "notexample.com" ends with "example.com" as substring but is not a subdomain
+      expect(getCookieOptions("notexample.com")).toEqual({ path: "/" });
+    });
+
+    it("returns no domain for .localhost subdomain", async () => {
+      const { getCookieOptions } = await importCookies();
+      expect(getCookieOptions("space.localhost")).toEqual({ path: "/" });
+    });
+
+    it("strips port from subdomain hostname", async () => {
+      const { getCookieOptions } = await importCookies();
+      expect(getCookieOptions("space.example.com:8080")).toEqual({
+        domain: ".example.com",
+        path: "/",
+      });
+    });
+
+    it("always includes path: '/'", async () => {
+      const { getCookieOptions } = await importCookies();
+      expect(getCookieOptions("localhost")).toHaveProperty("path", "/");
+      expect(getCookieOptions("example.com")).toHaveProperty("path", "/");
+      expect(getCookieOptions("other.org")).toHaveProperty("path", "/");
+    });
   });
 
   describe("when NEXT_PUBLIC_PLATFORM_DOMAIN is not set (defaults to localhost)", () => {
@@ -74,6 +108,16 @@ describe("getCookieOptions", () => {
     it("returns no domain for localhost", async () => {
       const { getCookieOptions } = await importCookies();
       expect(getCookieOptions("localhost")).toEqual({ path: "/" });
+    });
+
+    it("returns no domain for localhost with port", async () => {
+      const { getCookieOptions } = await importCookies();
+      expect(getCookieOptions("localhost:3000")).toEqual({ path: "/" });
+    });
+
+    it("returns no domain for 127.0.0.1 when platform defaults to localhost", async () => {
+      const { getCookieOptions } = await importCookies();
+      expect(getCookieOptions("127.0.0.1")).toEqual({ path: "/" });
     });
   });
 });

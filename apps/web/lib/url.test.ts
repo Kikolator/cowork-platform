@@ -25,6 +25,11 @@ describe("getProto", () => {
     const h = mockHeaders({});
     expect(getProto(h)).toBe("http");
   });
+
+  it("returns http when x-forwarded-proto is http", () => {
+    const h = mockHeaders({ "x-forwarded-proto": "http" });
+    expect(getProto(h)).toBe("http");
+  });
 });
 
 // ── getOrigin ─────────────────────────────────────────────────────────────
@@ -84,6 +89,14 @@ describe("isPlatformHost", () => {
   it("rejects a host that contains the domain as a substring but is not a subdomain", () => {
     // "notlocalhost" ends with "localhost" as a string but is not a subdomain
     expect(isPlatformHost("notlocalhost")).toBe(false);
+  });
+
+  it("rejects Vercel preview deployment URLs", () => {
+    expect(isPlatformHost("preview-abc123.vercel.app")).toBe(false);
+  });
+
+  it("matches with a different port", () => {
+    expect(isPlatformHost("localhost:8080")).toBe(true);
   });
 });
 
@@ -169,5 +182,10 @@ describe("buildSpaceUrlClient", () => {
     // "localhost" is the platform domain, so it should produce a subdomain URL
     const result = buildSpaceUrlClient("acme", "/dashboard");
     expect(result).toBe("http://acme.localhost:3000/dashboard");
+  });
+
+  it("handles root path", () => {
+    const result = buildSpaceUrlClient("acme", "/");
+    expect(result).toBe("http://acme.localhost:3000/");
   });
 });
