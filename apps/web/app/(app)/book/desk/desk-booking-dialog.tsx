@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { formatDuration } from "@/lib/booking/format";
+import { formatDuration, formatCredits } from "@/lib/booking/format";
 import { bookDesk, getAvailableDesks } from "./actions";
 
 interface DeskBookingDialogProps {
@@ -240,7 +240,7 @@ export function DeskBookingDialog({
               <>
                 <span className="text-muted-foreground">·</span>
                 <span>
-                  Cost: <strong>{formatDuration(durationMinutes)}</strong>
+                  Cost: <strong>{formatCredits(durationMinutes)}</strong>
                 </span>
               </>
             )}
@@ -284,7 +284,7 @@ export function DeskBookingDialog({
           {/* Insufficient credits warning */}
           {!hasEnoughCredits && (
             <p className="text-sm text-amber-600 dark:text-amber-400">
-              Not enough credits. You have {formatDuration(remainingCreditsMinutes)} remaining.
+              Not enough credits. You have {formatCredits(remainingCreditsMinutes)} remaining.
             </p>
           )}
 

@@ -1646,6 +1646,10 @@ export type Database = {
       current_space_id: { Args: never; Returns: string }
       current_space_role: { Args: never; Returns: string }
       current_tenant_id: { Args: never; Returns: string }
+      expire_purchased_credits: {
+        Args: { p_space_id: string; p_user_id: string }
+        Returns: number
+      }
       expire_renewable_credits: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
