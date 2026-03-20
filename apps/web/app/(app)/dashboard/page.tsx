@@ -45,8 +45,20 @@ export default async function DashboardPage() {
     .slice(0, 10);
   const todayEnd = toUTC(tomorrow, "00:00", timezone);
 
-  // Fetch member data, upcoming count, today's bookings, and closures in parallel
-  const [memberResult, upcomingResult, todayResult, closuresResult] = await Promise.all([
+  // Compute time-of-day greeting in space timezone
+  const localHour = parseInt(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date()),
+    10,
+  );
+  const greeting =
+    localHour < 12 ? "Good morning" : localHour < 18 ? "Good afternoon" : "Good evening";
+
+  // Fetch member data, upcoming count, today's bookings, closures, profile, and recent resources
+  const [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult] = await Promise.all([
     spaceId
       ? supabase
           .from("members")
@@ -87,11 +99,47 @@ export default async function DashboardPage() {
           .order("date", { ascending: true })
           .limit(5)
       : Promise.resolve({ data: null }),
+    supabase
+      .from("shared_profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single(),
+    spaceId
+      ? supabase
+          .from("bookings")
+          .select("resource_id, resource:resources!inner(id, name, resource_type:resource_types!inner(name, slug))")
+          .eq("user_id", user.id)
+          .eq("space_id", spaceId)
+          .in("status", ["completed", "checked_in", "confirmed"])
+          .order("start_time", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: null }),
   ]);
 
   const member = memberResult.data;
   const closures = closuresResult.data ?? [];
   const upcomingCount = upcomingResult.data?.length ?? 0;
+  const firstName = profileResult.data?.full_name?.split(" ")[0] ?? null;
+
+  // Deduplicate recent resources (most recent first, max 3)
+  const seen = new Set<string>();
+  const recentResources: Array<{
+    id: string;
+    name: string;
+    resource_type: { name: string; slug: string };
+  }> = [];
+  for (const b of recentBookingsResult.data ?? []) {
+    const res = b.resource as unknown as {
+      id: string;
+      name: string;
+      resource_type: { name: string; slug: string };
+    };
+    if (!seen.has(res.id)) {
+      seen.add(res.id);
+      recentResources.push(res);
+      if (recentResources.length >= 3) break;
+    }
+  }
 
   // Cast today's bookings
   const todayBookings = (todayResult.data ?? []).map((b) => ({
@@ -217,10 +265,12 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <h2 className="text-2xl font-semibold text-foreground">
-          Welcome to {spaceName}
+          {greeting}{firstName ? `, ${firstName}` : ""}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {isAdmin ? "Here's an overview of your space." : "Here's your summary."}
+          {isAdmin
+            ? `Here's an overview of ${spaceName}.`
+            : `Welcome to ${spaceName}. Here's your summary.`}
         </p>
       </div>
 
@@ -249,6 +299,35 @@ export default async function DashboardPage() {
       {/* Upcoming closures */}
       {closures.length > 0 && (
         <UpcomingClosures closures={closures} timezone={timezone} />
+      )}
+
+      {/* Book again — recent resources */}
+      {recentResources.length > 0 && (
+        <div>
+          <h3 className="text-lg font-medium text-foreground">Book again</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {recentResources.map((res) => {
+              const href =
+                res.resource_type.slug === "desk"
+                  ? "/book/desk"
+                  : `/book/room/${res.id}`;
+              return (
+                <Link
+                  key={res.id}
+                  href={href}
+                  className="group rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-xl transition-colors hover:bg-white/40 dark:hover:bg-white/5"
+                >
+                  <p className="truncate text-sm font-medium text-foreground group-hover:text-foreground">
+                    {res.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {res.resource_type.name}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Admin section */}
