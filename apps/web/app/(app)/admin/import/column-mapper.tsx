@@ -61,6 +61,7 @@ export function ColumnMapper({
             <Select
               value={currentValue}
               onValueChange={(v) => handleChange(header, v ?? SKIP_VALUE)}
+              items={[{ value: SKIP_VALUE, label: "Skip" }, ...mapping.availableFields.map((f) => ({ value: f.value, label: f.label }))]}
             >
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Skip" />

@@ -58,7 +58,7 @@ export function MemberNoteForm({ memberId }: MemberNoteFormProps) {
         className="resize-none"
       />
       <div className="flex items-center gap-2">
-        <Select value={category} onValueChange={setCategory}>
+        <Select value={category} onValueChange={setCategory} items={NOTE_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>

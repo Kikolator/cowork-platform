@@ -138,6 +138,7 @@ export function AddMemberForm({ open, onOpenChange, plans }: AddMemberFormProps)
                 onValueChange={(v) => {
                   if (v) setValue("planId", v);
                 }}
+                items={plans.map((p) => ({ value: p.id, label: p.name }))}
               >
                 <SelectTrigger>
                   <SelectValue>{planLabel}</SelectValue>

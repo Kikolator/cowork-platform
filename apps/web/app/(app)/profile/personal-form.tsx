@@ -129,6 +129,7 @@ export function PersonalForm({ profile }: PersonalFormProps) {
             onValueChange={(v) => {
               if (v) setValue("preferredLang", v as PersonalProfileValues["preferredLang"]);
             }}
+            items={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))}
           >
             <SelectTrigger>
               <SelectValue>

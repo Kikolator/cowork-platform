@@ -156,6 +156,7 @@ export function ProfessionalBillingForm({ memberId, member }: ProfessionalBillin
               onValueChange={(v) => {
                 if (v) setValue("billingEntityType", v as ProfessionalBillingValues["billingEntityType"]);
               }}
+              items={BILLING_ENTITY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
             >
               <SelectTrigger>
                 <SelectValue>{findLabel(BILLING_ENTITY_TYPES, watchBillingEntityType)}</SelectValue>
@@ -174,6 +175,7 @@ export function ProfessionalBillingForm({ memberId, member }: ProfessionalBillin
               onValueChange={(v) => {
                 setValue("fiscalIdType", v === "__none__" ? null : v);
               }}
+              items={[{ value: "__none__", label: "None" }, ...FISCAL_ID_TYPES.map((t) => ({ value: t.value, label: t.label }))]}
             >
               <SelectTrigger>
                 <SelectValue>{findLabel(FISCAL_ID_TYPES, watchFiscalIdType)}</SelectValue>
@@ -208,6 +210,7 @@ export function ProfessionalBillingForm({ memberId, member }: ProfessionalBillin
                   onValueChange={(v) => {
                     setValue("billingCompanyTaxIdType", v === "__none__" ? null : v);
                   }}
+                  items={[{ value: "__none__", label: "None" }, ...FISCAL_ID_TYPES.map((t) => ({ value: t.value, label: t.label }))]}
                 >
                   <SelectTrigger>
                     <SelectValue>{findLabel(FISCAL_ID_TYPES, watchBillingCompanyTaxIdType)}</SelectValue>

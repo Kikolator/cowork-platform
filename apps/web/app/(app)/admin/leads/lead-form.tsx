@@ -205,6 +205,7 @@ export function LeadForm({ open, onOpenChange, lead }: LeadFormProps) {
                   onValueChange={(v) => {
                     if (v) setValue("status", v as LeadFormValues["status"]);
                   }}
+                  items={LEAD_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] ?? s }))}
                 >
                   <SelectTrigger id="status">
                     <SelectValue />
@@ -225,6 +226,7 @@ export function LeadForm({ open, onOpenChange, lead }: LeadFormProps) {
                   onValueChange={(v) => {
                     if (v) setValue("source", v as LeadFormValues["source"]);
                   }}
+                  items={LEAD_SOURCES.map((s) => ({ value: s, label: SOURCE_LABELS[s] ?? s }))}
                 >
                   <SelectTrigger id="source">
                     <SelectValue />
