@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
-import { Loader2, Clock } from "lucide-react";
+import { useState, useMemo, useTransition, useEffect, useCallback } from "react";
+import { Loader2, Clock, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { formatDuration } from "@/lib/booking/format";
-import { bookDesk } from "./actions";
+import { bookDesk, getAvailableDesks } from "./actions";
 
 interface DeskBookingDialogProps {
   open: boolean;
@@ -78,6 +78,9 @@ export function DeskBookingDialog({
   const [endTime, setEndTime] = useState(businessClose);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [availableDesks, setAvailableDesks] = useState<{ id: string; name: string }[]>([]);
+  const [selectedDeskId, setSelectedDeskId] = useState<string | null>(null);
+  const [isLoadingDesks, setIsLoadingDesks] = useState(false);
 
   const allSlots = useMemo(
     () => generateTimeSlots(businessOpen, businessClose),
@@ -105,6 +108,24 @@ export function DeskBookingDialog({
   const isValidDuration = durationMinutes >= minBookingMinutes;
   const hasEnoughCredits = isUnlimited || remainingCreditsMinutes >= durationMinutes;
 
+  const fetchDesks = useCallback(async (s: string, e: string) => {
+    setIsLoadingDesks(true);
+    setSelectedDeskId(null);
+    try {
+      const desks = await getAvailableDesks(date, s, e);
+      setAvailableDesks(desks);
+      if (desks.length > 0) setSelectedDeskId(desks[0].id);
+    } finally {
+      setIsLoadingDesks(false);
+    }
+  }, [date]);
+
+  // Fetch available desks when times change
+  useEffect(() => {
+    if (!isValidDuration) return;
+    fetchDesks(startTime, endTime);
+  }, [startTime, endTime, isValidDuration, fetchDesks]);
+
   // When start changes, ensure end is still valid
   function handleStartChange(value: string) {
     setStartTime(value);
@@ -128,20 +149,25 @@ export function DeskBookingDialog({
   }
 
   function handleSubmit() {
+    if (!selectedDeskId) return;
     setError(null);
 
+    const deskName = availableDesks.find((d) => d.id === selectedDeskId)?.name ?? "Desk";
+
     startTransition(async () => {
-      const result = await bookDesk(date, startTime, endTime);
+      const result = await bookDesk(date, startTime, endTime, selectedDeskId);
 
       if (result.success) {
         onBooked({
-          deskName: result.deskName,
+          deskName,
           startTime: result.startTime,
           endTime: result.endTime,
         });
         // Reset for next use
         setStartTime(businessOpen);
         setEndTime(businessClose);
+        setSelectedDeskId(null);
+        setAvailableDesks([]);
       } else {
         setError(result.error);
       }
@@ -154,6 +180,8 @@ export function DeskBookingDialog({
       setStartTime(businessOpen);
       setEndTime(businessClose);
       setError(null);
+      setAvailableDesks([]);
+      setSelectedDeskId(null);
     }
     onOpenChange(isOpen);
   }
@@ -212,11 +240,46 @@ export function DeskBookingDialog({
               <>
                 <span className="text-muted-foreground">·</span>
                 <span>
-                  Cost: <strong>{formatDuration(durationMinutes)}</strong> credits
+                  Cost: <strong>{formatDuration(durationMinutes)}</strong>
                 </span>
               </>
             )}
           </div>
+
+          {/* Desk selection */}
+          {isValidDuration && (
+            <div className="grid gap-2">
+              <Label>Select a desk</Label>
+              {isLoadingDesks ? (
+                <div className="flex items-center justify-center py-3 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading desks…
+                </div>
+              ) : availableDesks.length === 0 ? (
+                <p className="py-2 text-sm text-muted-foreground">
+                  No desks available for this time slot
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {availableDesks.map((desk) => (
+                    <button
+                      key={desk.id}
+                      type="button"
+                      onClick={() => setSelectedDeskId(desk.id)}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        selectedDeskId === desk.id
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <Monitor className="h-4 w-4 shrink-0" />
+                      {desk.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Insufficient credits warning */}
           {!hasEnoughCredits && (
@@ -231,7 +294,7 @@ export function DeskBookingDialog({
         <DialogFooter>
           <Button
             onClick={handleSubmit}
-            disabled={isPending || !isValidDuration || !hasEnoughCredits}
+            disabled={isPending || !isValidDuration || !hasEnoughCredits || !selectedDeskId}
           >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Book Desk
