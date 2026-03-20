@@ -2,8 +2,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatCredits } from "@/lib/booking/format";
+import { formatCredits, toUTC } from "@/lib/booking/format";
 import { CalendarPlus, CalendarDays, CreditCard, Store } from "lucide-react";
+import { TodaySchedule } from "./today-schedule";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -24,8 +25,27 @@ export default async function DashboardPage() {
 
   const now = new Date().toISOString();
 
-  // Fetch member data + upcoming bookings for all users
-  const [memberResult, upcomingResult] = await Promise.all([
+  // Fetch space timezone first (needed for today's date calculation)
+  const { data: space } = spaceId
+    ? await supabase.from("spaces").select("timezone").eq("id", spaceId).single()
+    : { data: null };
+  const timezone = space?.timezone ?? "Europe/Madrid";
+
+  // Compute today's boundaries in space timezone using toUTC helper
+  const todayLocal = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const todayStart = toUTC(todayLocal, "00:00", timezone);
+  const tomorrow = new Date(new Date(todayLocal + "T12:00:00Z").getTime() + 86400000)
+    .toISOString()
+    .slice(0, 10);
+  const todayEnd = toUTC(tomorrow, "00:00", timezone);
+
+  // Fetch member data, upcoming count, and today's bookings in parallel
+  const [memberResult, upcomingResult, todayResult] = await Promise.all([
     spaceId
       ? supabase
           .from("members")
@@ -43,10 +63,33 @@ export default async function DashboardPage() {
           .gte("start_time", now)
           .in("status", ["confirmed", "checked_in"])
       : Promise.resolve({ data: null }),
+    spaceId
+      ? supabase
+          .from("bookings")
+          .select(
+            "id, start_time, end_time, status, resource:resources!inner(name, resource_type:resource_types!inner(name, slug))",
+          )
+          .eq("user_id", user.id)
+          .eq("space_id", spaceId)
+          .gte("start_time", todayStart)
+          .lt("start_time", todayEnd)
+          .in("status", ["confirmed", "checked_in", "completed"])
+          .order("start_time", { ascending: true })
+          .limit(10)
+      : Promise.resolve({ data: null }),
   ]);
 
   const member = memberResult.data;
   const upcomingCount = upcomingResult.data?.length ?? 0;
+
+  // Cast today's bookings
+  const todayBookings = (todayResult.data ?? []).map((b) => ({
+    ...b,
+    resource: b.resource as unknown as {
+      name: string;
+      resource_type: { name: string; slug: string };
+    },
+  }));
 
   // Fetch credit balances if member is active
   let creditBalances: Array<{
@@ -188,6 +231,9 @@ export default async function DashboardPage() {
         <QuickAction href="/plan" icon={<CreditCard className="h-4 w-4" />} label="My plan" />
         <QuickAction href="/store" icon={<Store className="h-4 w-4" />} label="Store" />
       </div>
+
+      {/* Today's schedule */}
+      <TodaySchedule bookings={todayBookings} timezone={timezone} />
 
       {/* Admin section */}
       {isAdmin && (
