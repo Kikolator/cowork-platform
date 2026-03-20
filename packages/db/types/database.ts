@@ -1247,6 +1247,7 @@ export type Database = {
           external_id: string | null
           floor: number | null
           id: string
+          image_url: string | null
           metadata: Json | null
           name: string
           resource_type_id: string
@@ -1261,6 +1262,7 @@ export type Database = {
           external_id?: string | null
           floor?: number | null
           id?: string
+          image_url?: string | null
           metadata?: Json | null
           name: string
           resource_type_id: string
@@ -1275,6 +1277,7 @@ export type Database = {
           external_id?: string | null
           floor?: number | null
           id?: string
+          image_url?: string | null
           metadata?: Json | null
           name?: string
           resource_type_id?: string

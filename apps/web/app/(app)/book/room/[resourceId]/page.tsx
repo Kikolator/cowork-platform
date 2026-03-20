@@ -29,7 +29,7 @@ export default async function RoomBookingPage({ params, searchParams }: PageProp
   const [{ data: resource }, { data: space }, { data: member }] = await Promise.all([
     supabase
       .from("resources")
-      .select("id, name, capacity, floor, resource_type_id, resource_type:resource_types!inner(id, slug, name)")
+      .select("id, name, capacity, floor, image_url, resource_type_id, resource_type:resource_types!inner(id, slug, name)")
       .eq("id", resourceId)
       .eq("space_id", spaceId)
       .single(),
@@ -75,6 +75,15 @@ export default async function RoomBookingPage({ params, searchParams }: PageProp
 
   return (
     <div>
+      {resource.image_url && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={resource.image_url}
+          alt={resource.name}
+          className="mb-6 aspect-[21/9] w-full rounded-xl object-cover"
+        />
+      )}
+
       <h1 className="text-2xl font-semibold tracking-tight">{resource.name}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {rt.name}

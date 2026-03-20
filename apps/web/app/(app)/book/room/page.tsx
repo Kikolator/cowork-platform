@@ -14,7 +14,7 @@ export default async function RoomSelectionPage() {
   const { data: rooms } = await supabase
     .from("resources")
     .select(
-      "id, name, capacity, floor, resource_type:resource_types!inner(id, slug, name, bookable)",
+      "id, name, capacity, floor, image_url, resource_type:resource_types!inner(id, slug, name, bookable)",
     )
     .eq("space_id", spaceId!)
     .eq("resource_types.bookable", true)
@@ -60,37 +60,48 @@ export default async function RoomSelectionPage() {
             <Link
               key={room.id}
               href={`/book/room/${room.id}`}
-              className="group flex flex-col rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/30 hover:bg-accent/50"
+              className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/30 hover:bg-accent/50"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Clock className="h-5 w-5 text-primary" />
-              </div>
-
-              <h3 className="mt-4 text-lg font-semibold">{room.name}</h3>
-
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                {room.capacity && (
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" />
-                    Capacity: {room.capacity}
-                  </span>
-                )}
-                {room.floor !== null && room.floor !== undefined && (
-                  <span>
-                    · Floor {room.floor}
-                  </span>
-                )}
-              </div>
-
-              {pricePerHour && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {pricePerHour}/hr or use credits
-                </p>
+              {room.image_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={room.image_url}
+                  alt={room.name}
+                  className="aspect-[16/9] w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-[16/9] w-full items-center justify-center bg-muted">
+                  <Clock className="h-8 w-8 text-muted-foreground/50" />
+                </div>
               )}
 
-              <div className="mt-4 flex items-center text-sm font-medium text-primary">
-                View Availability
-                <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <div className="p-6">
+                <h3 className="text-lg font-semibold">{room.name}</h3>
+
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  {room.capacity && (
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" />
+                      Capacity: {room.capacity}
+                    </span>
+                  )}
+                  {room.floor !== null && room.floor !== undefined && (
+                    <span>
+                      · Floor {room.floor}
+                    </span>
+                  )}
+                </div>
+
+                {pricePerHour && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {pricePerHour}/hr or use credits
+                  </p>
+                )}
+
+                <div className="mt-4 flex items-center text-sm font-medium text-primary">
+                  View Availability
+                  <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </div>
               </div>
             </Link>
           );

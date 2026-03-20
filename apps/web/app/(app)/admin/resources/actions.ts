@@ -31,6 +31,7 @@ export async function createResource(input: unknown) {
     capacity: rest.capacity,
     floor: rest.floor,
     sort_order: rest.sortOrder,
+    image_url: rest.imageUrl ?? null,
   });
 
   if (error) return { success: false as const, error: error.message };
@@ -56,6 +57,7 @@ export async function updateResource(resourceId: string, input: unknown) {
       capacity: rest.capacity,
       floor: rest.floor,
       sort_order: rest.sortOrder,
+      image_url: rest.imageUrl ?? null,
     })
     .eq("id", resourceId)
     .eq("space_id", spaceId);
