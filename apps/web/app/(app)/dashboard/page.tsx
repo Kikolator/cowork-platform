@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { formatCredits } from "@/lib/booking/format";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -20,7 +21,86 @@ export default async function DashboardPage() {
     (user.app_metadata?.space_role as string | undefined) ?? "member";
   const isAdmin = spaceRole === "admin" || spaceRole === "owner";
 
-  // Fetch counts for admin
+  const now = new Date().toISOString();
+
+  // Fetch member data + upcoming bookings for all users
+  const [memberResult, upcomingResult] = await Promise.all([
+    spaceId
+      ? supabase
+          .from("members")
+          .select("id, status, plan_id, plan:plans(name, price_cents, currency)")
+          .eq("user_id", user.id)
+          .eq("space_id", spaceId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    spaceId
+      ? supabase
+          .from("bookings")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("space_id", spaceId)
+          .gte("start_time", now)
+          .in("status", ["confirmed", "checked_in"])
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const member = memberResult.data;
+  const upcomingCount = upcomingResult.data?.length ?? 0;
+
+  // Fetch credit balances if member is active
+  let creditBalances: Array<{
+    resource_type_id: string;
+    remaining_minutes: number;
+    is_unlimited: boolean;
+  }> = [];
+  let resourceTypeNames: Record<string, string> = {};
+
+  const hasActiveMembership =
+    member && (member.status === "active" || member.status === "cancelling");
+
+  if (hasActiveMembership && spaceId) {
+    const [balanceResult, rtResult] = await Promise.all([
+      supabase.rpc("get_credit_balance", {
+        p_space_id: spaceId,
+        p_user_id: user.id,
+      }),
+      supabase
+        .from("resource_types")
+        .select("id, name")
+        .eq("space_id", spaceId),
+    ]);
+    creditBalances = balanceResult.data ?? [];
+    resourceTypeNames = Object.fromEntries(
+      (rtResult.data ?? []).map((rt) => [rt.id, rt.name]),
+    );
+  }
+
+  // Build plan display
+  const plan = member?.plan as unknown as {
+    name: string;
+    price_cents: number;
+    currency: string;
+  } | null;
+  const planDisplay = plan ? plan.name : "No active plan";
+
+  // Build bookings display
+  const bookingsDisplay =
+    upcomingCount > 0
+      ? `${upcomingCount} upcoming`
+      : "None upcoming";
+
+  // Build credits display
+  let creditsDisplay = "No credits";
+  if (hasActiveMembership && creditBalances.length > 0) {
+    const parts = creditBalances.map((cb) => {
+      const name = resourceTypeNames[cb.resource_type_id] ?? "Unknown";
+      if (cb.is_unlimited) return `${name}: Unlimited`;
+      return `${name}: ${formatCredits(cb.remaining_minutes)}`;
+    });
+    creditsDisplay = parts.join(" · ");
+  }
+
+  // Fetch admin counts
   let memberCount = 0;
   let resourceCount = 0;
   let planCount = 0;
@@ -91,9 +171,13 @@ export default async function DashboardPage() {
 
       {/* Member info */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <InfoCard title="Your plan" value="Not set up yet" />
-        <InfoCard title="Upcoming bookings" value="None" />
-        <InfoCard title="Credits" value="Not set up yet" />
+        <LinkCard title="Your plan" value={planDisplay} href="/plan" />
+        <LinkCard
+          title="Upcoming bookings"
+          value={bookingsDisplay}
+          href="/bookings"
+        />
+        <InfoCard title="Credits" value={creditsDisplay} />
       </div>
 
       {/* Admin section */}
@@ -173,6 +257,28 @@ function InfoCard({ title, value }: { title: string; value: string }) {
       <p className="text-xs font-medium text-muted-foreground">{title}</p>
       <p className="mt-1 text-sm text-foreground/80">{value}</p>
     </div>
+  );
+}
+
+function LinkCard({
+  title,
+  value,
+  href,
+}: {
+  title: string;
+  value: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-xl transition-colors hover:bg-white/40 dark:hover:bg-white/5"
+    >
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <p className="mt-1 text-sm text-foreground/80 group-hover:text-foreground">
+        {value}
+      </p>
+    </Link>
   );
 }
 
