@@ -30,13 +30,14 @@ interface ResourceTypeFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   resourceType?: ResourceTypeData;
+  currentRate?: { rate_cents: number };
 }
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
-export function ResourceTypeForm({ open, onOpenChange, resourceType }: ResourceTypeFormProps) {
+export function ResourceTypeForm({ open, onOpenChange, resourceType, currentRate }: ResourceTypeFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const isEdit = !!resourceType;
@@ -54,7 +55,7 @@ export function ResourceTypeForm({ open, onOpenChange, resourceType }: ResourceT
       slug: resourceType?.slug ?? "",
       bookable: resourceType?.bookable ?? true,
       billable: resourceType?.billable ?? true,
-      defaultRateCents: 0,
+      defaultRateCents: currentRate?.rate_cents ?? 0,
     },
   });
 
@@ -133,7 +134,7 @@ export function ResourceTypeForm({ open, onOpenChange, resourceType }: ResourceT
             </label>
           </div>
 
-          {!isEdit && watchBillable && (
+          {watchBillable && (
             <div className="space-y-1.5">
               <Label htmlFor="rt-rate">Default hourly rate (cents)</Label>
               <Input
