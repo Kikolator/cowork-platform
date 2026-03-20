@@ -98,6 +98,7 @@ export function PersonalForm({ profile }: PersonalFormProps) {
           maxHeight={512}
           label="Avatar"
           previewClassName="h-16 w-16 rounded-full"
+          crop={{ aspect: 1, cropShape: "round" }}
           onUploaded={(url) => setValue("avatarUrl", url, { shouldDirty: true })}
           onCleared={() => setValue("avatarUrl", "", { shouldDirty: true })}
         />
