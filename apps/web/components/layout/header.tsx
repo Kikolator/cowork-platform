@@ -9,6 +9,7 @@ interface HeaderProps {
   logoDarkUrl?: string | null;
   userEmail: string;
   spaceRole: string;
+  userAvatarUrl: string | null;
 }
 
 export function Header({
@@ -17,6 +18,7 @@ export function Header({
   logoDarkUrl,
   userEmail,
   spaceRole,
+  userAvatarUrl,
 }: HeaderProps) {
   return (
     <header className="relative z-30 flex h-14 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] px-4 backdrop-blur-xl">
@@ -31,7 +33,7 @@ export function Header({
           {spaceName}
         </span>
       </div>
-      <UserMenu userEmail={userEmail} spaceRole={spaceRole} />
+      <UserMenu userEmail={userEmail} spaceRole={spaceRole} avatarUrl={userAvatarUrl} />
     </header>
   );
 }

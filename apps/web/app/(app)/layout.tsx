@@ -28,6 +28,13 @@ export default async function AppLayout({
     redirect("/login");
   }
 
+  // Fetch user profile avatar
+  const { data: profile } = await supabase
+    .from("shared_profiles")
+    .select("avatar_url")
+    .eq("id", user.id)
+    .single();
+
   const headersList = await headers();
   const spaceName = headersList.get("x-space-name") ?? "RogueOps";
   const spaceRole =
@@ -90,6 +97,7 @@ export default async function AppLayout({
           logoDarkUrl={logoDarkUrl}
           userEmail={user.email ?? ""}
           spaceRole={spaceRole}
+          userAvatarUrl={profile?.avatar_url ?? null}
         />
         <main className="flex-1 overflow-y-auto p-6">
           {children}
