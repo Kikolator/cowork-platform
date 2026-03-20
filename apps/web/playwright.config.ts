@@ -12,9 +12,10 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
+  timeout: 30_000,
   use: {
     baseURL: "http://test-space.localhost:3000",
     storageState: "e2e/.auth/user.json",
@@ -24,9 +25,10 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    command: "npm run dev",
+    command: process.env.CI ? "npm run start" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
     env: {
       ...process.env,
       NEXT_PUBLIC_SUPABASE_URL: LOCAL_SUPABASE_URL,
