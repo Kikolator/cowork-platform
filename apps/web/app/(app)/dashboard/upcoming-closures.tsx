@@ -4,7 +4,7 @@ import { formatBookingDate } from "@/lib/booking/format";
 interface Closure {
   id: string;
   date: string;
-  all_day: boolean;
+  all_day: boolean | null;
   start_time: string | null;
   end_time: string | null;
   reason: string | null;
