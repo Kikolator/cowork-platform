@@ -6,14 +6,8 @@ import { getDeskAvailabilityRange, getClosures } from "@/lib/booking/availabilit
 import {
   validateDeskBookingDate,
   validateBookingTime,
-  getAdvanceBookingLimit,
 } from "@/lib/booking/rules";
-import {
-  toUTC,
-  getBusinessHoursForDate,
-  getBusinessHoursDuration,
-  type BusinessHours,
-} from "@/lib/booking/format";
+import { toUTC, type BusinessHours } from "@/lib/booking/format";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -47,10 +41,11 @@ export async function getDeskAvailability(
 
 export async function bookDesk(
   date: string,
-  startTime?: string,
-  endTime?: string,
+  startTime: string,
+  endTime: string,
+  resourceId: string,
 ): Promise<
-  | { success: true; bookingId: string; deskName: string; startTime: string; endTime: string }
+  | { success: true; bookingId: string; startTime: string; endTime: string }
   | { success: false; error: string }
 > {
   const { supabase, user, spaceId } = await getContext();
@@ -89,129 +84,103 @@ export async function bookDesk(
     return { success: false, error: validation.error! };
   }
 
-  // 4. Check user doesn't already have a desk booking on this date
-  const hours = getBusinessHoursForDate(businessHours, date, timezone);
-  if (!hours) {
-    return { success: false, error: "Space is closed on this day" };
+  // 4. Convert times and validate
+  const bookingStartUtc = toUTC(date, startTime, timezone);
+  const bookingEndUtc = toUTC(date, endTime, timezone);
+
+  const timeValidation = validateBookingTime(
+    bookingStartUtc,
+    bookingEndUtc,
+    businessHours,
+    timezone,
+    closures,
+    space.min_booking_minutes,
+    null, // no max for desks
+  );
+  if (!timeValidation.valid) {
+    return { success: false, error: timeValidation.error! };
   }
 
-  const dayStartUtc = toUTC(date, hours.open, timezone);
-  const dayEndUtc = toUTC(date, hours.close, timezone);
-
-  // Determine actual booking times (custom or full day)
-  const bookingStartUtc = startTime ? toUTC(date, startTime, timezone) : dayStartUtc;
-  const bookingEndUtc = endTime ? toUTC(date, endTime, timezone) : dayEndUtc;
-
-  // Validate custom time range if provided
-  if (startTime && endTime) {
-    const timeValidation = validateBookingTime(
-      bookingStartUtc,
-      bookingEndUtc,
-      businessHours,
-      timezone,
-      closures,
-      space.min_booking_minutes,
-      null, // no max for desks
-    );
-    if (!timeValidation.valid) {
-      return { success: false, error: timeValidation.error! };
-    }
-  }
-
-  const { data: existing } = await supabase
+  // Check for overlapping bookings by this user on the same day
+  const { data: overlapping } = await supabase
     .from("bookings")
     .select("id")
     .eq("user_id", user.id)
     .eq("space_id", spaceId)
     .in("status", ["confirmed", "checked_in"])
-    .gte("start_time", dayStartUtc)
-    .lt("start_time", dayEndUtc)
+    .lt("start_time", bookingEndUtc)
+    .gt("end_time", bookingStartUtc)
     .limit(1);
 
-  if (existing && existing.length > 0) {
-    return { success: false, error: "You already have a desk booking on this date" };
+  if (overlapping && overlapping.length > 0) {
+    return { success: false, error: "You already have a booking during this time slot" };
   }
 
-  // 5. Check availability
-  const { data: deskAvail } = await supabase.rpc("get_desk_availability", {
-    p_space_id: spaceId,
-    p_date: date,
-  });
-
-  const availableDesks = deskAvail?.[0]?.available_desks ?? 0;
-  if (availableDesks <= 0) {
-    return { success: false, error: "No desks available on this date" };
-  }
-
-  // 6. Find an available desk (lowest sort_order, not fixed, not booked, not pass-assigned)
-  const { data: allDesks } = await supabase
+  // 5. Validate the requested desk is available
+  const { data: desk } = await supabase
     .from("resources")
     .select("id, name, resource_type:resource_types!inner(slug)")
+    .eq("id", resourceId)
     .eq("space_id", spaceId)
     .eq("resource_type.slug", "desk")
     .eq("status", "available")
-    .order("sort_order", { ascending: true });
+    .maybeSingle();
 
-  if (!allDesks || allDesks.length === 0) {
-    return { success: false, error: "No desks configured" };
+  if (!desk) {
+    return { success: false, error: "Selected desk is not available" };
   }
 
-  // Exclude fixed desks of other members
-  const { data: fixedDeskMembers } = await supabase
+  // Ensure it's not a fixed desk of another member
+  const { data: fixedOwner } = await supabase
     .from("members")
-    .select("fixed_desk_id")
+    .select("id")
+    .eq("fixed_desk_id", resourceId)
     .eq("space_id", spaceId)
     .eq("status", "active")
-    .not("fixed_desk_id", "is", null);
+    .neq("user_id", user.id)
+    .maybeSingle();
 
-  const fixedDeskIds = new Set(
-    (fixedDeskMembers ?? [])
-      .map((m) => m.fixed_desk_id)
-      .filter((id): id is string => id !== null),
-  );
+  if (fixedOwner) {
+    return { success: false, error: "This desk is assigned to another member" };
+  }
 
-  // Exclude desks with overlapping bookings for the selected time range
-  const { data: bookedDesks } = await supabase
+  // Ensure no overlapping booking on this desk
+  const { data: deskConflict } = await supabase
     .from("bookings")
-    .select("resource_id")
+    .select("id")
+    .eq("resource_id", resourceId)
     .eq("space_id", spaceId)
     .in("status", ["confirmed", "checked_in"])
     .lt("start_time", bookingEndUtc)
-    .gt("end_time", bookingStartUtc);
+    .gt("end_time", bookingStartUtc)
+    .limit(1);
 
-  const bookedDeskIds = new Set((bookedDesks ?? []).map((b) => b.resource_id));
+  if (deskConflict && deskConflict.length > 0) {
+    return { success: false, error: "This desk is already booked for the selected time" };
+  }
 
-  // Exclude desks with active passes on this date
-  const { data: passDesks } = await supabase
+  // Ensure no active pass on this desk for this date
+  const { data: passConflict } = await supabase
     .from("passes")
-    .select("assigned_desk_id")
+    .select("id")
+    .eq("assigned_desk_id", resourceId)
     .eq("space_id", spaceId)
     .in("status", ["active"])
     .lte("start_date", date)
     .gte("end_date", date)
-    .not("assigned_desk_id", "is", null);
+    .limit(1);
 
-  const passDeskIds = new Set(
-    (passDesks ?? [])
-      .map((p) => p.assigned_desk_id)
-      .filter((id): id is string => id !== null),
-  );
-
-  const availableDesk = allDesks.find(
-    (d) => !fixedDeskIds.has(d.id) && !bookedDeskIds.has(d.id) && !passDeskIds.has(d.id),
-  );
-
-  if (!availableDesk) {
-    return { success: false, error: "No desks available on this date" };
+  if (passConflict && passConflict.length > 0) {
+    return { success: false, error: "This desk is reserved by a pass holder" };
   }
 
-  // 7. Call create_booking_with_credits RPC
+  // 6. Call create_booking_with_credits RPC
   const { data: bookingId, error: rpcError } = await supabase.rpc(
     "create_booking_with_credits",
     {
       p_space_id: spaceId,
       p_user_id: user.id,
-      p_resource_id: availableDesk.id,
+      p_resource_id: resourceId,
       p_start_time: bookingStartUtc,
       p_end_time: bookingEndUtc,
     },
@@ -234,8 +203,86 @@ export async function bookDesk(
   return {
     success: true,
     bookingId: bookingId as string,
-    deskName: availableDesk.name,
-    startTime: startTime ?? hours.open,
-    endTime: endTime ?? hours.close,
+    startTime,
+    endTime,
   };
+}
+
+// ── Get available desks for a time range ──────────────────────────────
+
+export async function getAvailableDesks(
+  date: string,
+  startTime: string,
+  endTime: string,
+): Promise<{ id: string; name: string }[]> {
+  const { supabase, user, spaceId } = await getContext();
+
+  // Get space timezone
+  const { data: space } = await supabase
+    .from("spaces")
+    .select("timezone")
+    .eq("id", spaceId)
+    .single();
+
+  if (!space) return [];
+
+  const bookingStartUtc = toUTC(date, startTime, space.timezone);
+  const bookingEndUtc = toUTC(date, endTime, space.timezone);
+
+  // All desks in the space
+  const { data: allDesks } = await supabase
+    .from("resources")
+    .select("id, name, resource_type:resource_types!inner(slug)")
+    .eq("space_id", spaceId)
+    .eq("resource_type.slug", "desk")
+    .eq("status", "available")
+    .order("sort_order", { ascending: true });
+
+  if (!allDesks || allDesks.length === 0) return [];
+
+  // Fixed desks of other members
+  const { data: fixedDeskMembers } = await supabase
+    .from("members")
+    .select("fixed_desk_id")
+    .eq("space_id", spaceId)
+    .eq("status", "active")
+    .not("fixed_desk_id", "is", null)
+    .neq("user_id", user.id);
+
+  const fixedDeskIds = new Set(
+    (fixedDeskMembers ?? [])
+      .map((m) => m.fixed_desk_id)
+      .filter((id): id is string => id !== null),
+  );
+
+  // Desks with overlapping bookings
+  const { data: bookedDesks } = await supabase
+    .from("bookings")
+    .select("resource_id")
+    .eq("space_id", spaceId)
+    .in("status", ["confirmed", "checked_in"])
+    .lt("start_time", bookingEndUtc)
+    .gt("end_time", bookingStartUtc);
+
+  const bookedDeskIds = new Set((bookedDesks ?? []).map((b) => b.resource_id));
+
+  // Desks with active passes on this date
+  const { data: passDesks } = await supabase
+    .from("passes")
+    .select("assigned_desk_id")
+    .eq("space_id", spaceId)
+    .in("status", ["active"])
+    .lte("start_date", date)
+    .gte("end_date", date)
+    .not("assigned_desk_id", "is", null);
+
+  const passDeskIds = new Set(
+    (passDesks ?? [])
+      .map((p) => p.assigned_desk_id)
+      .filter((id): id is string => id !== null),
+  );
+
+  return allDesks
+    .filter((d) => !fixedDeskIds.has(d.id) && !bookedDeskIds.has(d.id) && !passDeskIds.has(d.id))
+    .map((d) => ({ id: d.id, name: d.name }));
 }

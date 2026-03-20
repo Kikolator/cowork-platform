@@ -130,7 +130,7 @@ export function DeskCalendar({
               const isFull = (avail?.available ?? 0) <= 0;
 
               const isDisabled =
-                isPast || isClosed || isBooked || isFull || isPending || !hasCreditsOrUnlimited;
+                isPast || isClosed || isFull || isPending || !hasCreditsOrUnlimited;
 
               return (
                 <div
@@ -168,18 +168,21 @@ export function DeskCalendar({
                       <span className="text-[11px] text-muted-foreground">
                         Past
                       </span>
-                    ) : isBooked ? (
-                      <div className="flex items-center gap-1">
-                        <Check className="h-3 w-3 text-primary" />
-                        <span className="text-[11px] font-medium text-primary">
-                          Booked
-                        </span>
-                      </div>
                     ) : (
                       <>
-                        <span className="text-[11px] text-muted-foreground">
-                          {avail?.available ?? 0}/{avail?.total ?? 0}
-                        </span>
+                        {isBooked && (
+                          <div className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-primary" />
+                            <span className="text-[11px] font-medium text-primary">
+                              Booked
+                            </span>
+                          </div>
+                        )}
+                        {!isBooked && (
+                          <span className="text-[11px] text-muted-foreground">
+                            {avail?.available ?? 0}/{avail?.total ?? 0}
+                          </span>
+                        )}
                         <Button
                           size="sm"
                           variant={isFull ? "outline" : "default"}
@@ -187,11 +190,7 @@ export function DeskCalendar({
                           disabled={isDisabled}
                           onClick={() => handleBookClick(day.dateStr)}
                         >
-                          {isFull ? (
-                            "Full"
-                          ) : (
-                            "Book"
-                          )}
+                          {isFull ? "Full" : "Book"}
                         </Button>
                       </>
                     )}
