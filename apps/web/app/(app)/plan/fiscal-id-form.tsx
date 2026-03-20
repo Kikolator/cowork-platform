@@ -94,7 +94,7 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
 
           <div className="space-y-2">
             <Label htmlFor="entity-type">Entity Type</Label>
-            <Select value={entityType} onValueChange={(v) => v && setEntityType(v)}>
+            <Select value={entityType} onValueChange={(v) => v && setEntityType(v)} items={[{ value: "individual", label: "Individual" }, { value: "company", label: "Company" }]}>
               <SelectTrigger id="entity-type">
                 <SelectValue />
               </SelectTrigger>
@@ -107,7 +107,7 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
 
           <div className="space-y-2">
             <Label htmlFor="fiscal-id-type">ID Type</Label>
-            <Select value={fiscalIdType} onValueChange={(v) => v && setFiscalIdType(v)}>
+            <Select value={fiscalIdType} onValueChange={(v) => v && setFiscalIdType(v)} items={[{ value: "nif", label: "NIF" }, { value: "nie", label: "NIE" }, { value: "passport", label: "Passport" }, { value: "cif", label: "CIF" }, { value: "eu_vat", label: "EU VAT" }, { value: "other", label: "Other" }]}>
               <SelectTrigger id="fiscal-id-type">
                 <SelectValue />
               </SelectTrigger>

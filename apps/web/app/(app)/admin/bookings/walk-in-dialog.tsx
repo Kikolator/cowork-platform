@@ -115,7 +115,7 @@ export function WalkInDialog({ date, onCreated }: WalkInDialogProps) {
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
                 <Label>Member</Label>
-                <Select value={memberId} onValueChange={(v) => v && setMemberId(v)}>
+                <Select value={memberId} onValueChange={(v) => v && setMemberId(v)} items={formData.members.map((m) => ({ value: m.userId, label: m.label }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select member" />
                   </SelectTrigger>
@@ -131,7 +131,7 @@ export function WalkInDialog({ date, onCreated }: WalkInDialogProps) {
 
               <div className="grid gap-2">
                 <Label>Resource</Label>
-                <Select value={resourceId} onValueChange={(v) => v && setResourceId(v)}>
+                <Select value={resourceId} onValueChange={(v) => v && setResourceId(v)} items={formData.resources.map((r) => ({ value: r.id, label: `${r.name} (${r.type})` }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select resource" />
                   </SelectTrigger>
@@ -148,7 +148,7 @@ export function WalkInDialog({ date, onCreated }: WalkInDialogProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">
                   <Label>Start time</Label>
-                  <Select value={startTime} onValueChange={(v) => v && setStartTime(v)}>
+                  <Select value={startTime} onValueChange={(v) => v && setStartTime(v)} items={TIME_OPTIONS.map((t) => ({ value: t, label: t }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -163,7 +163,7 @@ export function WalkInDialog({ date, onCreated }: WalkInDialogProps) {
                 </div>
                 <div className="grid gap-2">
                   <Label>End time</Label>
-                  <Select value={endTime} onValueChange={(v) => v && setEndTime(v)}>
+                  <Select value={endTime} onValueChange={(v) => v && setEndTime(v)} items={TIME_OPTIONS.map((t) => ({ value: t, label: t }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
