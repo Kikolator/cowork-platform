@@ -2,17 +2,12 @@
  * RLS Tests: import_jobs Table
  *
  * Tests for the import_jobs table (migration 00016). Admin-only pattern:
- *   space_admins_manage: FOR ALL USING (is_space_admin + space_id match)
+ *   space_admins_manage: FOR ALL USING (is_space_admin + space_id match via current_space_id())
  *   platform_admins_full: FOR ALL USING (is_platform_admin)
  *
- * NOTE: The import_jobs RLS policy uses raw JWT accessor
- * (auth.jwt() ->> 'space_id')::uuid instead of current_space_id().
- * This still works because the JWT stores space_id in app_metadata
- * and current_space_id() reads from app_metadata. However, the raw
- * accessor reads from the top-level JWT claim. The test helpers put
- * space_id in app_metadata, which current_space_id() reads. The raw
- * accessor in the import_jobs policy reads a different path, so
- * behavior may differ. Tests below verify the actual behavior.
+ * The original policy used a raw JWT accessor (auth.jwt() ->> 'space_id')
+ * which read from the wrong JWT path. Migration fix_import_jobs_rls_jwt_path
+ * corrected it to use current_space_id() like all other tables.
  */
 
 import { describe, it, expect } from 'vitest';
