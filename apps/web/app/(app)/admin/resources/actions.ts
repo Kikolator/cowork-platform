@@ -198,11 +198,17 @@ export async function updateResourceType(resourceTypeId: string, input: unknown)
 
   if (error) return { success: false as const, error: error.message };
 
+  // Upsert rate config if billable and rate provided
+  if (parsed.data.billable && parsed.data.defaultRateCents !== undefined) {
+    const rateResult = await upsertRate(resourceTypeId, parsed.data.defaultRateCents);
+    if (!rateResult.success) return rateResult;
+  }
+
   revalidatePath("/admin/resources");
   return { success: true as const };
 }
 
-export async function updateRate(resourceTypeId: string, rateCents: number) {
+export async function upsertRate(resourceTypeId: string, rateCents: number) {
   if (!Number.isInteger(rateCents) || rateCents < 0) {
     return { success: false as const, error: "Rate must be a non-negative integer" };
   }
@@ -211,9 +217,14 @@ export async function updateRate(resourceTypeId: string, rateCents: number) {
 
   const { error } = await supabase
     .from("rate_config")
-    .update({ rate_cents: rateCents })
-    .eq("resource_type_id", resourceTypeId)
-    .eq("space_id", spaceId);
+    .upsert(
+      {
+        space_id: spaceId,
+        resource_type_id: resourceTypeId,
+        rate_cents: rateCents,
+      },
+      { onConflict: "space_id,resource_type_id" },
+    );
 
   if (error) return { success: false as const, error: error.message };
 

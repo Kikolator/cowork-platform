@@ -29,9 +29,10 @@ interface ResourcesPageProps {
   resourceTypes: ResourceType[];
   resources: Resource[];
   spaceId: string;
+  rateMap: Record<string, { rate_cents: number }>;
 }
 
-export function ResourcesPage({ resourceTypes, resources, spaceId }: ResourcesPageProps) {
+export function ResourcesPage({ resourceTypes, resources, spaceId, rateMap }: ResourcesPageProps) {
   const [addTypeOpen, setAddTypeOpen] = useState(false);
 
   const grouped = resourceTypes.map((rt) => ({
@@ -76,6 +77,7 @@ export function ResourcesPage({ resourceTypes, resources, spaceId }: ResourcesPa
             resourceType={resourceType}
             resources={groupResources}
             spaceId={spaceId}
+            currentRate={rateMap[resourceType.id]}
           />
         ))
       )}

@@ -76,9 +76,10 @@ interface ResourceGroupProps {
   resourceType: ResourceTypeData;
   resources: Resource[];
   spaceId: string;
+  currentRate?: { rate_cents: number };
 }
 
-export function ResourceGroup({ resourceType, resources, spaceId }: ResourceGroupProps) {
+export function ResourceGroup({ resourceType, resources, spaceId, currentRate }: ResourceGroupProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editResource, setEditResource] = useState<Resource | null>(null);
   const [editTypeOpen, setEditTypeOpen] = useState(false);
@@ -254,6 +255,7 @@ export function ResourceGroup({ resourceType, resources, spaceId }: ResourceGrou
         open={editTypeOpen}
         onOpenChange={setEditTypeOpen}
         resourceType={resourceType}
+        currentRate={currentRate}
       />
 
       {/* Delete resource confirmation */}
