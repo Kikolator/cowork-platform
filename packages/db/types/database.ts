@@ -474,6 +474,7 @@ export type Database = {
           id: string
           invited_at: string | null
           joined_at: string | null
+          nuki_auth_id: number | null
           paused_at: string | null
           plan_id: string
           role_title: string | null
@@ -511,6 +512,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           joined_at?: string | null
+          nuki_auth_id?: number | null
           paused_at?: string | null
           plan_id: string
           role_title?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           joined_at?: string | null
+          nuki_auth_id?: number | null
           paused_at?: string | null
           plan_id?: string
           role_title?: string | null
@@ -1338,6 +1341,59 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      space_access_config: {
+        Row: {
+          space_id: string
+          enabled: boolean
+          mode: string
+          code_business_hours: string | null
+          code_extended: string | null
+          code_twenty_four_seven: string | null
+          nuki_api_token: string | null
+          nuki_smartlock_id: string | null
+          nuki_last_sync_at: string | null
+          nuki_sync_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          space_id: string
+          enabled?: boolean
+          mode?: string
+          code_business_hours?: string | null
+          code_extended?: string | null
+          code_twenty_four_seven?: string | null
+          nuki_api_token?: string | null
+          nuki_smartlock_id?: string | null
+          nuki_last_sync_at?: string | null
+          nuki_sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          space_id?: string
+          enabled?: boolean
+          mode?: string
+          code_business_hours?: string | null
+          code_extended?: string | null
+          code_twenty_four_seven?: string | null
+          nuki_api_token?: string | null
+          nuki_smartlock_id?: string | null
+          nuki_last_sync_at?: string | null
+          nuki_sync_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_access_config_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: true
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       space_closures: {
         Row: {

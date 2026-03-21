@@ -214,7 +214,7 @@ export function MemberDetail({
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
             <DetailRow label="Fixed desk" value={deskName} />
             <DetailRow label="24/7 access" value={member.has_twenty_four_seven ? "Yes" : "No"} />
-            <DetailRow label="Access code" value={member.access_code} />
+            <DetailRow label="Access code (override)" value={member.access_code} />
             <DetailRow label="Alarm approved" value={member.alarm_approved ? "Yes" : "No"} />
           </dl>
         </div>

@@ -255,12 +255,15 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="accessCode">Access code</Label>
+                <Label htmlFor="accessCode">Access code override</Label>
                 <Input
                   id="accessCode"
                   {...register("accessCode")}
                   placeholder="e.g. 1234"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Leave empty to use the general code or Nuki-generated code.
+                </p>
               </div>
             </div>
             <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
