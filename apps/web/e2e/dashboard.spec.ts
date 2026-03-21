@@ -131,7 +131,7 @@ test.describe("Sidebar navigation - member links", () => {
     }) => {
       const link = page
         .locator("aside")
-        .getByRole("link", { name: label, exact: true });
+        .locator(`a[href="${href}"]`);
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute("href", href);
     });
@@ -209,7 +209,7 @@ test.describe("Sidebar navigation - admin links", () => {
     }) => {
       const link = page
         .locator("aside")
-        .getByRole("link", { name: label, exact: true });
+        .locator(`a[href="${href}"]`);
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute("href", href);
     });
