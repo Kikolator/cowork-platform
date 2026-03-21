@@ -7,7 +7,7 @@ import {
   validateDeskBookingDate,
   validateBookingTime,
 } from "@/lib/booking/rules";
-import { toUTC, type BusinessHours } from "@/lib/booking/format";
+import { toUTC, getBusinessHoursForDate, type BusinessHours } from "@/lib/booking/format";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -208,13 +208,162 @@ export async function bookDesk(
   };
 }
 
+// ── Get desk slot availability for a date ─────────────────────────────
+
+export interface DeskTimeSlot {
+  time: string;
+  availableDesks: number;
+  userBooked: boolean;
+}
+
+export async function getDeskSlotAvailability(
+  date: string,
+): Promise<DeskTimeSlot[]> {
+  const { supabase, user, spaceId } = await getContext();
+
+  const { data: space } = await supabase
+    .from("spaces")
+    .select("timezone, business_hours")
+    .eq("id", spaceId)
+    .single();
+
+  if (!space) return [];
+
+  const timezone = space.timezone;
+  const businessHours = space.business_hours as BusinessHours;
+  const hours = getBusinessHoursForDate(businessHours, date, timezone);
+  if (!hours) return [];
+
+  // Generate 30-min time points
+  const timePoints = generateSlotTimes(hours.open, hours.close);
+  if (timePoints.length < 2) return [];
+
+  // Get all available desks
+  const { data: allDesks } = await supabase
+    .from("resources")
+    .select("id, resource_type:resource_types!inner(slug)")
+    .eq("space_id", spaceId)
+    .eq("resource_type.slug", "desk")
+    .eq("status", "available");
+
+  if (!allDesks || allDesks.length === 0) {
+    return timePoints.slice(0, -1).map((time) => ({
+      time,
+      availableDesks: 0,
+      userBooked: false,
+    }));
+  }
+
+  // Fixed desks of other members
+  const { data: fixedDeskMembers } = await supabase
+    .from("members")
+    .select("fixed_desk_id")
+    .eq("space_id", spaceId)
+    .eq("status", "active")
+    .not("fixed_desk_id", "is", null)
+    .neq("user_id", user.id);
+
+  const fixedDeskIds = new Set(
+    (fixedDeskMembers ?? [])
+      .map((m) => m.fixed_desk_id)
+      .filter((id): id is string => id !== null),
+  );
+
+  // Pass-reserved desks for this date
+  const { data: passDesks } = await supabase
+    .from("passes")
+    .select("assigned_desk_id")
+    .eq("space_id", spaceId)
+    .in("status", ["active"])
+    .lte("start_date", date)
+    .gte("end_date", date)
+    .not("assigned_desk_id", "is", null);
+
+  const passDeskIds = new Set(
+    (passDesks ?? [])
+      .map((p) => p.assigned_desk_id)
+      .filter((id): id is string => id !== null),
+  );
+
+  const availableDeskIds = allDesks
+    .filter((d) => !fixedDeskIds.has(d.id) && !passDeskIds.has(d.id))
+    .map((d) => d.id);
+
+  const totalAvailable = availableDeskIds.length;
+
+  // Get all desk bookings for this date
+  const dayStartUtc = toUTC(date, hours.open, timezone);
+  const dayEndUtc = toUTC(date, hours.close, timezone);
+
+  const { data: deskBookings } = await supabase
+    .from("bookings")
+    .select("resource_id, start_time, end_time")
+    .eq("space_id", spaceId)
+    .in("status", ["confirmed", "checked_in"])
+    .lt("start_time", dayEndUtc)
+    .gt("end_time", dayStartUtc)
+    .in("resource_id", availableDeskIds);
+
+  // Get user's bookings for this date
+  const { data: userBookings } = await supabase
+    .from("bookings")
+    .select("start_time, end_time")
+    .eq("user_id", user.id)
+    .eq("space_id", spaceId)
+    .in("status", ["confirmed", "checked_in"])
+    .lt("start_time", dayEndUtc)
+    .gt("end_time", dayStartUtc);
+
+  // Compute per-slot availability
+  const result: DeskTimeSlot[] = [];
+  for (let i = 0; i < timePoints.length - 1; i++) {
+    const slotStartUtc = toUTC(date, timePoints[i]!, timezone);
+    const slotEndUtc = toUTC(date, timePoints[i + 1]!, timezone);
+
+    const bookedCount = new Set(
+      (deskBookings ?? [])
+        .filter((b) => b.start_time < slotEndUtc && b.end_time > slotStartUtc)
+        .map((b) => b.resource_id),
+    ).size;
+
+    const userBooked = (userBookings ?? []).some(
+      (b) => b.start_time < slotEndUtc && b.end_time > slotStartUtc,
+    );
+
+    result.push({
+      time: timePoints[i]!,
+      availableDesks: Math.max(0, totalAvailable - bookedCount),
+      userBooked,
+    });
+  }
+
+  return result;
+}
+
+function generateSlotTimes(open: string, close: string): string[] {
+  const [openH, openM] = open.split(":").map(Number) as [number, number];
+  const [closeH, closeM] = close.split(":").map(Number) as [number, number];
+  const openMin = openH * 60 + openM;
+  const closeMin = closeH * 60 + closeM;
+
+  const slots: string[] = [];
+  for (let m = openMin; m <= closeMin; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    slots.push(
+      `${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`,
+    );
+  }
+  return slots;
+}
+
 // ── Get available desks for a time range ──────────────────────────────
 
 export async function getAvailableDesks(
   date: string,
   startTime: string,
   endTime: string,
-): Promise<{ id: string; name: string }[]> {
+): Promise<{ id: string; name: string; image_url: string | null }[]> {
   const { supabase, user, spaceId } = await getContext();
 
   // Get space timezone
@@ -232,7 +381,7 @@ export async function getAvailableDesks(
   // All desks in the space
   const { data: allDesks } = await supabase
     .from("resources")
-    .select("id, name, resource_type:resource_types!inner(slug)")
+    .select("id, name, image_url, resource_type:resource_types!inner(slug)")
     .eq("space_id", spaceId)
     .eq("resource_type.slug", "desk")
     .eq("status", "available")
@@ -284,5 +433,5 @@ export async function getAvailableDesks(
 
   return allDesks
     .filter((d) => !fixedDeskIds.has(d.id) && !bookedDeskIds.has(d.id) && !passDeskIds.has(d.id))
-    .map((d) => ({ id: d.id, name: d.name }));
+    .map((d) => ({ id: d.id, name: d.name, image_url: d.image_url }));
 }

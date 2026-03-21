@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getBusinessHoursForDate, type BusinessHours } from "@/lib/booking/format";
 import { getDeskAvailability } from "./actions";
 import { DeskBookingDialog } from "./desk-booking-dialog";
 
@@ -21,7 +20,6 @@ interface DeskCalendarProps {
   businessDays: string[]; // days of week with business hours (e.g., ["mon","tue","wed","thu","fri"])
   timezone: string;
   hasCreditsOrUnlimited: boolean;
-  businessHours: BusinessHours;
   minBookingMinutes: number;
   remainingCreditsMinutes: number;
   isUnlimited: boolean;
@@ -34,7 +32,6 @@ export function DeskCalendar({
   businessDays,
   timezone,
   hasCreditsOrUnlimited,
-  businessHours,
   minBookingMinutes,
   remainingCreditsMinutes,
   isUnlimited,
@@ -203,23 +200,17 @@ export function DeskCalendar({
       </div>
 
       {/* Booking dialog */}
-      {dialogDate && (() => {
-        const hours = getBusinessHoursForDate(businessHours, dialogDate, timezone);
-        if (!hours) return null;
-        return (
-          <DeskBookingDialog
-            open
-            onOpenChange={(isOpen) => { if (!isOpen) setDialogDate(null); }}
-            date={dialogDate}
-            businessOpen={hours.open}
-            businessClose={hours.close}
-            minBookingMinutes={minBookingMinutes}
-            remainingCreditsMinutes={remainingCreditsMinutes}
-            isUnlimited={isUnlimited}
-            onBooked={handleBooked}
-          />
-        );
-      })()}
+      {dialogDate && (
+        <DeskBookingDialog
+          open
+          onOpenChange={(isOpen) => { if (!isOpen) setDialogDate(null); }}
+          date={dialogDate}
+          minBookingMinutes={minBookingMinutes}
+          remainingCreditsMinutes={remainingCreditsMinutes}
+          isUnlimited={isUnlimited}
+          onBooked={handleBooked}
+        />
+      )}
     </div>
   );
 }
