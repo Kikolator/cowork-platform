@@ -64,7 +64,7 @@ test.describe("Dashboard page", () => {
   });
 
   test("'Store' quick action navigates to /store", async ({ page }) => {
-    await page.getByRole("link", { name: "Store", exact: true }).click();
+    await page.locator("main").getByRole("link", { name: "Store", exact: true }).click();
     await page.waitForURL("**/store");
     await expect(page).toHaveURL(/\/store$/);
   });
