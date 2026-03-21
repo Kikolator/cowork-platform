@@ -406,7 +406,7 @@ export function DeskBookingDialog({
                   No desks available for this time slot
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid max-h-[320px] grid-cols-2 gap-3 overflow-y-auto">
                   {availableDesks.map((desk) => (
                     <button
                       key={desk.id}

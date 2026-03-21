@@ -130,8 +130,10 @@ export function formatDuration(minutes: number): string {
 /** Convert minutes to credit count (1 credit = 1 hour). */
 export function formatCredits(minutes: number): string {
   const credits = minutes / 60;
-  if (Number.isInteger(credits)) return `${credits}`;
-  return `${parseFloat(credits.toFixed(2))}`;
+  const value = Number.isInteger(credits)
+    ? `${credits}`
+    : `${parseFloat(credits.toFixed(2))}`;
+  return `${value} credit${credits === 1 ? "" : "s"}`;
 }
 
 // ── Business hours helpers ─────────────────────────────────────────────
