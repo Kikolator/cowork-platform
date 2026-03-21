@@ -44,9 +44,18 @@ export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl }: SidebarP
             />
           )
         ) : (
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-sm">
-            {spaceName.charAt(0).toUpperCase()}
-          </div>
+          <>
+            <img
+              src="/ai-logo-light.svg"
+              alt={spaceName}
+              className="h-7 w-7 rounded-lg object-cover shadow-sm dark:hidden"
+            />
+            <img
+              src="/ai-logo-dark.svg"
+              alt={spaceName}
+              className="hidden h-7 w-7 rounded-lg object-cover shadow-sm dark:block"
+            />
+          </>
         )}
         <span className="truncate font-display text-sm font-semibold text-foreground">
           {spaceName}

@@ -19,11 +19,18 @@ export default async function PlatformLayout({
         </div>
       )}
       <div className="w-full max-w-lg space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            RogueOps
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-3">
+          <img
+            src="/ai-compound-light.svg"
+            alt="RogueOps"
+            className="h-10 dark:hidden"
+          />
+          <img
+            src="/ai-compound-dark.svg"
+            alt="RogueOps"
+            className="hidden h-10 dark:block"
+          />
+          <p className="text-sm text-muted-foreground">
             Launch your space
           </p>
         </div>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 411.52 100">
+  <defs>
+    <style>
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        fill: #111;
+      }
+
+      .cls-2 {
+        font-family: Outfit-ExtraBold, Outfit;
+        font-variation-settings: 'wght' 800;
+        font-weight: 700;
+      }
+
+      .cls-2, .cls-3 {
+        font-size: 72px;
+      }
+
+      .cls-3 {
+        font-family: Outfit-Regular, Outfit;
+        font-variation-settings: 'wght' 400;
+        letter-spacing: -.08em;
+        opacity: .5;
+      }
+
+      .cls-4 {
+        opacity: .9;
+      }
+
+      .cls-5 {
+        letter-spacing: -.11em;
+      }
+
+      .cls-6 {
+        letter-spacing: -.08em;
+      }
+    </style>
+  </defs>
+  <g>
+    <polygon class="cls-1" points="56.32 11.24 11.56 88.76 37.24 88.74 50.64 65.52 50.64 48.59 62 48.59 62 65.52 75.4 88.74 101.08 88.76 56.32 11.24"/>
+    <polygon class="cls-4" points="62 65.52 62 65.69 50.64 65.69 50.64 65.52 37.24 88.74 75.4 88.74 62 65.52"/>
+  </g>
+  <g>
+    <text class="cls-2" transform="translate(103.79 70.98)"><tspan class="cls-5" x="0" y="0">R</tspan><tspan class="cls-6" x="39.96" y="0">ogue</tspan></text>
+    <text class="cls-3" transform="translate(284.81 71.62)"><tspan x="0" y="0">Ops</tspan></text>
+  </g>
+</svg>
