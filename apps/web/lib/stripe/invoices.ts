@@ -1,4 +1,5 @@
 import "server-only";
+import type Stripe from "stripe";
 import { getStripe } from "./client";
 
 export interface InvoiceRow {
@@ -14,29 +15,18 @@ export interface InvoiceRow {
   customerEmail: string | null;
 }
 
-function mapInvoice(inv: {
-  id: string;
-  number: string | null;
-  created: number;
-  amount_due: number;
-  currency: string;
-  status: string | null;
-  invoice_pdf: string | null;
-  hosted_invoice_url: string | null;
-  customer_name: string | null;
-  customer_email: string | null;
-}): InvoiceRow {
+function mapInvoice(inv: Stripe.Invoice): InvoiceRow {
   return {
     id: inv.id,
-    number: inv.number,
+    number: inv.number ?? null,
     date: inv.created,
     amountDue: inv.amount_due,
     currency: inv.currency,
-    status: inv.status,
-    pdfUrl: inv.invoice_pdf,
-    hostedUrl: inv.hosted_invoice_url,
-    customerName: inv.customer_name,
-    customerEmail: inv.customer_email,
+    status: inv.status ?? null,
+    pdfUrl: inv.invoice_pdf ?? null,
+    hostedUrl: inv.hosted_invoice_url ?? null,
+    customerName: inv.customer_name ?? null,
+    customerEmail: inv.customer_email ?? null,
   };
 }
 
