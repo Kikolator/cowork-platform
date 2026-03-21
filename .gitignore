@@ -36,6 +36,7 @@ packages/db/supabase/snippets/
 out/
 build
 dist
+*.tsbuildinfo
 
 
 # Debug

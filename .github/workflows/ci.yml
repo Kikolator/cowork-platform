@@ -30,10 +30,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - name: Install dependencies
+        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
 
       - name: Turbo lint
         run: npx turbo run lint ${{ env.TURBO_FILTER }}
@@ -52,10 +52,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - name: Install dependencies
+        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
 
       - name: Turbo check-types
         run: npx turbo run check-types ${{ env.TURBO_FILTER }}
@@ -76,10 +76,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - name: Install dependencies
+        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
 
       - name: Turbo build
         run: npx turbo run build ${{ env.TURBO_FILTER }}
@@ -99,10 +99,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - name: Install dependencies
+        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
 
       - uses: supabase/setup-cli@v1
         with:
@@ -141,10 +141,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - name: Install dependencies
+        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
 
       - uses: supabase/setup-cli@v1
         with:
