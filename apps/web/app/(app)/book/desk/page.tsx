@@ -159,7 +159,6 @@ export default async function DeskBookingPage() {
           businessDays={businessDays}
           timezone={timezone}
           hasCreditsOrUnlimited={hasCreditsOrUnlimited}
-          businessHours={businessHours}
           minBookingMinutes={minBookingMinutes}
           remainingCreditsMinutes={remainingMinutes}
           isUnlimited={isUnlimited}
