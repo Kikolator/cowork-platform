@@ -29,20 +29,20 @@ test.describe("Dashboard page", () => {
   });
 
   test("shows Credits info card", async ({ page }) => {
-    await expect(page.getByText("Credits")).toBeVisible();
+    await expect(page.getByText("Credits", { exact: true })).toBeVisible();
   });
 
   test("quick action links are visible", async ({ page }) => {
     const actions = ["Book a space", "My bookings", "My plan", "Store"];
     for (const label of actions) {
       await expect(
-        page.getByRole("link", { name: label, exact: true }),
+        page.getByRole("link", { name: label, exact: true }).first(),
       ).toBeVisible();
     }
   });
 
   test("'Book a space' quick action navigates to /book", async ({ page }) => {
-    await page.getByRole("link", { name: "Book a space", exact: true }).click();
+    await page.getByRole("link", { name: "Book a space", exact: true }).first().click();
     await page.waitForURL("**/book");
     await expect(page).toHaveURL(/\/book$/);
   });
@@ -87,9 +87,9 @@ test.describe("Dashboard admin sections", () => {
       page.getByRole("heading", { name: "Quick Stats" }),
     ).toBeVisible();
 
-    await expect(page.locator("main").getByText("Members")).toBeVisible();
-    await expect(page.locator("main").getByText("Resources")).toBeVisible();
-    await expect(page.locator("main").getByText("Plans configured")).toBeVisible();
+    await expect(page.locator("main").getByText("Members", { exact: true })).toBeVisible();
+    await expect(page.locator("main").getByText("Resources", { exact: true })).toBeVisible();
+    await expect(page.locator("main").getByText("Plans configured", { exact: true })).toBeVisible();
   });
 
   test("admin user sees Setup Checklist section", async ({ page }) => {

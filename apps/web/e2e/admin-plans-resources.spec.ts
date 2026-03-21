@@ -251,8 +251,8 @@ test.describe("Admin Resources page", () => {
     // Form fields
     await expect(dialog.getByLabel("Name")).toBeVisible();
     await expect(dialog.getByLabel("Slug")).toBeVisible();
-    await expect(dialog.getByText("Bookable")).toBeVisible();
-    await expect(dialog.getByText("Billable")).toBeVisible();
+    await expect(dialog.getByText("Bookable", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Billable", { exact: true })).toBeVisible();
 
     // Footer buttons
     await expect(

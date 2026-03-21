@@ -48,9 +48,9 @@ test.describe("Admin Settings - Branding Tab", () => {
   });
 
   test("renders image upload sections for logo, dark logo, and favicon", async ({ page }) => {
-    await expect(page.getByText("Logo", { exact: false })).toBeVisible();
-    await expect(page.getByText("Dark Mode Logo")).toBeVisible();
-    await expect(page.getByText("Favicon")).toBeVisible();
+    await expect(page.getByText("Logo", { exact: true })).toBeVisible();
+    await expect(page.getByText("Dark Mode Logo", { exact: true })).toBeVisible();
+    await expect(page.getByText("Favicon", { exact: true })).toBeVisible();
   });
 
   test("space name field is pre-populated", async ({ page }) => {
@@ -116,14 +116,14 @@ test.describe("Admin Settings - Tab Navigation via URL", () => {
     const featuresTab = page.getByRole("tab", { name: "Features" });
     await expect(featuresTab).toHaveAttribute("aria-selected", "true");
 
-    // Features form content - feature toggle labels
+    // Features form content - feature toggle labels (exact match to avoid description/substring collisions)
     const main = page.locator("main");
-    await expect(main.getByText("Passes")).toBeVisible();
-    await expect(main.getByText("Credits")).toBeVisible();
-    await expect(main.getByText("Leads")).toBeVisible();
-    await expect(main.getByText("Recurring Bookings")).toBeVisible();
-    await expect(main.getByText("Guest Passes")).toBeVisible();
-    await expect(main.getByText("Open Registration")).toBeVisible();
+    await expect(main.getByText("Passes", { exact: true })).toBeVisible();
+    await expect(main.getByText("Credits", { exact: true })).toBeVisible();
+    await expect(main.getByText("Leads", { exact: true })).toBeVisible();
+    await expect(main.getByText("Recurring Bookings", { exact: true })).toBeVisible();
+    await expect(main.getByText("Guest Passes", { exact: true })).toBeVisible();
+    await expect(main.getByText("Open Registration", { exact: true })).toBeVisible();
   });
 
   test("navigates to Payments tab via ?tab=payments", async ({ page }) => {
@@ -183,7 +183,7 @@ test.describe("Admin Settings - Tab Switching via Click", () => {
     await expect(
       page.getByRole("tab", { name: "Features" }),
     ).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator("main").getByText("Passes")).toBeVisible();
+    await expect(page.locator("main").getByText("Passes", { exact: true })).toBeVisible();
 
     // Click Payments tab
     await page.getByRole("tab", { name: "Payments" }).click();
@@ -209,10 +209,10 @@ test.describe("Admin Settings - Operations Tab Content", () => {
     await page.goto("/admin/settings?tab=operations");
     await expect(page.getByText("Business Hours")).toBeVisible();
 
-    await expect(page.getByText("Day")).toBeVisible();
-    await expect(page.getByText("Open")).toBeVisible();
-    await expect(page.getByText("Close")).toBeVisible();
-    await expect(page.getByText("Closed")).toBeVisible();
+    await expect(page.getByText("Day", { exact: true })).toBeVisible();
+    await expect(page.getByText("Open", { exact: true })).toBeVisible();
+    await expect(page.getByText("Close", { exact: true })).toBeVisible();
+    await expect(page.getByText("Closed", { exact: true })).toBeVisible();
   });
 
   test("shows minimum booking time description", async ({ page }) => {
@@ -267,7 +267,7 @@ test.describe("Admin Settings - Features Tab Content", () => {
 
   test("each feature has a toggle switch", async ({ page }) => {
     await page.goto("/admin/settings?tab=features");
-    await expect(page.locator("main").getByText("Passes")).toBeVisible();
+    await expect(page.locator("main").getByText("Passes", { exact: true })).toBeVisible();
 
     // There should be 6 switch toggles (one per feature flag)
     const switches = page.getByRole("switch");
