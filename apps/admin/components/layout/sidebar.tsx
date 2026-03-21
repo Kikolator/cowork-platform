@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Building2,
   DollarSign,
+  FileText,
   BarChart3,
   Shield,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const navItems = [
   { label: "Overview", href: "/", icon: LayoutDashboard },
   { label: "Tenants", href: "/tenants", icon: Building2 },
   { label: "Revenue", href: "/revenue", icon: DollarSign },
+  { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Admins", href: "/admins", icon: Shield },
 ];

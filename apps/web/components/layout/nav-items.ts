@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ShoppingBag,
   CreditCard,
+  FileText,
   User,
   KeyRound,
   Users,
@@ -31,6 +32,7 @@ export const navItems: NavItem[] = [
   { label: "My Bookings", href: "/bookings", icon: CalendarDays },
   { label: "Store", href: "/store", icon: ShoppingBag },
   { label: "My Plan", href: "/plan", icon: CreditCard },
+  { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Access", href: "/access", icon: KeyRound },
 
@@ -64,6 +66,12 @@ export const navItems: NavItem[] = [
     label: "Products",
     href: "/admin/products",
     icon: Package,
+    adminOnly: true,
+  },
+  {
+    label: "Invoices",
+    href: "/admin/invoices",
+    icon: FileText,
     adminOnly: true,
   },
   {

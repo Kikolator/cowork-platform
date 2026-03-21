@@ -121,6 +121,7 @@ test.describe("Sidebar navigation - member links", () => {
     { label: "My Bookings", href: "/bookings" },
     { label: "Store", href: "/store" },
     { label: "My Plan", href: "/plan" },
+    { label: "Invoices", href: "/invoices" },
     { label: "Profile", href: "/profile" },
   ];
 
@@ -130,7 +131,7 @@ test.describe("Sidebar navigation - member links", () => {
     }) => {
       const link = page
         .locator("aside")
-        .getByRole("link", { name: label, exact: true });
+        .locator(`a[href="${href}"]`);
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute("href", href);
     });
@@ -195,6 +196,7 @@ test.describe("Sidebar navigation - admin links", () => {
     { label: "Plans & Pricing", href: "/admin/plans" },
     { label: "Resources", href: "/admin/resources" },
     { label: "Products", href: "/admin/products" },
+    { label: "Invoices", href: "/admin/invoices" },
     { label: "Settings", href: "/admin/settings" },
     { label: "Leads", href: "/admin/leads" },
     { label: "Passes", href: "/admin/passes" },
@@ -207,7 +209,7 @@ test.describe("Sidebar navigation - admin links", () => {
     }) => {
       const link = page
         .locator("aside")
-        .getByRole("link", { name: label, exact: true });
+        .locator(`a[href="${href}"]`);
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute("href", href);
     });
