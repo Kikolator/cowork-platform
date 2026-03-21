@@ -154,6 +154,14 @@ jobs:
         run: supabase start -x imgproxy,inbucket,studio,edge-runtime,logflare,vector,supavisor
         working-directory: packages/db
 
+      - name: Export Supabase keys
+        id: supabase-keys
+        run: |
+          eval "$(supabase status -o env)"
+          echo "anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
+          echo "service_role_key=${SERVICE_ROLE_KEY}" >> "$GITHUB_OUTPUT"
+        working-directory: packages/db
+
       - name: Reset DB (migrations + seed)
         run: supabase db reset
         working-directory: packages/db
@@ -171,7 +179,7 @@ jobs:
           echo "Supabase failed to start"
           exit 1
         env:
-          SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+          SUPABASE_ANON_KEY: ${{ steps.supabase-keys.outputs.anon_key }}
 
       - name: Install Playwright browsers (chromium)
         run: npx playwright install --with-deps chromium
@@ -189,8 +197,8 @@ jobs:
         working-directory: apps/web
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_PUB_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-          SUPABASE_SECRET_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+          NEXT_PUBLIC_SUPABASE_PUB_KEY: ${{ steps.supabase-keys.outputs.anon_key }}
+          SUPABASE_SECRET_KEY: ${{ steps.supabase-keys.outputs.service_role_key }}
 
       - name: Upload Playwright report
         if: failure()
