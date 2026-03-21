@@ -297,7 +297,7 @@ export function SlotPicker({
             </span>
             {!isUnlimited && (
               <span className="ml-2 text-sm text-muted-foreground">
-                — {formatCredits(selectedDuration)} credits
+                — {formatCredits(selectedDuration)}
               </span>
             )}
           </div>
@@ -316,7 +316,7 @@ export function SlotPicker({
 
       {selectedRange !== null && !hasEnoughCredits && (
         <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-          You need {formatCredits(selectedDuration)} credits but have {formatCredits(remainingCreditsMinutes)}.{" "}
+          You need {formatCredits(selectedDuration)} but have {formatCredits(remainingCreditsMinutes)}.{" "}
           <a href="/store" className="font-medium underline">
             Purchase an hour bundle
           </a>
