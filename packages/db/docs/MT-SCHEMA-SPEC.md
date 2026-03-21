@@ -353,6 +353,7 @@ CREATE TABLE members (
   has_twenty_four_seven       boolean DEFAULT false,
   access_code                 text,
   alarm_approved              boolean DEFAULT false,
+  nuki_auth_id                bigint,          -- Nuki keypad authorization ID (set by sync)
   -- Professional context (space-specific)
   company                     text,
   role_title                  text,
@@ -680,6 +681,34 @@ CREATE TABLE space_closures (
 ```
 
 `all_day = true` blocks the full day. `all_day = false` + `start_time/end_time` blocks a partial day (e.g., closed afternoon for maintenance). Availability functions must check this table before returning slots.
+
+### space_access_config
+
+Per-space door access code configuration. Supports manual shared codes and Nuki smart lock integration.
+
+```sql
+CREATE TABLE space_access_config (
+  space_id                uuid PRIMARY KEY REFERENCES spaces(id) ON DELETE CASCADE,
+  enabled                 boolean NOT NULL DEFAULT false,
+  mode                    text NOT NULL DEFAULT 'manual'
+                          CHECK (mode IN ('manual', 'nuki')),
+  -- General codes: one per access tier
+  code_business_hours     text,
+  code_extended           text,
+  code_twenty_four_seven  text,
+  -- Nuki integration
+  nuki_api_token          text,
+  nuki_smartlock_id       text,
+  nuki_last_sync_at       timestamptz,
+  nuki_sync_error         text,
+  created_at              timestamptz NOT NULL DEFAULT now(),
+  updated_at              timestamptz NOT NULL DEFAULT now()
+);
+```
+
+`mode = 'manual'`: admin sets shared codes per access tier. Members see the code matching their plan's `access_type`. Individual overrides via `members.access_code`.
+
+`mode = 'nuki'`: system auto-generates unique 6-digit keypad PINs per member via the Nuki Web API. PINs get time restrictions matching the member's plan access level. Codes are automatically deleted when subscriptions end (via webhook).
 
 ### member_notes
 

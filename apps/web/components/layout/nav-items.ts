@@ -5,6 +5,7 @@ import {
   ShoppingBag,
   CreditCard,
   User,
+  KeyRound,
   Users,
   CalendarRange,
   UserPlus,
@@ -31,6 +32,7 @@ export const navItems: NavItem[] = [
   { label: "Store", href: "/store", icon: ShoppingBag },
   { label: "My Plan", href: "/plan", icon: CreditCard },
   { label: "Profile", href: "/profile", icon: User },
+  { label: "Access", href: "/access", icon: KeyRound },
 
   {
     label: "Members",

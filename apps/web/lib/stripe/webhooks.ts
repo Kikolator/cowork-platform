@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
+import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -430,4 +431,7 @@ async function handleSubscriptionDeleted(
     spaceId,
     userId: member.user_id,
   });
+
+  // Delete Nuki keypad code if Nuki integration is enabled
+  await deleteNukiCodeForMember(spaceId, member.id);
 }

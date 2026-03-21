@@ -5,10 +5,11 @@ import { BrandingForm } from "./branding-form";
 import { OperationsForm } from "./operations-form";
 import { FiscalForm } from "./fiscal-form";
 import { FeaturesForm } from "./features-form";
+import { AccessForm } from "./access-form";
 import { StripeConnect } from "./stripe-connect";
 import { getEffectiveFeePercent } from "@/lib/stripe/fees";
 
-const VALID_TABS = ["branding", "operations", "fiscal", "features", "payments"] as const;
+const VALID_TABS = ["branding", "operations", "fiscal", "features", "access", "payments"] as const;
 
 export default async function SettingsPage({
   searchParams,
@@ -62,6 +63,13 @@ export default async function SettingsPage({
 
   const features = (space.features as Record<string, boolean> | null) ?? {};
 
+  // Fetch access config
+  const { data: accessConfig } = await supabase
+    .from("space_access_config")
+    .select("*")
+    .eq("space_id", spaceId)
+    .maybeSingle();
+
   return (
     <div className="space-y-6">
       <div>
@@ -75,6 +83,7 @@ export default async function SettingsPage({
           <TabsTrigger value="operations">Operations</TabsTrigger>
           <TabsTrigger value="fiscal">Fiscal</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
+          <TabsTrigger value="access">Access</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
@@ -92,6 +101,10 @@ export default async function SettingsPage({
 
         <TabsContent value="features" className="mt-6">
           <FeaturesForm features={features} />
+        </TabsContent>
+
+        <TabsContent value="access" className="mt-6">
+          <AccessForm config={accessConfig} />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">
