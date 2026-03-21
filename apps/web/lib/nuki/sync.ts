@@ -123,14 +123,14 @@ export async function syncNukiCodes(spaceId: string): Promise<{
   }
 
   // Fetch member display names
-  const userIds = members.map((m: { user_id: string }) => m.user_id);
+  const userIds = members.map((m) => m.user_id);
   const { data: profiles } = await admin
     .from("shared_profiles")
     .select("id, full_name, email")
     .in("id", userIds);
 
   const profileMap = new Map(
-    (profiles ?? []).map((p: { id: string; full_name: string | null; email: string }) => [p.id, p.full_name ?? p.email]),
+    (profiles ?? []).map((p) => [p.id, p.full_name ?? p.email]),
   );
 
   // Get existing Nuki auths on this smartlock
@@ -143,7 +143,7 @@ export async function syncNukiCodes(spaceId: string): Promise<{
     const plan = member.plans as unknown as { access_type: string };
     const accessType = plan.access_type;
     const isActive = activeStatuses.has(member.status) && accessType !== "none";
-    const memberName = (profileMap.get(member.user_id) ?? "Member") as string;
+    const memberName = String(profileMap.get(member.user_id) ?? "Member");
     // Truncate to Nuki's 20-char limit
     const nukiName = memberName.slice(0, 20);
 

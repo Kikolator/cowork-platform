@@ -131,7 +131,7 @@ export function AccessForm({ config }: AccessFormProps) {
         </div>
         <Switch
           checked={watchEnabled}
-          onCheckedChange={(checked: boolean) => setValue("enabled", checked)}
+          onCheckedChange={(checked) => setValue("enabled", checked === true)}
         />
       </div>
 
@@ -142,7 +142,7 @@ export function AccessForm({ config }: AccessFormProps) {
             <Label>Mode</Label>
             <Select
               value={watchMode}
-              onValueChange={(v: string) => {
+              onValueChange={(v) => {
                 if (v) setValue("mode", v as AccessConfigValues["mode"]);
               }}
               items={MODES.map((m) => ({ value: m.value, label: m.label }))}
@@ -248,14 +248,14 @@ export function AccessForm({ config }: AccessFormProps) {
                     <Label>Smart Lock</Label>
                     <Select
                       value={watchNukiSmartlockId ?? ""}
-                      onValueChange={(v: string) => { if (v) setValue("nukiSmartlockId", v); }}
-                      items={smartlocks.map((l: { id: string; name: string }) => ({ value: l.id, label: l.name }))}
+                      onValueChange={(v) => { if (v) setValue("nukiSmartlockId", v); }}
+                      items={smartlocks.map((l) => ({ value: l.id, label: l.name }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a smart lock" />
                       </SelectTrigger>
                       <SelectContent>
-                        {smartlocks.map((l: { id: string; name: string }) => (
+                        {smartlocks.map((l) => (
                           <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -302,7 +302,7 @@ export function AccessForm({ config }: AccessFormProps) {
                         </div>
                         {syncResult.errors.length > 0 && (
                           <div className="mt-2 text-xs text-destructive">
-                            {syncResult.errors.map((e: string, i: number) => (
+                            {syncResult.errors.map((e, i) => (
                               <p key={i}>{e}</p>
                             ))}
                           </div>
