@@ -9,12 +9,14 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "email:dev": "email dev --dir emails"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@cowork/db": "*",
     "@hookform/resolvers": "^5.2.2",
+    "@react-email/components": "^1.0.10",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "class-variance-authority": "^0.7.1",
@@ -25,7 +27,9 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-easy-crop": "^5.5.6",
+    "react-email": "^5.2.10",
     "react-hook-form": "^7.71.2",
+    "resend": "^6.9.4",
     "server-only": "^0.0.1",
     "shadcn": "^4.0.0",
     "stripe": "^20.4.1",
