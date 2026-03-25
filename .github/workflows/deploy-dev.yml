@@ -40,6 +40,41 @@ jobs:
         if: always()
         run: echo "### Migrate ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
 
+  schema-drift:
+    name: Schema Drift Detection
+    needs: [migrate]
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to dev project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Check for schema drift
+        run: |
+          OUTPUT=$(supabase db diff --linked 2>&1) || true
+          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
+            echo "::warning::Schema drift detected against dev project"
+            echo "### Schema Drift Detected" >> "$GITHUB_STEP_SUMMARY"
+            echo '```sql' >> "$GITHUB_STEP_SUMMARY"
+            echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Schema Drift — None" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DEV_DB_PASSWORD }}
+
   generate-types:
     name: Generate Types
     needs: [migrate]
@@ -93,7 +128,7 @@ jobs:
 
   summary:
     name: Summary
-    needs: [migrate, generate-types]
+    needs: [migrate, schema-drift, generate-types]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -105,5 +140,6 @@ jobs:
           | Job | Status |
           |-----|--------|
           | Migrations | ${{ needs.migrate.result }} |
+          | Schema Drift | ${{ needs.schema-drift.result }} |
           | Generate Types | ${{ needs.generate-types.result }} |
           EOF

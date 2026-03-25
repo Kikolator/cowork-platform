@@ -1,5 +1,12 @@
 # CI pipeline — runs on every PR to main and dev
 # Validates code quality, types, build, tests, and database integrity
+#
+# Minute-saving strategy:
+#   - Path-based filtering skips expensive jobs when irrelevant files change
+#   - E2E only runs on PRs to main (most expensive job at ~6 min)
+#   - DB jobs only run when migration files change
+#   - Schema drift detection moved to deploy-dev (informational only)
+#   - Skipped jobs satisfy required status checks in GitHub rulesets
 name: CI
 
 on:
@@ -18,14 +25,42 @@ env:
   TURBO_FILTER: --filter=...[origin/${{ github.base_ref }}]
 
 jobs:
+  # ─── Detect what changed ─────────────────────────────────────
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+      migrations: ${{ steps.filter.outputs.migrations }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'apps/**/*.{ts,tsx,js,jsx,css}'
+              - 'packages/**/*.{ts,tsx,js,jsx}'
+              - '**/package.json'
+              - '**/tsconfig*.json'
+              - 'turbo.json'
+            migrations:
+              - 'packages/db/supabase/migrations/**'
+              - 'packages/db/supabase/seed.sql'
+            web:
+              - 'apps/web/**'
+              - 'packages/**'
+
   # ─── Lint & Type-check (parallel) ─────────────────────────────
   lint:
     name: Lint
+    needs: [changes]
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          # Fetch base branch so turbo filter can diff against it
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -44,6 +79,8 @@ jobs:
 
   typecheck:
     name: Type-check
+    needs: [changes]
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,7 +104,8 @@ jobs:
   # ─── Build & Test (parallel, after lint+typecheck) ────────────
   build:
     name: Build
-    needs: [lint, typecheck]
+    needs: [changes, lint, typecheck]
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -90,7 +128,8 @@ jobs:
 
   test:
     name: Test
-    needs: [lint, typecheck]
+    needs: [changes, lint, typecheck]
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -128,10 +167,11 @@ jobs:
         if: always()
         run: echo "### Test ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
 
-  # ─── E2E (after lint+typecheck) ───────────────────────────────
+  # ─── E2E (main PRs only — most expensive job) ────────────────
   e2e:
     name: E2E
-    needs: [lint, typecheck]
+    needs: [changes, lint, typecheck]
+    if: github.base_ref == 'main' && needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -217,9 +257,11 @@ jobs:
         if: always()
         run: echo "### E2E ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
 
-  # ─── Supabase database checks ────────────────────────────────
+  # ─── Supabase database checks (only when migrations change) ──
   db-lint:
     name: DB Lint
+    needs: [changes]
+    if: needs.changes.outputs.migrations == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -244,43 +286,10 @@ jobs:
         if: always()
         run: echo "### DB Lint ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
 
-  schema-drift:
-    name: Schema Drift Detection
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Link to dev project
-        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
-        working-directory: packages/db
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Check for schema drift
-        # Warn-only — non-zero exit is informational, not blocking
-        continue-on-error: true
-        run: |
-          OUTPUT=$(supabase db diff --linked 2>&1) || true
-          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
-            echo "::warning::Schema drift detected against dev project"
-            echo "### ⚠️ Schema Drift Detected" >> "$GITHUB_STEP_SUMMARY"
-            echo '```sql' >> "$GITHUB_STEP_SUMMARY"
-            echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "### Schema Drift — None ✅" >> "$GITHUB_STEP_SUMMARY"
-          fi
-        working-directory: packages/db
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DEV_DB_PASSWORD }}
-
   migration-dry-run:
     name: Migration Dry Run
+    needs: [changes]
+    if: needs.changes.outputs.migrations == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -290,7 +299,6 @@ jobs:
           version: latest
 
       - name: Start local Supabase (db only)
-        # Only start the db service — skip realtime, storage, studio, etc. for speed
         run: supabase start -x realtime,storage,imgproxy,inbucket,postgrest,gotrue,studio,edge-runtime,logflare,vector,supavisor
         working-directory: packages/db
 
