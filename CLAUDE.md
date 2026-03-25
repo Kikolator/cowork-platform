@@ -5,9 +5,11 @@ White-label coworking management platform. Turborepo monorepo.
 ## Structure
 
 ```
-apps/web          → Next.js 16 (App Router) — tenant-facing product
+apps/web          → Next.js 16 (App Router) — tenant-facing web product
 apps/admin        → Next.js 16 (App Router) — platform admin dashboard (admin.rogueops.app)
+apps/mobile       → Expo (React Native) — tenant-branded mobile app (single app, multi-tenant)
 packages/db       → Supabase: migrations, edge functions, generated types
+packages/shared   → Shared logic: Zod schemas, validation, constants, types (used by web + mobile)
 ```
 
 ## Stack
@@ -20,6 +22,19 @@ packages/db       → Supabase: migrations, edge functions, generated types
 - **Validation**: Zod at API boundaries
 - **Data fetching**: Supabase JS (server + client via `@supabase/ssr`)
 - **Deployment**: Vercel
+
+## Mobile Stack
+
+- **Framework**: Expo SDK (latest), Expo Router (file-based routing)
+- **Language**: TypeScript (strict, same tsconfig as web)
+- **Styling**: NativeWind (Tailwind CSS for React Native)
+- **Components**: Custom (no shadcn/ui equivalent in RN)
+- **Auth**: `@supabase/supabase-js` + AsyncStorage (client-side only, no SSR)
+- **Data fetching**: TanStack Query v5 + direct Supabase client (RLS enforced)
+- **Validation**: Zod (shared with web via `@cowork/shared`)
+- **Forms**: React Hook Form + Zod resolvers (same as web)
+- **Build/Deploy**: EAS Build + EAS Submit (cloud CI, no local Xcode/Gradle needed)
+- **OTA Updates**: EAS Update for JS bundle hot-patches without store review
 
 ## Commands
 
@@ -41,6 +56,12 @@ supabase gen types typescript --local > types/database.ts
 # Testing (from apps/web/)
 turbo test                 # Unit tests (Vitest)
 turbo test:e2e             # E2E tests (Playwright)
+
+# Mobile (from apps/mobile/)
+npx expo start             # Dev server (scan QR or open simulator)
+eas build --platform ios    # Cloud build for iOS
+eas build --platform android # Cloud build for Android
+eas submit                  # Submit to App Store / Play Store
 ```
 
 ## Conventions
@@ -51,6 +72,10 @@ turbo test:e2e             # E2E tests (Playwright)
 - Database types auto-generated. Never hand-edit `database.ts`.
 - Small files (~200 lines max). One component per file.
 - Colocate related files: page, components, actions, hooks in the same directory.
+- Mobile screens use Expo Router file conventions. Group layouts in `(auth)/` and `(app)/` match web.
+- All Supabase calls in mobile go through the client SDK directly — no server components, no server actions. RLS is the security boundary.
+- Shared business logic (validation, calculations, constants) lives in `@cowork/shared`, imported by both web and mobile.
+- Mobile env vars use `EXPO_PUBLIC_` prefix (equivalent to `NEXT_PUBLIC_` on web).
 
 ## DB Schema Spec
 
