@@ -42,6 +42,7 @@ jobs:
             src:
               - 'apps/**/*.{ts,tsx,js,jsx,css}'
               - 'packages/**/*.{ts,tsx,js,jsx}'
+              - '!packages/db/types/database.ts'
               - '**/package.json'
               - '**/tsconfig*.json'
               - 'turbo.json'
