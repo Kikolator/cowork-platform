@@ -117,6 +117,7 @@ jobs:
             This PR updates `packages/db/types/database.ts` to reflect the latest dev schema.
           add-paths: packages/db/types/database.ts
           delete-branch: true
+          sign-commits: true
 
       - name: Summary
         run: |
