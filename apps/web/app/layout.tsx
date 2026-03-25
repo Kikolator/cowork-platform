@@ -6,7 +6,7 @@ import "./globals.css";
 const outfit = localFont({
   src: "./fonts/outfit-latin-variable.woff2",
   variable: "--font-display",
-  weight: "400 700",
+  weight: "100 900",
   display: "swap",
 });
 

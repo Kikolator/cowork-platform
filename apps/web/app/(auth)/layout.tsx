@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { RogueOpsLogo } from "@/components/rogueops-logo";
 
 async function getSpaceName() {
   const headersList = await headers();
@@ -29,18 +30,7 @@ export default async function AuthLayout({
               {spaceName}
             </h1>
           ) : (
-            <>
-              <img
-                src="/ai-compound-light.svg"
-                alt="RogueOps"
-                className="h-10 dark:hidden"
-              />
-              <img
-                src="/ai-compound-dark.svg"
-                alt="RogueOps"
-                className="hidden h-10 dark:block"
-              />
-            </>
+            <RogueOpsLogo className="h-10" />
           )}
         </div>
         <div className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] p-8 shadow-[var(--glass-shadow)] backdrop-blur-xl">
