@@ -1344,45 +1344,45 @@ export type Database = {
       }
       space_access_config: {
         Row: {
-          space_id: string
-          enabled: boolean
-          mode: string
           code_business_hours: string | null
           code_extended: string | null
           code_twenty_four_seven: string | null
-          nuki_api_token: string | null
-          nuki_smartlock_id: string | null
-          nuki_last_sync_at: string | null
-          nuki_sync_error: string | null
           created_at: string
+          enabled: boolean
+          mode: string
+          nuki_api_token: string | null
+          nuki_last_sync_at: string | null
+          nuki_smartlock_id: string | null
+          nuki_sync_error: string | null
+          space_id: string
           updated_at: string
         }
         Insert: {
-          space_id: string
-          enabled?: boolean
-          mode?: string
           code_business_hours?: string | null
           code_extended?: string | null
           code_twenty_four_seven?: string | null
-          nuki_api_token?: string | null
-          nuki_smartlock_id?: string | null
-          nuki_last_sync_at?: string | null
-          nuki_sync_error?: string | null
           created_at?: string
+          enabled?: boolean
+          mode?: string
+          nuki_api_token?: string | null
+          nuki_last_sync_at?: string | null
+          nuki_smartlock_id?: string | null
+          nuki_sync_error?: string | null
+          space_id: string
           updated_at?: string
         }
         Update: {
-          space_id?: string
-          enabled?: boolean
-          mode?: string
           code_business_hours?: string | null
           code_extended?: string | null
           code_twenty_four_seven?: string | null
-          nuki_api_token?: string | null
-          nuki_smartlock_id?: string | null
-          nuki_last_sync_at?: string | null
-          nuki_sync_error?: string | null
           created_at?: string
+          enabled?: boolean
+          mode?: string
+          nuki_api_token?: string | null
+          nuki_last_sync_at?: string | null
+          nuki_smartlock_id?: string | null
+          nuki_sync_error?: string | null
+          space_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -1760,6 +1760,14 @@ export type Database = {
       is_space_admin: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: boolean
+      }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
       }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
