@@ -49,6 +49,8 @@ export async function updateAccessConfig(input: unknown) {
 }
 
 export async function fetchNukiSmartlocks(apiToken: string) {
+  await getSpaceId(); // Verify caller is authenticated with space context
+
   try {
     const locks = await listSmartlocks(apiToken);
     return {
