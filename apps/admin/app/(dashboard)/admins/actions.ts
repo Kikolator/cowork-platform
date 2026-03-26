@@ -1,11 +1,20 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/auth/guard";
 
+const emailSchema = z.string().email().max(320);
+const uuidSchema = z.string().uuid();
+
 export async function addPlatformAdmin(email: string) {
   await requirePlatformAdmin();
+
+  const parsed = emailSchema.safeParse(email);
+  if (!parsed.success) {
+    return { error: "Invalid email address" };
+  }
 
   const db = createAdminClient();
 
@@ -13,7 +22,7 @@ export async function addPlatformAdmin(email: string) {
   const { data: profile } = await db
     .from("shared_profiles")
     .select("id")
-    .eq("email", email.toLowerCase().trim())
+    .eq("email", parsed.data.toLowerCase().trim())
     .single();
 
   if (!profile) {
@@ -46,6 +55,11 @@ export async function addPlatformAdmin(email: string) {
 export async function removePlatformAdmin(userId: string) {
   await requirePlatformAdmin();
 
+  const parsedId = uuidSchema.safeParse(userId);
+  if (!parsedId.success) {
+    return { error: "Invalid user ID" };
+  }
+
   const db = createAdminClient();
 
   // Don't allow removing the last admin
@@ -60,7 +74,7 @@ export async function removePlatformAdmin(userId: string) {
   const { error } = await db
     .from("platform_admins")
     .delete()
-    .eq("user_id", userId);
+    .eq("user_id", parsedId.data);
 
   if (error) {
     return { error: error.message };
