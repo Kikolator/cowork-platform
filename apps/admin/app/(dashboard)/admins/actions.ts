@@ -62,22 +62,15 @@ export async function removePlatformAdmin(userId: string) {
 
   const db = createAdminClient();
 
-  // Don't allow removing the last admin
-  const { count } = await db
-    .from("platform_admins")
-    .select("*", { count: "exact", head: true });
-
-  if ((count ?? 0) <= 1) {
-    return { error: "Cannot remove the last platform admin." };
-  }
-
-  const { error } = await db
-    .from("platform_admins")
-    .delete()
-    .eq("user_id", parsedId.data);
+  // Atomic: delete only if more than one admin remains
+  const { data: removed, error } = await db
+    .rpc("remove_platform_admin", { p_user_id: parsedId.data });
 
   if (error) {
     return { error: error.message };
+  }
+  if (!removed) {
+    return { error: "Cannot remove the last platform admin." };
   }
 
   revalidatePath("/admins");
