@@ -15,22 +15,19 @@ export async function getApplicationFeesSummary(days = 30) {
   const stripe = getStripe();
   const since = Math.floor(Date.now() / 1000) - days * 86400;
 
-  const transactions = await stripe.balanceTransactions.list({
+  let totalFeeCents = 0;
+  const transactions: Awaited<ReturnType<typeof stripe.balanceTransactions.list>>["data"] = [];
+
+  for await (const tx of stripe.balanceTransactions.list({
     type: "application_fee",
     created: { gte: since },
     limit: 100,
-  });
-
-  let totalFeeCents = 0;
-  for (const tx of transactions.data) {
+  })) {
     totalFeeCents += tx.amount;
+    transactions.push(tx);
   }
 
-  return {
-    totalFeeCents,
-    count: transactions.data.length,
-    transactions: transactions.data,
-  };
+  return { totalFeeCents, count: transactions.length, transactions };
 }
 
 export async function getConnectedAccountDetails(accountId: string) {
@@ -42,16 +39,14 @@ export async function getPaymentVolume(days = 30) {
   const stripe = getStripe();
   const since = Math.floor(Date.now() / 1000) - days * 86400;
 
-  const charges = await stripe.charges.list({
-    created: { gte: since },
-    limit: 100,
-  });
-
   let totalVolumeCents = 0;
   let successCount = 0;
   let failedCount = 0;
 
-  for (const charge of charges.data) {
+  for await (const charge of stripe.charges.list({
+    created: { gte: since },
+    limit: 100,
+  })) {
     if (charge.status === "succeeded") {
       totalVolumeCents += charge.amount;
       successCount++;

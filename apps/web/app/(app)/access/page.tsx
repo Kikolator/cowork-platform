@@ -38,12 +38,10 @@ export default async function AccessPage() {
     );
   }
 
-  // Fetch space access config
-  const { data: accessConfig } = await supabase
-    .from("space_access_config")
-    .select("enabled, mode, code_business_hours, code_extended, code_twenty_four_seven")
-    .eq("space_id", spaceId)
-    .maybeSingle();
+  // Fetch space access config via safe RPC (excludes nuki_api_token)
+  const { data: accessConfigs } = await supabase
+    .rpc("get_member_access_config", { p_space_id: spaceId });
+  const accessConfig = accessConfigs?.[0] ?? null;
 
   const plan = member.plans as unknown as { access_type: string };
   const accessType = member.has_twenty_four_seven ? "twenty_four_seven" : plan.access_type;

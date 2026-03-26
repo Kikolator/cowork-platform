@@ -1728,6 +1728,17 @@ export type Database = {
           total_desks: number
         }[]
       }
+      get_member_access_config: {
+        Args: { p_space_id: string }
+        Returns: {
+          space_id: string
+          enabled: boolean
+          mode: string
+          code_business_hours: string | null
+          code_extended: string | null
+          code_twenty_four_seven: string | null
+        }[]
+      }
       get_platform_stats: { Args: never; Returns: Json }
       get_room_availability: {
         Args: { p_date: string; p_resource_id: string; p_space_id: string }
@@ -1757,6 +1768,10 @@ export type Database = {
         Returns: number
       }
       is_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      remove_platform_admin: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       is_space_admin: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: boolean

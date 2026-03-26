@@ -1,6 +1,6 @@
 import "server-only";
 import { resend } from "./resend";
-import { createClient } from "./supabase/server";
+import { createAdminClient } from "./supabase/admin";
 import type { TenantBranding } from "../emails/components/tenant-layout";
 
 const PLATFORM_FROM = "Cowork Platform <noreply@rogueops.app>";
@@ -45,8 +45,8 @@ async function sendEmail(options: SendEmailOptions & { from: string }) {
 
   // Log to notifications_log if space context provided
   if (spaceId && template) {
-    const supabase = await createClient();
-    await supabase.from("notifications_log").insert({
+    const admin = createAdminClient();
+    await admin.from("notifications_log").insert({
       space_id: spaceId,
       user_id: userId ?? null,
       channel: "email",
