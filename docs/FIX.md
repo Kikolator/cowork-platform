@@ -42,7 +42,12 @@ Tracking document for issues found during code review of `dev` branch (2026-03-2
   - Fix: `20260326091259_add_booking_conflict_check_to_rpc.sql` — moved all conflict checks into the RPC
 
 - [x] **#12 Admin middleware lacks platform admin check**
-  - Fix: Documented the two-layer auth model (middleware=authn, layout=authz) in `apps/admin/middleware.ts`
+  - Fix: Documented the two-layer auth model (proxy=authn, layout=authz) in `apps/admin/proxy.ts`
 
 - [x] **#13 Notification logging uses user client**
   - Fix: Switched to `createAdminClient()` in `apps/web/lib/email.ts`
+
+## Bonus
+
+- [x] **#14 Rename `middleware.ts` to `proxy.ts` (Next.js 16)**
+  - Fix: Renamed in both `apps/web` and `apps/admin`, removed `config.matcher`, added static asset early returns
