@@ -1,4 +1,5 @@
 import "server-only";
+import { randomInt } from "crypto";
 
 /**
  * Generate a valid Nuki keypad PIN code.
@@ -17,8 +18,8 @@ export function generatePin(existingCodes: Set<number>): number {
   for (let i = 0; i < MAX_ATTEMPTS; i++) {
     let code = 0;
     for (let d = 0; d < 6; d++) {
-      // Random digit 1-9
-      const digit = Math.floor(Math.random() * 9) + 1;
+      // Cryptographically secure random digit 1-9
+      const digit = randomInt(1, 10);
       code = code * 10 + digit;
     }
 
