@@ -16,6 +16,8 @@
     "typescript": "5.9.2"
   },
   "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "1.0.0-rc.9",
+    "@rolldown/binding-linux-x64-musl": "1.0.0-rc.9",
     "@tailwindcss/oxide-linux-x64-gnu": "^4.2.1",
     "@tailwindcss/oxide-linux-x64-musl": "^4.2.1"
   },
