@@ -122,7 +122,6 @@ jobs:
     # Run after migrate succeeds, or if migrate was skipped (no new migrations)
     if: always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
     runs-on: ubuntu-latest
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
