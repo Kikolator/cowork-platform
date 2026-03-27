@@ -7,6 +7,7 @@
 #   - DB jobs only run when migration files change
 #   - Schema drift detection moved to deploy-dev (informational only)
 #   - Skipped jobs satisfy required status checks in GitHub rulesets
+#   - npm ci with cache — reproducible installs, no lockfile deletion
 name: CI
 
 on:
@@ -67,9 +68,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Turbo lint
         run: npx turbo run lint ${{ env.TURBO_FILTER }}
@@ -91,9 +93,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Turbo check-types
         run: npx turbo run check-types ${{ env.TURBO_FILTER }}
@@ -116,9 +119,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Turbo build
         run: npx turbo run build ${{ env.TURBO_FILTER }}
@@ -140,9 +144,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
+        run: npm ci
 
       - uses: supabase/setup-cli@v1
         with:
@@ -183,9 +188,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: corepack disable && rm package-lock.json && npm install --no-audit --no-fund
+        run: npm ci
 
       - uses: supabase/setup-cli@v1
         with:
@@ -230,8 +236,8 @@ jobs:
         run: npx turbo run build --filter=web
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_PUB_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-          SUPABASE_SECRET_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+          NEXT_PUBLIC_SUPABASE_PUB_KEY: ${{ steps.supabase-keys.outputs.anon_key }}
+          SUPABASE_SECRET_KEY: ${{ steps.supabase-keys.outputs.service_role_key }}
 
       - name: Run Playwright tests
         run: npx playwright test
