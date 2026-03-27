@@ -136,7 +136,7 @@ export function OperationsForm({ space }: OperationsFormProps) {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label>Timezone</Label>
-          <Select value={watchTimezone} onValueChange={(v) => { if (v) setValue("timezone", v); }}>
+          <Select value={watchTimezone} onValueChange={(v) => { if (v) setValue("timezone", v); }} items={TIMEZONES.map((tz) => ({ value: tz, label: tz }))}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -150,7 +150,7 @@ export function OperationsForm({ space }: OperationsFormProps) {
 
         <div className="space-y-1.5">
           <Label>Currency</Label>
-          <Select value={watchCurrency} onValueChange={(v) => { if (v) setValue("currency", v); }}>
+          <Select value={watchCurrency} onValueChange={(v) => { if (v) setValue("currency", v); }} items={CURRENCIES.map((c) => ({ value: c, label: c.toUpperCase() }))}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -167,6 +167,7 @@ export function OperationsForm({ space }: OperationsFormProps) {
           <Select
             value={watchLocale}
             onValueChange={(v) => { if (v) setValue("defaultLocale", v as OperationsFormValues["defaultLocale"]); }}
+            items={LOCALES.map((l) => ({ value: l.value, label: l.label }))}
           >
             <SelectTrigger>
               <SelectValue />
@@ -185,6 +186,7 @@ export function OperationsForm({ space }: OperationsFormProps) {
         <Select
           value={String(watchMinBooking)}
           onValueChange={(v) => { if (v) setValue("minBookingMinutes", parseInt(v, 10)); }}
+          items={MIN_BOOKING_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))}
         >
           <SelectTrigger className="w-48">
             <SelectValue />

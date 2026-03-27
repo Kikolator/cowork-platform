@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatCredits } from "@/lib/booking/format";
 import { getRoomAvailability, bookRoom } from "../actions";
 
 interface TimeSlot {
@@ -175,7 +176,7 @@ export function SlotPicker({
         <span className="text-sm font-semibold">
           {isUnlimited
             ? "Unlimited"
-            : `${Math.floor(remainingCreditsMinutes / 60)}h ${remainingCreditsMinutes % 60}m remaining`}
+            : `${formatCredits(remainingCreditsMinutes)} remaining`}
         </span>
       </div>
 
@@ -296,7 +297,7 @@ export function SlotPicker({
             </span>
             {!isUnlimited && (
               <span className="ml-2 text-sm text-muted-foreground">
-                — {selectedDuration} credits
+                — {formatCredits(selectedDuration)}
               </span>
             )}
           </div>
@@ -315,7 +316,7 @@ export function SlotPicker({
 
       {selectedRange !== null && !hasEnoughCredits && (
         <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-          You need {selectedDuration} credits but have {remainingCreditsMinutes}.{" "}
+          You need {formatCredits(selectedDuration)} but have {formatCredits(remainingCreditsMinutes)}.{" "}
           <a href="/store" className="font-medium underline">
             Purchase an hour bundle
           </a>

@@ -474,6 +474,7 @@ export type Database = {
           id: string
           invited_at: string | null
           joined_at: string | null
+          nuki_auth_id: number | null
           paused_at: string | null
           plan_id: string
           role_title: string | null
@@ -511,6 +512,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           joined_at?: string | null
+          nuki_auth_id?: number | null
           paused_at?: string | null
           plan_id: string
           role_title?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           joined_at?: string | null
+          nuki_auth_id?: number | null
           paused_at?: string | null
           plan_id?: string
           role_title?: string | null
@@ -1247,6 +1250,7 @@ export type Database = {
           external_id: string | null
           floor: number | null
           id: string
+          image_url: string | null
           metadata: Json | null
           name: string
           resource_type_id: string
@@ -1261,6 +1265,7 @@ export type Database = {
           external_id?: string | null
           floor?: number | null
           id?: string
+          image_url?: string | null
           metadata?: Json | null
           name: string
           resource_type_id: string
@@ -1275,6 +1280,7 @@ export type Database = {
           external_id?: string | null
           floor?: number | null
           id?: string
+          image_url?: string | null
           metadata?: Json | null
           name?: string
           resource_type_id?: string
@@ -1335,6 +1341,59 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      space_access_config: {
+        Row: {
+          code_business_hours: string | null
+          code_extended: string | null
+          code_twenty_four_seven: string | null
+          created_at: string
+          enabled: boolean
+          mode: string
+          nuki_api_token: string | null
+          nuki_last_sync_at: string | null
+          nuki_smartlock_id: string | null
+          nuki_sync_error: string | null
+          space_id: string
+          updated_at: string
+        }
+        Insert: {
+          code_business_hours?: string | null
+          code_extended?: string | null
+          code_twenty_four_seven?: string | null
+          created_at?: string
+          enabled?: boolean
+          mode?: string
+          nuki_api_token?: string | null
+          nuki_last_sync_at?: string | null
+          nuki_smartlock_id?: string | null
+          nuki_sync_error?: string | null
+          space_id: string
+          updated_at?: string
+        }
+        Update: {
+          code_business_hours?: string | null
+          code_extended?: string | null
+          code_twenty_four_seven?: string | null
+          created_at?: string
+          enabled?: boolean
+          mode?: string
+          nuki_api_token?: string | null
+          nuki_last_sync_at?: string | null
+          nuki_smartlock_id?: string | null
+          nuki_sync_error?: string | null
+          space_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_access_config_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: true
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       space_closures: {
         Row: {
@@ -1643,6 +1702,10 @@ export type Database = {
       current_space_id: { Args: never; Returns: string }
       current_space_role: { Args: never; Returns: string }
       current_tenant_id: { Args: never; Returns: string }
+      expire_purchased_credits: {
+        Args: { p_space_id: string; p_user_id: string }
+        Returns: number
+      }
       expire_renewable_credits: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
@@ -1663,6 +1726,17 @@ export type Database = {
           available_desks: number
           booked_desks: number
           total_desks: number
+        }[]
+      }
+      get_member_access_config: {
+        Args: { p_space_id: string }
+        Returns: {
+          code_business_hours: string
+          code_extended: string
+          code_twenty_four_seven: string
+          enabled: boolean
+          mode: string
+          space_id: string
         }[]
       }
       get_platform_stats: { Args: never; Returns: Json }
@@ -1697,6 +1771,15 @@ export type Database = {
       is_space_admin: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: boolean
+      }
+      remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
       }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }

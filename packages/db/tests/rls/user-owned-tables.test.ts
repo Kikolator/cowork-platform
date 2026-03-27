@@ -142,6 +142,59 @@ describe.each(USER_OWNED_TABLES)('%s', (table: UserOwnedTable) => {
 });
 
 // =========================================================================
+// members: users_update_own policy (migration 00018)
+// =========================================================================
+describe('members: users_update_own', () => {
+  it('member can update own member record (professional fields)', async () => {
+    const client = userClient(SPACE_A_MEMBER_ID, SPACE_A_ID);
+    const { error } = await client
+      .from('members')
+      .update({ company: 'Acme Corp', role_title: 'Software Engineer' })
+      .eq('user_id', SPACE_A_MEMBER_ID)
+      .eq('space_id', SPACE_A_ID);
+    expect(error).toBeNull();
+  });
+
+  it('member can update own billing fields', async () => {
+    const client = userClient(SPACE_A_MEMBER_ID, SPACE_A_ID);
+    const { error } = await client
+      .from('members')
+      .update({
+        billing_entity_type: 'company',
+        billing_company_name: 'Acme Corp SL',
+        billing_address_line1: 'Calle Mayor 15',
+        billing_city: 'Barcelona',
+        billing_postal_code: '08001',
+        billing_country: 'ES',
+      })
+      .eq('user_id', SPACE_A_MEMBER_ID)
+      .eq('space_id', SPACE_A_ID);
+    expect(error).toBeNull();
+  });
+
+  it('member cannot update another member record', async () => {
+    const client = userClient(SPACE_A_MEMBER_ID, SPACE_A_ID);
+    const { data } = await client
+      .from('members')
+      .update({ company: 'Hacked Company' })
+      .eq('user_id', SPACE_B_MEMBER_ID)
+      .select();
+    expect(data).toEqual([]);
+  });
+
+  it('member cannot update own record with wrong space_id in JWT', async () => {
+    const client = userClient(SPACE_A_MEMBER_ID, SPACE_B_ID);
+    const { data } = await client
+      .from('members')
+      .update({ company: 'Wrong Space Update' })
+      .eq('user_id', SPACE_A_MEMBER_ID)
+      .eq('space_id', SPACE_A_ID)
+      .select();
+    expect(data).toEqual([]);
+  });
+});
+
+// =========================================================================
 // notification_preferences: extra users_update_own policy
 // =========================================================================
 describe('notification_preferences: users_update_own', () => {
@@ -174,6 +227,51 @@ describe('notification_preferences: users_update_own', () => {
       .eq('space_id', SPACE_A_ID)
       .select();
     expect(data).toEqual([]);
+  });
+});
+
+// =========================================================================
+// notification_preferences: users_insert_own policy (migration 00018)
+// =========================================================================
+describe('notification_preferences: users_insert_own', () => {
+  it('member can insert own notification preferences', async () => {
+    // Use Space A admin as a user who does not yet have notification prefs
+    const client = userClient(SPACE_A_ADMIN_ID, SPACE_A_ID);
+    const { error } = await client.from('notification_preferences').insert({
+      space_id: SPACE_A_ID,
+      user_id: SPACE_A_ADMIN_ID,
+      booking_reminders: true,
+      marketing: false,
+    });
+    expect(error).toBeNull();
+
+    // Cleanup
+    const svc = serviceClient();
+    await svc
+      .from('notification_preferences')
+      .delete()
+      .eq('user_id', SPACE_A_ADMIN_ID)
+      .eq('space_id', SPACE_A_ID);
+  });
+
+  it('member cannot insert notification preferences for another user', async () => {
+    const client = userClient(SPACE_A_MEMBER_ID, SPACE_A_ID);
+    const { error } = await client.from('notification_preferences').insert({
+      space_id: SPACE_A_ID,
+      user_id: SPACE_B_MEMBER_ID,
+      booking_reminders: true,
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it('member cannot insert notification preferences for wrong space', async () => {
+    const client = userClient(SPACE_A_MEMBER_ID, SPACE_A_ID);
+    const { error } = await client.from('notification_preferences').insert({
+      space_id: SPACE_B_ID,
+      user_id: SPACE_A_MEMBER_ID,
+      booking_reminders: true,
+    });
+    expect(error).not.toBeNull();
   });
 });
 

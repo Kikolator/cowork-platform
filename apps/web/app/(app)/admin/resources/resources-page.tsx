@@ -22,14 +22,17 @@ interface Resource {
   floor: number | null;
   sort_order: number | null;
   resource_type_id: string;
+  image_url: string | null;
 }
 
 interface ResourcesPageProps {
   resourceTypes: ResourceType[];
   resources: Resource[];
+  spaceId: string;
+  rateMap: Record<string, { rate_cents: number }>;
 }
 
-export function ResourcesPage({ resourceTypes, resources }: ResourcesPageProps) {
+export function ResourcesPage({ resourceTypes, resources, spaceId, rateMap }: ResourcesPageProps) {
   const [addTypeOpen, setAddTypeOpen] = useState(false);
 
   const grouped = resourceTypes.map((rt) => ({
@@ -73,6 +76,8 @@ export function ResourcesPage({ resourceTypes, resources }: ResourcesPageProps) 
             key={resourceType.id}
             resourceType={resourceType}
             resources={groupResources}
+            spaceId={spaceId}
+            currentRate={rateMap[resourceType.id]}
           />
         ))
       )}

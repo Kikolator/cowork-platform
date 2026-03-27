@@ -257,6 +257,7 @@ export function ProductForm({
                 onValueChange={(v) => {
                   if (v) setValue("category", v as ProductFormValues["category"]);
                 }}
+                items={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
               >
                 <SelectTrigger id="category">
                   <SelectValue />
@@ -324,6 +325,7 @@ export function ProductForm({
                   onValueChange={(v) => {
                     if (v) setValue("currency", v);
                   }}
+                  items={CURRENCIES.map((c) => ({ value: c, label: c.toUpperCase() }))}
                 >
                   <SelectTrigger id="currency">
                     <SelectValue />
@@ -370,6 +372,7 @@ export function ProductForm({
                           });
                         }
                       }}
+                      items={resourceTypes.map((rt) => ({ value: rt.id, label: rt.name }))}
                     >
                       <SelectTrigger id="resourceType">
                         <SelectValue placeholder="Select resource type" />
@@ -432,6 +435,7 @@ export function ProductForm({
                   <Select
                     value={watch("planId") ?? ""}
                     onValueChange={(v) => setValue("planId", v === "none" ? "" : (v ?? ""))}
+                    items={[{ value: "none", label: "No plan linked" }, ...plans.map((p) => ({ value: p.id, label: p.name }))]}
                   >
                     <SelectTrigger id="planId">
                       <SelectValue placeholder="No plan linked" />

@@ -165,7 +165,20 @@ export async function updateSpaceFiscal(input: unknown) {
   return { success: true as const };
 }
 
+const ALLOWED_FEATURE_KEYS = [
+  "passes",
+  "credits",
+  "leads",
+  "recurring_bookings",
+  "guest_passes",
+  "open_registration",
+] as const;
+
 export async function updateFeatureFlag(key: string, value: boolean) {
+  if (!ALLOWED_FEATURE_KEYS.includes(key as (typeof ALLOWED_FEATURE_KEYS)[number])) {
+    return { success: false as const, error: "Invalid feature flag" };
+  }
+
   const { supabase, spaceId } = await getSpaceId();
 
   // Read-modify-write to avoid losing other keys

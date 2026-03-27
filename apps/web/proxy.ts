@@ -18,12 +18,22 @@ function redirectTo(request: NextRequest, path: string, spaceSlug?: string) {
   return NextResponse.redirect(url);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
 
-  // Let the health-check endpoint through without auth or space resolution
-  if (pathname === "/api/health") {
+  // Skip static assets and internal Next.js routes
+  if (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/manifest.json") ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp)$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
+  // Let health-check and webhook endpoints through without auth or space resolution
+  if (pathname === "/api/health" || pathname.startsWith("/api/webhooks/")) {
     return NextResponse.next();
   }
 
@@ -88,9 +98,3 @@ export async function middleware(request: NextRequest) {
 
   return response;
 }
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
-};

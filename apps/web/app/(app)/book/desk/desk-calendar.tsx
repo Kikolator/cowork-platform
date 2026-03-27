@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { Check, Loader2, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getDeskAvailability, bookDesk } from "./actions";
+import { getDeskAvailability } from "./actions";
+import { DeskBookingDialog } from "./desk-booking-dialog";
 
 interface DayAvailability {
   available: number;
@@ -19,6 +20,9 @@ interface DeskCalendarProps {
   businessDays: string[]; // days of week with business hours (e.g., ["mon","tue","wed","thu","fri"])
   timezone: string;
   hasCreditsOrUnlimited: boolean;
+  minBookingMinutes: number;
+  remainingCreditsMinutes: number;
+  isUnlimited: boolean;
 }
 
 export function DeskCalendar({
@@ -28,6 +32,9 @@ export function DeskCalendar({
   businessDays,
   timezone,
   hasCreditsOrUnlimited,
+  minBookingMinutes,
+  remainingCreditsMinutes,
+  isUnlimited,
 }: DeskCalendarProps) {
   const [availability, setAvailability] =
     useState<Record<string, DayAvailability>>(initialAvailability);
@@ -36,7 +43,7 @@ export function DeskCalendar({
     message: string;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [bookingDate, setBookingDate] = useState<string | null>(null);
+  const [dialogDate, setDialogDate] = useState<string | null>(null);
 
   // Generate dates for the grid
   const dates = generateDates(startDate, endDate);
@@ -47,25 +54,21 @@ export function DeskCalendar({
   // Group dates by week
   const weeks = groupByWeek(dates, timezone);
 
-  function handleBook(date: string) {
+  function handleBookClick(date: string) {
     setBookingResult(null);
-    setBookingDate(date);
+    setDialogDate(date);
+  }
 
+  function handleBooked(result: { deskName: string; startTime: string; endTime: string }) {
+    const bookedDate = dialogDate;
+    setDialogDate(null);
+    setBookingResult({
+      type: "success",
+      message: `Booked ${result.deskName} for ${bookedDate} (${result.startTime} – ${result.endTime})`,
+    });
     startTransition(async () => {
-      const result = await bookDesk(date);
-
-      if (result.success) {
-        setBookingResult({
-          type: "success",
-          message: `Booked ${result.deskName} for ${date}`,
-        });
-        // Refresh availability
-        const updated = await getDeskAvailability(startDate, endDate);
-        setAvailability(updated);
-      } else {
-        setBookingResult({ type: "error", message: result.error });
-      }
-      setBookingDate(null);
+      const updated = await getDeskAvailability(startDate, endDate);
+      setAvailability(updated);
     });
   }
 
@@ -122,10 +125,9 @@ export function DeskCalendar({
               const isClosed = avail?.closed ?? false;
               const isBooked = avail?.userBooked ?? false;
               const isFull = (avail?.available ?? 0) <= 0;
-              const isBooking = bookingDate === day.dateStr;
 
               const isDisabled =
-                isPast || isClosed || isBooked || isFull || isPending || !hasCreditsOrUnlimited;
+                isPast || isClosed || isFull || isPending || !hasCreditsOrUnlimited;
 
               return (
                 <div
@@ -163,32 +165,29 @@ export function DeskCalendar({
                       <span className="text-[11px] text-muted-foreground">
                         Past
                       </span>
-                    ) : isBooked ? (
-                      <div className="flex items-center gap-1">
-                        <Check className="h-3 w-3 text-primary" />
-                        <span className="text-[11px] font-medium text-primary">
-                          Booked
-                        </span>
-                      </div>
                     ) : (
                       <>
-                        <span className="text-[11px] text-muted-foreground">
-                          {avail?.available ?? 0}/{avail?.total ?? 0}
-                        </span>
+                        {isBooked && (
+                          <div className="flex items-center gap-1">
+                            <Check className="h-3 w-3 text-primary" />
+                            <span className="text-[11px] font-medium text-primary">
+                              Booked
+                            </span>
+                          </div>
+                        )}
+                        {!isBooked && (
+                          <span className="text-[11px] text-muted-foreground">
+                            {avail?.available ?? 0}/{avail?.total ?? 0}
+                          </span>
+                        )}
                         <Button
                           size="sm"
                           variant={isFull ? "outline" : "default"}
                           className="mt-1 h-6 w-full text-[11px]"
                           disabled={isDisabled}
-                          onClick={() => handleBook(day.dateStr)}
+                          onClick={() => handleBookClick(day.dateStr)}
                         >
-                          {isBooking ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : isFull ? (
-                            "Full"
-                          ) : (
-                            "Book"
-                          )}
+                          {isFull ? "Full" : "Book"}
                         </Button>
                       </>
                     )}
@@ -199,6 +198,19 @@ export function DeskCalendar({
           </div>
         ))}
       </div>
+
+      {/* Booking dialog */}
+      {dialogDate && (
+        <DeskBookingDialog
+          open
+          onOpenChange={(isOpen) => { if (!isOpen) setDialogDate(null); }}
+          date={dialogDate}
+          minBookingMinutes={minBookingMinutes}
+          remainingCreditsMinutes={remainingCreditsMinutes}
+          isUnlimited={isUnlimited}
+          onBooked={handleBooked}
+        />
+      )}
     </div>
   );
 }

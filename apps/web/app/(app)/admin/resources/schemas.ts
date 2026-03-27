@@ -6,6 +6,7 @@ export const resourceSchema = z.object({
   capacity: z.number().int().min(1).max(1000),
   floor: z.number().int().min(-5).max(100),
   sortOrder: z.number().int(),
+  imageUrl: z.string().url().nullable().optional(),
 });
 
 export type ResourceFormValues = z.infer<typeof resourceSchema>;

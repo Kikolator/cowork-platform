@@ -1,7 +1,8 @@
 import "server-only";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { grantMonthlyCredits, expireRenewableCredits } from "@/lib/credits/grant";
+import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
+import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -14,22 +15,35 @@ export async function routeWebhookEvent(
       await handleAccountUpdated(event);
       break;
 
-    // Payment events (space-level)
+    // Payment events (space-level — require spaceId)
     case "checkout.session.completed":
-      await handleCheckoutCompleted(event, spaceId!);
-      break;
     case "invoice.paid":
-      await handleInvoicePaid(event, spaceId!);
-      break;
     case "invoice.payment_failed":
-      await handleInvoicePaymentFailed(event, spaceId!);
-      break;
     case "customer.subscription.updated":
-      await handleSubscriptionUpdated(event, spaceId!);
+    case "customer.subscription.deleted": {
+      if (!spaceId) {
+        console.error(`${event.type} received but no spaceId resolved for connected account`);
+        break;
+      }
+      switch (event.type) {
+        case "checkout.session.completed":
+          await handleCheckoutCompleted(event, spaceId);
+          break;
+        case "invoice.paid":
+          await handleInvoicePaid(event, spaceId);
+          break;
+        case "invoice.payment_failed":
+          await handleInvoicePaymentFailed(event, spaceId);
+          break;
+        case "customer.subscription.updated":
+          await handleSubscriptionUpdated(event, spaceId);
+          break;
+        case "customer.subscription.deleted":
+          await handleSubscriptionDeleted(event, spaceId);
+          break;
+      }
       break;
-    case "customer.subscription.deleted":
-      await handleSubscriptionDeleted(event, spaceId!);
-      break;
+    }
 
     default:
       console.log(`Unhandled webhook event: ${event.type}`);
@@ -420,9 +434,17 @@ async function handleSubscriptionDeleted(
     })
     .eq("id", member.id);
 
-  // Expire all renewable credits
+  // Expire all credits — subscription credits and purchased credits
+  // Purchased credits are only valid while the plan is active
   await expireRenewableCredits({
     spaceId,
     userId: member.user_id,
   });
+  await expirePurchasedCredits({
+    spaceId,
+    userId: member.user_id,
+  });
+
+  // Delete Nuki keypad code if Nuki integration is enabled
+  await deleteNukiCodeForMember(spaceId, member.id);
 }

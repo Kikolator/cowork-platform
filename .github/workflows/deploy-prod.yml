@@ -122,12 +122,11 @@ jobs:
     # Run after migrate succeeds, or if migrate was skipped (no new migrations)
     if: always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
+          token: ${{ secrets.TYPES_PUSH_TOKEN }}
 
       - uses: supabase/setup-cli@v1
         with:
@@ -146,16 +145,26 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
 
-      - name: Commit types if changed
+      - name: Push types if changed
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/db/types/database.ts
-          if git diff --cached --quiet; then
+          if git diff --staged --quiet; then
             echo "No type changes detected"
+            echo "TYPES_CHANGED=false" >> "$GITHUB_ENV"
           else
             git commit -m "chore(db): regenerate prod database types"
             git push
+            echo "TYPES_CHANGED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Summary
+        run: |
+          if [ "$TYPES_CHANGED" = "true" ]; then
+            echo "### Types — pushed to main ✅" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Types — No changes ✅" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # ─── Smoke test: always runs (even if migration was skipped) ──

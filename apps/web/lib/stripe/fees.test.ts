@@ -1,7 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("server-only", () => ({}));
-
+import { describe, expect, it } from "vitest";
 import { calculateApplicationFee, getEffectiveFeePercent } from "./fees";
 
 // ── getEffectiveFeePercent ────────────────────────────────────────────────
@@ -23,6 +20,27 @@ describe("getEffectiveFeePercent", () => {
 
   it("allows zero override", () => {
     expect(getEffectiveFeePercent("pro", 0)).toBe(0);
+  });
+
+  it("returns override even when it matches the plan default", () => {
+    // Override of 3 on pro plan (which defaults to 3) should still return 3
+    expect(getEffectiveFeePercent("pro", 3)).toBe(3);
+  });
+
+  it("returns override higher than any plan default", () => {
+    expect(getEffectiveFeePercent("enterprise", 15)).toBe(15);
+  });
+
+  it("returns free default for empty string plan", () => {
+    expect(getEffectiveFeePercent("", null)).toBe(5);
+  });
+
+  it("distinguishes between all three plan tiers", () => {
+    const free = getEffectiveFeePercent("free", null);
+    const pro = getEffectiveFeePercent("pro", null);
+    const enterprise = getEffectiveFeePercent("enterprise", null);
+    expect(free).toBeGreaterThan(pro);
+    expect(pro).toBeGreaterThan(enterprise);
   });
 });
 
@@ -58,5 +76,34 @@ describe("calculateApplicationFee", () => {
   it("handles larger amounts correctly", () => {
     // 50000 * 0.05 = 2500
     expect(calculateApplicationFee(50000, 5)).toBe(2500);
+  });
+
+  it("rounds down at exactly 0.5 fractional cent (banker's rounding)", () => {
+    // 150 * 0.03 = 4.5 → Math.round(4.5) = 5 (JS rounds .5 up for positive numbers)
+    expect(calculateApplicationFee(150, 3)).toBe(5);
+  });
+
+  it("rounds up when fractional cent is above 0.5", () => {
+    // 151 * 0.03 = 4.53 → rounds to 5
+    expect(calculateApplicationFee(151, 3)).toBe(5);
+  });
+
+  it("handles 100% fee (full amount)", () => {
+    expect(calculateApplicationFee(5000, 100)).toBe(5000);
+  });
+
+  it("handles 1 cent at 100% fee", () => {
+    expect(calculateApplicationFee(1, 100)).toBe(1);
+  });
+
+  it("handles both zero amount and zero percent", () => {
+    expect(calculateApplicationFee(0, 0)).toBe(0);
+  });
+
+  it("produces consistent results for typical subscription amounts", () => {
+    // $49.99 = 4999 cents at 5% = 249.95 → 250
+    expect(calculateApplicationFee(4999, 5)).toBe(250);
+    // $99.00 = 9900 cents at 3% = 297
+    expect(calculateApplicationFee(9900, 3)).toBe(297);
   });
 });

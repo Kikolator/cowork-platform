@@ -1,5 +1,6 @@
 import { SignOutButton } from "./sign-out-button";
 import { createClient } from "@/lib/supabase/server";
+import { RogueOpsLogo } from "@/components/rogueops-logo";
 
 export default async function PlatformLayout({
   children,
@@ -19,11 +20,9 @@ export default async function PlatformLayout({
         </div>
       )}
       <div className="w-full max-w-lg space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            RogueOps
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-3">
+          <RogueOpsLogo className="h-10" />
+          <p className="text-sm text-muted-foreground">
             Launch your space
           </p>
         </div>

@@ -171,6 +171,7 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
           <Select
             value={statusFilter}
             onValueChange={(v) => v && setStatusFilter(v)}
+            items={[{ value: "all", label: "All Statuses" }, { value: "active", label: "Active" }, { value: "pending_payment", label: "Pending" }, { value: "used", label: "Used" }, { value: "cancelled", label: "Cancelled" }, { value: "expired", label: "Expired" }]}
           >
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -308,6 +309,7 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
               <Select
                 value={createUserId}
                 onValueChange={(v) => v && setCreateUserId(v)}
+                items={spaceUsers.map((u) => ({ value: u.id, label: u.full_name ?? u.email }))}
               >
                 <SelectTrigger id="create-user">
                   <SelectValue placeholder="Select a user" />
@@ -327,6 +329,7 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
               <Select
                 value={createPassType}
                 onValueChange={(v) => v && setCreatePassType(v as "day" | "week")}
+                items={[{ value: "day", label: "Day Pass" }, { value: "week", label: "Week Pass" }]}
               >
                 <SelectTrigger id="create-pass-type">
                   <SelectValue />

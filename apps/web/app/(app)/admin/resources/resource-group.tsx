@@ -40,6 +40,7 @@ interface Resource {
   floor: number | null;
   sort_order: number | null;
   resource_type_id: string;
+  image_url: string | null;
 }
 
 interface ResourceTypeData {
@@ -74,9 +75,11 @@ const STATUS_OPTIONS = [
 interface ResourceGroupProps {
   resourceType: ResourceTypeData;
   resources: Resource[];
+  spaceId: string;
+  currentRate?: { rate_cents: number };
 }
 
-export function ResourceGroup({ resourceType, resources }: ResourceGroupProps) {
+export function ResourceGroup({ resourceType, resources, spaceId, currentRate }: ResourceGroupProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editResource, setEditResource] = useState<Resource | null>(null);
   const [editTypeOpen, setEditTypeOpen] = useState(false);
@@ -230,6 +233,7 @@ export function ResourceGroup({ resourceType, resources }: ResourceGroupProps) {
         resourceTypeName={resourceType.name}
         nextSortOrder={nextSortOrder}
         defaultCapacity={defaultCapacity}
+        spaceId={spaceId}
       />
 
       {/* Edit resource dialog */}
@@ -242,6 +246,7 @@ export function ResourceGroup({ resourceType, resources }: ResourceGroupProps) {
           resource={editResource}
           nextSortOrder={nextSortOrder}
           defaultCapacity={defaultCapacity}
+          spaceId={spaceId}
         />
       )}
 
@@ -250,6 +255,7 @@ export function ResourceGroup({ resourceType, resources }: ResourceGroupProps) {
         open={editTypeOpen}
         onOpenChange={setEditTypeOpen}
         resourceType={resourceType}
+        currentRate={currentRate}
       />
 
       {/* Delete resource confirmation */}

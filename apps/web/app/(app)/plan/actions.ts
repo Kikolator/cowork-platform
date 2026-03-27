@@ -36,6 +36,11 @@ interface FiscalData {
   companyName?: string;
   companyTaxId?: string;
   companyTaxIdType?: string;
+  billingAddressLine1?: string;
+  billingAddressLine2?: string;
+  billingCity?: string;
+  billingPostalCode?: string;
+  billingCountry?: string;
 }
 
 export async function subscribeToPlan(
@@ -97,6 +102,11 @@ export async function subscribeToPlan(
           billing_company_tax_id_type: fiscalData.companyTaxIdType
             ? (fiscalData.companyTaxIdType as "nif" | "nie" | "passport" | "cif" | "eu_vat" | "foreign_tax_id" | "other")
             : null,
+          billing_address_line1: fiscalData.billingAddressLine1 ?? null,
+          billing_address_line2: fiscalData.billingAddressLine2 ?? null,
+          billing_city: fiscalData.billingCity ?? null,
+          billing_postal_code: fiscalData.billingPostalCode ?? null,
+          billing_country: fiscalData.billingCountry ?? null,
         };
 
         if (existingMember) {

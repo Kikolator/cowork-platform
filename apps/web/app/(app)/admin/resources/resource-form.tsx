@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ImageUpload } from "@/components/image-upload";
 import { resourceSchema, type ResourceFormValues } from "./schemas";
 import { createResource, updateResource } from "./actions";
 
@@ -24,6 +25,7 @@ interface ResourceData {
   floor: number | null;
   sort_order: number | null;
   resource_type_id: string;
+  image_url: string | null;
 }
 
 interface ResourceFormProps {
@@ -34,6 +36,7 @@ interface ResourceFormProps {
   resource?: ResourceData;
   nextSortOrder: number;
   defaultCapacity: number;
+  spaceId: string;
 }
 
 export function ResourceForm({
@@ -44,9 +47,11 @@ export function ResourceForm({
   resource,
   nextSortOrder,
   defaultCapacity,
+  spaceId,
 }: ResourceFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(resource?.image_url ?? null);
   const isEdit = !!resource;
 
   const {
@@ -67,9 +72,10 @@ export function ResourceForm({
   function onSubmit(data: ResourceFormValues) {
     setServerError(null);
     startTransition(async () => {
+      const payload = { ...data, imageUrl: imageUrl };
       const result = isEdit
-        ? await updateResource(resource.id, data)
-        : await createResource(data);
+        ? await updateResource(resource.id, payload)
+        : await createResource(payload);
       if (!result.success) {
         setServerError(result.error);
       } else {
@@ -123,6 +129,23 @@ export function ResourceForm({
                 {...register("floor", { valueAsNumber: true })}
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Photo</Label>
+            <ImageUpload
+              currentUrl={imageUrl}
+              spaceId={spaceId}
+              bucket="space-assets"
+              pathPrefix="resource"
+              onUploaded={(url) => setImageUrl(url)}
+              onCleared={() => setImageUrl(null)}
+              label="Photo"
+              maxWidth={1024}
+              maxHeight={768}
+              hint="PNG, JPG, or WebP. Auto-resized to 1024×768px."
+              previewClassName="h-24 w-auto"
+            />
           </div>
 
           <input type="hidden" {...register("resourceTypeId")} />

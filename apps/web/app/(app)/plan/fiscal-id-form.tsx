@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,16 @@ import {
 } from "@/components/ui/select";
 import { subscribeToPlan } from "./actions";
 
+const FISCAL_ID_TYPES = [
+  { value: "nif", label: "NIF" },
+  { value: "nie", label: "NIE" },
+  { value: "passport", label: "Passport" },
+  { value: "cif", label: "CIF" },
+  { value: "eu_vat", label: "EU VAT" },
+  { value: "foreign_tax_id", label: "Foreign Tax ID" },
+  { value: "other", label: "Other" },
+] as const;
+
 interface FiscalIdFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,7 +46,13 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
   const [fiscalIdType, setFiscalIdType] = useState("nif");
   const [fiscalId, setFiscalId] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [companyTaxIdType, setCompanyTaxIdType] = useState("cif");
   const [companyTaxId, setCompanyTaxId] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +75,12 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
         fiscalId: fiscalId.trim(),
         companyName: entityType === "company" ? companyName.trim() : undefined,
         companyTaxId: entityType === "company" ? companyTaxId.trim() : undefined,
-        companyTaxIdType: entityType === "company" ? "cif" : undefined,
+        companyTaxIdType: entityType === "company" ? companyTaxIdType : undefined,
+        billingAddressLine1: addressLine1.trim() || undefined,
+        billingAddressLine2: addressLine2.trim() || undefined,
+        billingCity: city.trim() || undefined,
+        billingPostalCode: postalCode.trim() || undefined,
+        billingCountry: country.trim() || undefined,
       });
 
       if (!result.success) {
@@ -77,11 +99,11 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Fiscal Information Required</DialogTitle>
+          <DialogTitle>Billing Information Required</DialogTitle>
           <DialogDescription>
-            Please provide your fiscal ID before subscribing. This is required by law in your region.
+            Please provide your billing details before subscribing. This is required by law in your region.
           </DialogDescription>
         </DialogHeader>
 
@@ -92,34 +114,33 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="entity-type">Entity Type</Label>
-            <Select value={entityType} onValueChange={(v) => v && setEntityType(v)}>
-              <SelectTrigger id="entity-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="individual">Individual</SelectItem>
-                <SelectItem value="company">Company</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="entity-type">Entity Type</Label>
+              <Select value={entityType} onValueChange={(v) => v && setEntityType(v)} items={[{ value: "individual", label: "Individual" }, { value: "company", label: "Company" }]}>
+                <SelectTrigger id="entity-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="company">Company</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="fiscal-id-type">ID Type</Label>
-            <Select value={fiscalIdType} onValueChange={(v) => v && setFiscalIdType(v)}>
-              <SelectTrigger id="fiscal-id-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nif">NIF</SelectItem>
-                <SelectItem value="nie">NIE</SelectItem>
-                <SelectItem value="passport">Passport</SelectItem>
-                <SelectItem value="cif">CIF</SelectItem>
-                <SelectItem value="eu_vat">EU VAT</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label htmlFor="fiscal-id-type">Fiscal ID Type</Label>
+              <Select value={fiscalIdType} onValueChange={(v) => v && setFiscalIdType(v)} items={FISCAL_ID_TYPES.map((t) => ({ value: t.value, label: t.label }))}>
+                <SelectTrigger id="fiscal-id-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FISCAL_ID_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -134,6 +155,7 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
 
           {entityType === "company" && (
             <>
+              <Separator />
               <div className="space-y-2">
                 <Label htmlFor="company-name">Company Name</Label>
                 <Input
@@ -143,17 +165,83 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
                   placeholder="Company name"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="company-tax-id">Company Tax ID</Label>
-                <Input
-                  id="company-tax-id"
-                  value={companyTaxId}
-                  onChange={(e) => setCompanyTaxId(e.target.value)}
-                  placeholder="CIF or tax ID"
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="company-tax-id-type">Company Tax ID Type</Label>
+                  <Select value={companyTaxIdType} onValueChange={(v) => v && setCompanyTaxIdType(v)} items={FISCAL_ID_TYPES.map((t) => ({ value: t.value, label: t.label }))}>
+                    <SelectTrigger id="company-tax-id-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FISCAL_ID_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company-tax-id">Company Tax ID</Label>
+                  <Input
+                    id="company-tax-id"
+                    value={companyTaxId}
+                    onChange={(e) => setCompanyTaxId(e.target.value)}
+                    placeholder="CIF or tax ID"
+                  />
+                </div>
               </div>
             </>
           )}
+
+          <Separator />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="address-line1">Address line 1</Label>
+              <Input
+                id="address-line1"
+                value={addressLine1}
+                onChange={(e) => setAddressLine1(e.target.value)}
+                placeholder="Street address"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address-line2">Address line 2</Label>
+              <Input
+                id="address-line2"
+                value={addressLine2}
+                onChange={(e) => setAddressLine2(e.target.value)}
+                placeholder="Apt, suite, etc."
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="postal-code">Postal code</Label>
+              <Input
+                id="postal-code"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="ES"
+                maxLength={2}
+              />
+            </div>
+          </div>
 
           <DialogFooter>
             <Button type="submit" disabled={isPending}>

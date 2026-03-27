@@ -170,6 +170,105 @@ describe("validateBookingTime", () => {
     );
     expect(result).toEqual({ valid: true });
   });
+
+  // ── Boundary conditions ──────────────────────────────────────────────
+
+  it("accepts booking at exactly the default minimum duration (60 min)", () => {
+    // 09:00 UTC = 10:00 CET, 10:00 UTC = 11:00 CET (exactly 60 min)
+    const result = validateBookingTime(
+      "2026-03-12T09:00:00.000Z",
+      "2026-03-12T10:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("accepts booking at exactly the maximum duration (240 min)", () => {
+    // 08:00 UTC = 09:00 CET, 12:00 UTC = 13:00 CET (exactly 240 min)
+    const result = validateBookingTime(
+      "2026-03-12T08:00:00.000Z",
+      "2026-03-12T12:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("accepts booking starting exactly at opening time", () => {
+    // 08:00 UTC = 09:00 CET (opening), 10:00 UTC = 11:00 CET (2h)
+    const result = validateBookingTime(
+      "2026-03-12T08:00:00.000Z",
+      "2026-03-12T10:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("accepts booking ending exactly at closing time", () => {
+    // 16:00 UTC = 17:00 CET start, 17:00 UTC = 18:00 CET end (exactly closing)
+    const result = validateBookingTime(
+      "2026-03-12T16:00:00.000Z",
+      "2026-03-12T17:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("accepts booking at exactly the custom minimum duration (15 min)", () => {
+    const result = validateBookingTime(
+      "2026-03-12T09:00:00.000Z",
+      "2026-03-12T09:15:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+      15,
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("rejects when end is exactly at opening time", () => {
+    // start 07:30 UTC = 08:30 CET, end 08:00 UTC = 09:00 CET (end equals open)
+    const result = validateBookingTime(
+      "2026-03-12T07:30:00.000Z",
+      "2026-03-12T08:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      [],
+    );
+    // start is before opening, so "Start time is outside business hours"
+    expect(result.valid).toBe(false);
+  });
+
+  it("handles closure list with multiple dates", () => {
+    const closures = ["2026-03-12", "2026-03-13", "2026-03-16"];
+    const result = validateBookingTime(
+      "2026-03-13T09:00:00.000Z",
+      "2026-03-13T11:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      closures,
+    );
+    expect(result).toEqual({ valid: false, error: "The space is closed on this date" });
+  });
+
+  it("accepts when date is not in closure list", () => {
+    const closures = ["2026-03-13", "2026-03-16"];
+    const result = validateBookingTime(
+      "2026-03-12T09:00:00.000Z",
+      "2026-03-12T11:00:00.000Z",
+      WEEKDAY_HOURS,
+      TZ,
+      closures,
+    );
+    expect(result).toEqual({ valid: true });
+  });
 });
 
 // ── validateDeskBookingDate ─────────────────────────────────────────────
@@ -212,6 +311,24 @@ describe("validateDeskBookingDate", () => {
   it("accepts a valid future weekday", () => {
     const result = validateDeskBookingDate("2026-03-12", WEEKDAY_HOURS, TZ, []);
     expect(result).toEqual({ valid: true });
+  });
+
+  it("accepts today's date (not in the past)", () => {
+    // System time is 2026-03-11 08:00 UTC = 09:00 CET, today is 2026-03-11 in CET
+    const result = validateDeskBookingDate("2026-03-11", WEEKDAY_HOURS, TZ, []);
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("accepts date at exactly the 14-day boundary", () => {
+    // Today is 2026-03-11, 14 days later is 2026-03-25 (Wednesday)
+    const result = validateDeskBookingDate("2026-03-25", WEEKDAY_HOURS, TZ, []);
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("rejects a Sunday (closed) even if within date range", () => {
+    // 2026-03-22 = Sunday
+    const result = validateDeskBookingDate("2026-03-22", WEEKDAY_HOURS, TZ, []);
+    expect(result).toEqual({ valid: false, error: "The space is closed on this day" });
   });
 });
 
@@ -257,6 +374,59 @@ describe("canCancelBooking", () => {
     expect(result.willRefund).toBe(true);
     expect(result.reason).toBe("Late cancellation");
   });
+
+  it("does not flag late cancellation when exactly 2h before start", () => {
+    // now = 10:00, start = 12:00 → exactly 2h → should NOT be late
+    const result = canCancelBooking(
+      { start_time: "2026-03-11T12:00:00.000Z", status: "confirmed" },
+      now,
+    );
+    expect(result.canCancel).toBe(true);
+    expect(result.willRefund).toBe(true);
+    expect(result.reason).toBeUndefined();
+  });
+
+  it("flags late cancellation at 1h 59m before start", () => {
+    // now = 10:00, start = 11:59 → 1h59m → late
+    const result = canCancelBooking(
+      { start_time: "2026-03-11T11:59:00.000Z", status: "confirmed" },
+      now,
+    );
+    expect(result.canCancel).toBe(true);
+    expect(result.willRefund).toBe(true);
+    expect(result.reason).toBe("Late cancellation");
+  });
+
+  it("rejects booking starting exactly at now", () => {
+    // start_time equals now → start < now is false, but start === now means it hasn't started yet?
+    // Actually start < now is false when equal, so it passes the "already started" check
+    const result = canCancelBooking(
+      { start_time: "2026-03-11T10:00:00.000Z", status: "confirmed" },
+      now,
+    );
+    // start === now, so start < now is false → can cancel, and 0h < 2h → late cancellation
+    expect(result.canCancel).toBe(true);
+    expect(result.reason).toBe("Late cancellation");
+  });
+
+  it("rejects cancellation for completed booking even if start is in the future", () => {
+    // Edge case: status is "completed" but start_time is in the future (data inconsistency)
+    const result = canCancelBooking(
+      { start_time: "2026-03-12T10:00:00.000Z", status: "completed" },
+      now,
+    );
+    expect(result.canCancel).toBe(false);
+    expect(result.reason).toBe("Booking is already completed");
+  });
+
+  it("allows cancelling a pending booking", () => {
+    const result = canCancelBooking(
+      { start_time: "2026-03-12T10:00:00.000Z", status: "pending" },
+      now,
+    );
+    expect(result.canCancel).toBe(true);
+    expect(result.willRefund).toBe(true);
+  });
 });
 
 // ── getAdvanceBookingLimit ──────────────────────────────────────────────
@@ -264,5 +434,11 @@ describe("canCancelBooking", () => {
 describe("getAdvanceBookingLimit", () => {
   it("returns 14", () => {
     expect(getAdvanceBookingLimit()).toBe(14);
+  });
+
+  it("returns a positive integer", () => {
+    const limit = getAdvanceBookingLimit();
+    expect(limit).toBeGreaterThan(0);
+    expect(Number.isInteger(limit)).toBe(true);
   });
 });

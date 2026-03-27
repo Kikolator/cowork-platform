@@ -71,7 +71,7 @@ export default async function DeskBookingPage() {
   ] = await Promise.all([
     supabase
       .from("spaces")
-      .select("timezone, business_hours")
+      .select("timezone, business_hours, min_booking_minutes")
       .eq("id", spaceId)
       .single(),
 
@@ -95,6 +95,7 @@ export default async function DeskBookingPage() {
 
   const timezone = space?.timezone ?? "Europe/Madrid";
   const businessHours = (space?.business_hours ?? {}) as BusinessHours;
+  const minBookingMinutes = space?.min_booking_minutes ?? 60;
 
   // Find desk resource type credit info
   const { data: deskType } = await supabase
@@ -158,6 +159,9 @@ export default async function DeskBookingPage() {
           businessDays={businessDays}
           timezone={timezone}
           hasCreditsOrUnlimited={hasCreditsOrUnlimited}
+          minBookingMinutes={minBookingMinutes}
+          remainingCreditsMinutes={remainingMinutes}
+          isUnlimited={isUnlimited}
         />
       </div>
 
