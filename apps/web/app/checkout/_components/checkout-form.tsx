@@ -38,7 +38,9 @@ export function CheckoutForm({ type, planSlug }: CheckoutFormProps) {
     setServerError(null);
 
     try {
-      const res = await fetch("/api/checkout/session", {
+      const spaceParam = new URLSearchParams(window.location.search).get("space");
+      const apiUrl = `/api/checkout/session${spaceParam ? `?space=${spaceParam}` : ""}`;
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
