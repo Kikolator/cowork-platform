@@ -931,6 +931,7 @@ export type Database = {
           created_at: string | null
           currency: string
           description: string | null
+          desk_weight: number
           external_id: string | null
           has_fixed_desk: boolean | null
           id: string
@@ -950,6 +951,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           description?: string | null
+          desk_weight?: number
           external_id?: string | null
           has_fixed_desk?: boolean | null
           id?: string
@@ -969,6 +971,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           description?: string | null
+          desk_weight?: number
           external_id?: string | null
           has_fixed_desk?: boolean | null
           id?: string
@@ -1710,6 +1713,14 @@ export type Database = {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
       }
+      check_space_capacity: {
+        Args: {
+          p_space_id: string
+          p_plan_id: string
+          p_exclude_member_id?: string
+        }
+        Returns: Json
+      }
       get_credit_balance: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: {
@@ -1719,6 +1730,10 @@ export type Database = {
           total_minutes: number
           used_minutes: number
         }[]
+      }
+      get_space_capacity: {
+        Args: { p_space_id: string }
+        Returns: Json
       }
       get_desk_availability: {
         Args: { p_date: string; p_space_id: string }
