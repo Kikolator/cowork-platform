@@ -928,6 +928,7 @@ export type Database = {
         Row: {
           access_type: string
           active: boolean | null
+          capacity: number | null
           created_at: string | null
           currency: string
           description: string | null
@@ -948,6 +949,7 @@ export type Database = {
         Insert: {
           access_type?: string
           active?: boolean | null
+          capacity?: number | null
           created_at?: string | null
           currency?: string
           description?: string | null
@@ -968,6 +970,7 @@ export type Database = {
         Update: {
           access_type?: string
           active?: boolean | null
+          capacity?: number | null
           created_at?: string | null
           currency?: string
           description?: string | null
@@ -1485,6 +1488,11 @@ export type Database = {
           created_at: string | null
           currency: string
           custom_domain: string | null
+          daypass_currency: string
+          daypass_daily_limit: number | null
+          daypass_enabled: boolean
+          daypass_price_cents: number | null
+          daypass_stripe_price_id: string | null
           default_locale: string
           favicon_url: string | null
           features: Json
@@ -1511,6 +1519,11 @@ export type Database = {
           created_at?: string | null
           currency?: string
           custom_domain?: string | null
+          daypass_currency?: string
+          daypass_daily_limit?: number | null
+          daypass_enabled?: boolean
+          daypass_price_cents?: number | null
+          daypass_stripe_price_id?: string | null
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1537,6 +1550,11 @@ export type Database = {
           created_at?: string | null
           currency?: string
           custom_domain?: string | null
+          daypass_currency?: string
+          daypass_daily_limit?: number | null
+          daypass_enabled?: boolean
+          daypass_price_cents?: number | null
+          daypass_stripe_price_id?: string | null
           default_locale?: string
           favicon_url?: string | null
           features?: Json
