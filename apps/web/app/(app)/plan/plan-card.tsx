@@ -26,6 +26,8 @@ interface PlanCardProps {
   };
   isCurrent: boolean;
   memberStatus: string | null;
+  /** Number of spots available for this plan, or null if no desk capacity applies */
+  spotsLeft: number | null;
   onError: (msg: string) => void;
   onFiscalIdRequired: (planId: string) => void;
 }
@@ -54,12 +56,14 @@ export function PlanCard({
   plan,
   isCurrent,
   memberStatus,
+  spotsLeft,
   onError,
   onFiscalIdRequired,
 }: PlanCardProps) {
   const [isPending, startTransition] = useTransition();
 
   const hasActiveMembership = memberStatus === "active" || memberStatus === "cancelling" || memberStatus === "past_due" || memberStatus === "paused";
+  const isSoldOut = spotsLeft !== null && spotsLeft <= 0 && !isCurrent;
 
   function handleAction() {
     startTransition(async () => {
@@ -94,6 +98,11 @@ export function PlanCard({
       {isCurrent && (
         <div className="absolute -top-3 left-4">
           <Badge variant="default">Current Plan</Badge>
+        </div>
+      )}
+      {isSoldOut && (
+        <div className="absolute -top-3 right-4">
+          <Badge variant="destructive">Sold Out</Badge>
         </div>
       )}
 
@@ -136,20 +145,28 @@ export function PlanCard({
         )}
       </div>
 
+      {spotsLeft !== null && spotsLeft > 0 && spotsLeft <= 5 && !isCurrent && (
+        <p className="mb-2 text-center text-xs font-medium text-amber-600 dark:text-amber-400">
+          Only {spotsLeft} {spotsLeft === 1 ? "spot" : "spots"} left
+        </p>
+      )}
+
       <Button
         onClick={handleAction}
-        disabled={isCurrent || isPending}
+        disabled={isCurrent || isPending || isSoldOut}
         variant={isCurrent ? "outline" : "default"}
         size="lg"
         className="w-full"
       >
         {isPending
           ? "Processing..."
-          : isCurrent
-            ? "Current Plan"
-            : hasActiveMembership
-              ? `Switch to ${plan.name}`
-              : "Subscribe"}
+          : isSoldOut
+            ? "Sold Out"
+            : isCurrent
+              ? "Current Plan"
+              : hasActiveMembership
+                ? `Switch to ${plan.name}`
+                : "Subscribe"}
       </Button>
     </div>
   );

@@ -162,6 +162,15 @@ export async function addMember(input: unknown) {
     return { success: false as const, error: "This person is already a member of this space" };
   }
 
+  // 4b. Check space capacity for the selected plan
+  const { data: capacity } = await admin.rpc("check_space_capacity", {
+    p_space_id: spaceId,
+    p_plan_id: d.planId,
+  });
+  if (capacity && typeof capacity === "object" && "has_capacity" in capacity && !capacity.has_capacity) {
+    return { success: false as const, error: "No desk capacity available for this plan. Consider adding more desks or choosing a different plan." };
+  }
+
   // 5. Insert member record
   const { data: newMember, error: insertError } = await supabase
     .from("members")

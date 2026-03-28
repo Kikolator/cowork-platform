@@ -69,13 +69,24 @@ export async function subscribeToPlan(
     // Fetch plan
     const { data: plan } = await admin
       .from("plans")
-      .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id, active, space_id")
+      .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id, active, space_id, desk_weight")
       .eq("id", planId)
       .eq("space_id", spaceId)
       .single();
 
     if (!plan) return { success: false, error: "Plan not found" };
     if (!plan.active) return { success: false, error: "This plan is no longer available" };
+
+    // Check space capacity
+    if (plan.desk_weight > 0) {
+      const { data: capacity } = await admin.rpc("check_space_capacity", {
+        p_space_id: spaceId,
+        p_plan_id: planId,
+      });
+      if (capacity && typeof capacity === "object" && "has_capacity" in capacity && !capacity.has_capacity) {
+        return { success: false, error: "This plan is currently sold out. No desk capacity available." };
+      }
+    }
 
     // Check fiscal ID requirement
     const { data: space } = await admin
@@ -210,13 +221,25 @@ export async function changePlan(newPlanId: string): Promise<
     // Fetch new plan
     const { data: newPlan } = await admin
       .from("plans")
-      .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id, active, space_id")
+      .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id, active, space_id, desk_weight")
       .eq("id", newPlanId)
       .eq("space_id", spaceId)
       .single();
 
     if (!newPlan) return { success: false, error: "Plan not found" };
     if (!newPlan.active) return { success: false, error: "This plan is no longer available" };
+
+    // Check space capacity for the new plan (excluding current member's weight)
+    if (newPlan.desk_weight > 0) {
+      const { data: capacity } = await admin.rpc("check_space_capacity", {
+        p_space_id: spaceId,
+        p_plan_id: newPlanId,
+        p_exclude_member_id: member.id,
+      });
+      if (capacity && typeof capacity === "object" && "has_capacity" in capacity && !capacity.has_capacity) {
+        return { success: false, error: "Cannot switch to this plan. No desk capacity available." };
+      }
+    }
 
     const { stripeAccountId } = await verifyStripeReady(tenantId);
     const priceId = await ensureStripePriceExists(newPlan, stripeAccountId, spaceId);

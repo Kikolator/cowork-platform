@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { planSchema, type PlanFormValues } from "./schemas";
+import { planSchema, type PlanFormValues, weightToMembersPerDesk } from "./schemas";
 import { createPlan, updatePlan } from "./actions";
 import { PlanCreditConfig } from "./plan-credit-config";
 
@@ -59,6 +59,7 @@ interface Plan {
   iva_rate: number;
   access_type: string;
   has_fixed_desk: boolean | null;
+  desk_weight: number;
   sort_order: number | null;
   plan_credit_config: Array<{
     resource_type_id: string;
@@ -144,6 +145,7 @@ export function PlanForm({
       accessType:
         (plan?.access_type as PlanFormValues["accessType"]) ?? "business_hours",
       hasFixedDesk: plan?.has_fixed_desk ?? false,
+      membersPerDesk: plan ? weightToMembersPerDesk(plan.desk_weight) : 0,
       sortOrder: plan?.sort_order ?? nextSortOrder,
       creditConfig: defaultCreditConfig,
     },
@@ -152,6 +154,7 @@ export function PlanForm({
   const watchCurrency = watch("currency");
   const watchHasFixedDesk = watch("hasFixedDesk");
   const watchAccessType = watch("accessType");
+  const watchMembersPerDesk = watch("membersPerDesk");
 
   function onSubmit(data: PlanFormValues) {
     setServerError(null);
@@ -358,9 +361,10 @@ export function PlanForm({
               <Checkbox
                 id="hasFixedDesk"
                 checked={watchHasFixedDesk}
-                onCheckedChange={(checked) =>
-                  setValue("hasFixedDesk", checked === true)
-                }
+                onCheckedChange={(checked) => {
+                  setValue("hasFixedDesk", checked === true);
+                  if (checked) setValue("membersPerDesk", 1);
+                }}
               />
               <div>
                 <span className="text-sm font-medium">
@@ -371,6 +375,38 @@ export function PlanForm({
                 </p>
               </div>
             </label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="membersPerDesk">Desk ratio</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="membersPerDesk"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="w-24"
+                  {...register("membersPerDesk", { valueAsNumber: true })}
+                  disabled={watchHasFixedDesk}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {watchMembersPerDesk === 0
+                    ? "No desk needed (virtual plan)"
+                    : watchMembersPerDesk === 1
+                      ? "1 member per desk (dedicated)"
+                      : `${watchMembersPerDesk} members share 1 desk`}
+                </span>
+              </div>
+              {errors.membersPerDesk && (
+                <p className="text-xs text-destructive">
+                  {errors.membersPerDesk.message}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Controls capacity limits. Higher ratio = more members per desk.
+                Set to 0 for plans that don&apos;t need a desk.
+              </p>
+            </div>
           </FormSection>
 
           <Separator />
