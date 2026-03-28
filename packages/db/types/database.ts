@@ -1773,6 +1773,14 @@ export type Database = {
         Returns: boolean
       }
       remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
+      }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
     Enums: {
