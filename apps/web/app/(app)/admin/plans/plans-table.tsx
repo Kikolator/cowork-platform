@@ -10,8 +10,10 @@ import {
   Infinity,
   Clock,
   Armchair,
+  Users,
   Zap,
 } from "lucide-react";
+import { weightToMembersPerDesk } from "./schemas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -59,6 +61,7 @@ interface Plan {
   iva_rate: number;
   access_type: string;
   has_fixed_desk: boolean | null;
+  desk_weight: number;
   sort_order: number | null;
   active: boolean | null;
   plan_credit_config: CreditConfig[];
@@ -245,6 +248,12 @@ export function PlansTable({
                               Fixed desk included
                             </div>
                           )}
+                          {plan.desk_weight > 0 && !plan.has_fixed_desk && (
+                            <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                              <Users className="h-3 w-3" />
+                              {weightToMembersPerDesk(plan.desk_weight)} members/desk
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -342,6 +351,7 @@ export function PlansTable({
           }}
           plan={{
             ...editPlan,
+            desk_weight: editPlan.desk_weight,
             plan_credit_config: editPlan.plan_credit_config.map((cc) => ({
               resource_type_id: cc.resource_type_id,
               monthly_minutes: cc.monthly_minutes,

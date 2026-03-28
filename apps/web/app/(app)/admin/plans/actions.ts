@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { planSchema } from "./schemas";
+import { planSchema, membersPerDeskToWeight } from "./schemas";
 
 async function getSpaceId() {
   const supabase = await createClient();
@@ -22,7 +22,8 @@ export async function createPlan(input: unknown) {
   }
 
   const { supabase, spaceId } = await getSpaceId();
-  const { creditConfig, priceCents, ivaRate, hasFixedDesk, accessType, sortOrder, ...rest } = parsed.data;
+  const { creditConfig, priceCents, ivaRate, hasFixedDesk, accessType, sortOrder, membersPerDesk, ...rest } = parsed.data;
+  const deskWeight = membersPerDeskToWeight(membersPerDesk);
 
   // Check slug uniqueness
   const { data: existing } = await supabase
@@ -48,6 +49,7 @@ export async function createPlan(input: unknown) {
       iva_rate: ivaRate,
       access_type: accessType,
       has_fixed_desk: hasFixedDesk,
+      desk_weight: deskWeight,
       sort_order: sortOrder,
     })
     .select("id")
@@ -86,7 +88,8 @@ export async function updatePlan(planId: string, input: unknown) {
   }
 
   const { supabase, spaceId } = await getSpaceId();
-  const { creditConfig, priceCents, ivaRate, hasFixedDesk, accessType, sortOrder, ...rest } = parsed.data;
+  const { creditConfig, priceCents, ivaRate, hasFixedDesk, accessType, sortOrder, membersPerDesk, ...rest } = parsed.data;
+  const deskWeight = membersPerDeskToWeight(membersPerDesk);
 
   // Check slug uniqueness (exclude current plan)
   const { data: existing } = await supabase
@@ -112,6 +115,7 @@ export async function updatePlan(planId: string, input: unknown) {
       iva_rate: ivaRate,
       access_type: accessType,
       has_fixed_desk: hasFixedDesk,
+      desk_weight: deskWeight,
       sort_order: sortOrder,
     })
     .eq("id", planId)

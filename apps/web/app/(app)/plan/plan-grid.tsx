@@ -20,17 +20,25 @@ interface Plan {
   currency: string;
   access_type: string;
   has_fixed_desk: boolean | null;
+  desk_weight: number;
   sort_order: number | null;
   plan_credit_config: CreditConfig[];
+}
+
+interface SpaceCapacity {
+  total_desks: number;
+  consumed: number;
+  remaining: number;
 }
 
 interface PlanGridProps {
   plans: Plan[];
   currentPlanId: string | null;
   memberStatus: string | null;
+  capacity: SpaceCapacity | null;
 }
 
-export function PlanGrid({ plans, currentPlanId, memberStatus }: PlanGridProps) {
+export function PlanGrid({ plans, currentPlanId, memberStatus, capacity }: PlanGridProps) {
   const [error, setError] = useState<string | null>(null);
   const [fiscalIdPlanId, setFiscalIdPlanId] = useState<string | null>(null);
 
@@ -57,6 +65,11 @@ export function PlanGrid({ plans, currentPlanId, memberStatus }: PlanGridProps) 
             plan={plan}
             isCurrent={plan.id === currentPlanId}
             memberStatus={memberStatus}
+            spotsLeft={
+              capacity && plan.desk_weight > 0
+                ? Math.floor(capacity.remaining / plan.desk_weight)
+                : null
+            }
             onError={setError}
             onFiscalIdRequired={(planId) => setFiscalIdPlanId(planId)}
           />
