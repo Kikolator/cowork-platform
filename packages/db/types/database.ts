@@ -1710,6 +1710,14 @@ export type Database = {
         Args: { p_booking_id: string; p_space_id: string; p_user_id: string }
         Returns: undefined
       }
+      check_space_capacity: {
+        Args: {
+          p_exclude_member_id?: string
+          p_plan_id: string
+          p_space_id: string
+        }
+        Returns: Json
+      }
       create_booking_with_credits: {
         Args: {
           p_end_time: string
@@ -1731,14 +1739,6 @@ export type Database = {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
       }
-      check_space_capacity: {
-        Args: {
-          p_space_id: string
-          p_plan_id: string
-          p_exclude_member_id?: string
-        }
-        Returns: Json
-      }
       get_credit_balance: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: {
@@ -1748,10 +1748,6 @@ export type Database = {
           total_minutes: number
           used_minutes: number
         }[]
-      }
-      get_space_capacity: {
-        Args: { p_space_id: string }
-        Returns: Json
       }
       get_desk_availability: {
         Args: { p_date: string; p_space_id: string }
@@ -1781,6 +1777,7 @@ export type Database = {
           slot_start: string
         }[]
       }
+      get_space_capacity: { Args: { p_space_id: string }; Returns: Json }
       grant_credits: {
         Args: {
           p_amount_minutes: number
