@@ -67,6 +67,11 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
+    // Guest checkout routes: no auth required, but space headers are set above
+    if (pathname.startsWith("/checkout") || pathname.startsWith("/api/checkout/")) {
+      return response;
+    }
+
     if (!user) {
       return redirectTo(request, "/login", preserveSlug);
     }
