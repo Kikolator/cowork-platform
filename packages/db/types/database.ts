@@ -928,9 +928,11 @@ export type Database = {
         Row: {
           access_type: string
           active: boolean | null
+          capacity: number | null
           created_at: string | null
           currency: string
           description: string | null
+          desk_weight: number
           external_id: string | null
           has_fixed_desk: boolean | null
           id: string
@@ -947,9 +949,11 @@ export type Database = {
         Insert: {
           access_type?: string
           active?: boolean | null
+          capacity?: number | null
           created_at?: string | null
           currency?: string
           description?: string | null
+          desk_weight?: number
           external_id?: string | null
           has_fixed_desk?: boolean | null
           id?: string
@@ -966,9 +970,11 @@ export type Database = {
         Update: {
           access_type?: string
           active?: boolean | null
+          capacity?: number | null
           created_at?: string | null
           currency?: string
           description?: string | null
+          desk_weight?: number
           external_id?: string | null
           has_fixed_desk?: boolean | null
           id?: string
@@ -1482,6 +1488,11 @@ export type Database = {
           created_at: string | null
           currency: string
           custom_domain: string | null
+          daypass_currency: string
+          daypass_daily_limit: number | null
+          daypass_enabled: boolean
+          daypass_price_cents: number | null
+          daypass_stripe_price_id: string | null
           default_locale: string
           favicon_url: string | null
           features: Json
@@ -1508,6 +1519,11 @@ export type Database = {
           created_at?: string | null
           currency?: string
           custom_domain?: string | null
+          daypass_currency?: string
+          daypass_daily_limit?: number | null
+          daypass_enabled?: boolean
+          daypass_price_cents?: number | null
+          daypass_stripe_price_id?: string | null
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1534,6 +1550,11 @@ export type Database = {
           created_at?: string | null
           currency?: string
           custom_domain?: string | null
+          daypass_currency?: string
+          daypass_daily_limit?: number | null
+          daypass_enabled?: boolean
+          daypass_price_cents?: number | null
+          daypass_stripe_price_id?: string | null
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1689,6 +1710,14 @@ export type Database = {
         Args: { p_booking_id: string; p_space_id: string; p_user_id: string }
         Returns: undefined
       }
+      check_space_capacity: {
+        Args: {
+          p_exclude_member_id?: string
+          p_plan_id: string
+          p_space_id: string
+        }
+        Returns: Json
+      }
       create_booking_with_credits: {
         Args: {
           p_end_time: string
@@ -1748,6 +1777,7 @@ export type Database = {
           slot_start: string
         }[]
       }
+      get_space_capacity: { Args: { p_space_id: string }; Returns: Json }
       grant_credits: {
         Args: {
           p_amount_minutes: number
@@ -1773,6 +1803,14 @@ export type Database = {
         Returns: boolean
       }
       remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
+      }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
     Enums: {

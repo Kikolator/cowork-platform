@@ -19,6 +19,7 @@ interface Plan {
   currency: string;
   access_type: string;
   has_fixed_desk: boolean | null;
+  desk_weight: number;
   sort_order: number | null;
   plan_credit_config: PlanCreditConfig[];
 }
@@ -42,13 +43,18 @@ export default async function PlanPage() {
     .eq("space_id", spaceId)
     .maybeSingle();
 
-  // Get all active plans with credit config
-  const { data: plans } = await supabase
-    .from("plans")
-    .select("*, plan_credit_config(*, resource_types(id, name, slug))")
-    .eq("space_id", spaceId)
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
+  // Get all active plans with credit config and space capacity
+  const [{ data: plans }, { data: capacityData }] = await Promise.all([
+    supabase
+      .from("plans")
+      .select("*, plan_credit_config(*, resource_types(id, name, slug))")
+      .eq("space_id", spaceId)
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+    supabase.rpc("get_space_capacity", { p_space_id: spaceId }),
+  ]);
+
+  const capacity = capacityData as { total_desks: number; consumed: number; remaining: number } | null;
 
   // Get credit balances and resource type names if member exists
   let creditBalances: Array<{
@@ -111,6 +117,7 @@ export default async function PlanPage() {
         plans={typedPlans}
         currentPlanId={member && member.status !== "churned" ? member.plan_id : null}
         memberStatus={member?.status ?? null}
+        capacity={capacity}
       />
     </div>
   );

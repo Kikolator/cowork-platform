@@ -65,6 +65,13 @@ async function handleAccountUpdated(event: Stripe.Event) {
 
 async function handleCheckoutCompleted(event: Stripe.Event, spaceId: string) {
   const session = event.data.object as Stripe.Checkout.Session;
+
+  // Guest checkout flow (from marketing landing page)
+  if (session.metadata?.guest_checkout === "true") {
+    await handleGuestCheckout(session, spaceId);
+    return;
+  }
+
   const category = session.metadata?.product_category;
 
   if (session.mode === "subscription") {
@@ -447,4 +454,188 @@ async function handleSubscriptionDeleted(
 
   // Delete Nuki keypad code if Nuki integration is enabled
   await deleteNukiCodeForMember(spaceId, member.id);
+}
+
+async function handleGuestCheckout(
+  session: Stripe.Checkout.Session,
+  spaceId: string,
+) {
+  // Only proceed if payment is confirmed
+  if (session.payment_status !== "paid") {
+    console.warn("Guest checkout session not paid, skipping", {
+      sessionId: session.id,
+      paymentStatus: session.payment_status,
+    });
+    return;
+  }
+
+  const metadata = session.metadata ?? {};
+  const email = metadata.email;
+  const name = metadata.name;
+  const type = metadata.type; // "daypass" | "membership"
+
+  if (!email || !type) {
+    console.error("Guest checkout missing required metadata", { metadata });
+    return;
+  }
+
+  const admin = createAdminClient();
+
+  // Upsert user via admin API
+  let userId: string;
+  const { data: newUser, error: createError } =
+    await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: name ? { name } : {},
+    });
+
+  if (createError) {
+    // User may already exist — look them up
+    const { data: listData } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1,
+    });
+    const existingUser = listData?.users?.find(
+      (u: { email?: string }) => u.email === email,
+    );
+    if (!existingUser) {
+      console.error("Failed to create or find user for guest checkout", {
+        email,
+        error: createError.message,
+      });
+      return;
+    }
+    userId = existingUser.id;
+  } else {
+    userId = newUser.user.id;
+  }
+
+  if (type === "daypass") {
+    const today = new Date().toISOString().split("T")[0]!;
+    const amountTotal = session.amount_total ?? 0;
+
+    const { data: pass, error: passError } = await admin
+      .from("passes")
+      .insert({
+        space_id: spaceId,
+        user_id: userId,
+        pass_type: "day" as const,
+        status: "active" as const,
+        start_date: today,
+        end_date: today,
+        stripe_session_id: session.id,
+        amount_cents: amountTotal,
+        is_guest: false,
+      })
+      .select("id, start_date, end_date")
+      .single();
+
+    if (passError) {
+      console.error("Failed to create pass for guest checkout", passError);
+      return;
+    }
+
+    // Auto-assign desk
+    if (pass) {
+      const { data: deskId } = await admin.rpc("auto_assign_desk", {
+        p_space_id: spaceId,
+        p_start_date: pass.start_date,
+        p_end_date: pass.end_date,
+      });
+
+      if (deskId) {
+        await admin
+          .from("passes")
+          .update({ assigned_desk_id: deskId })
+          .eq("id", pass.id);
+      }
+    }
+  } else if (type === "membership") {
+    const planSlug = metadata.plan_slug;
+    const planId = metadata.plan_id;
+    const customerId =
+      typeof session.customer === "string" ? session.customer : null;
+    const subscriptionId =
+      typeof session.subscription === "string" ? session.subscription : null;
+
+    if (!planId && !planSlug) {
+      console.error("Guest membership checkout missing plan info", { metadata });
+      return;
+    }
+
+    // Resolve plan_id from slug if not in metadata
+    let resolvedPlanId: string | undefined = planId;
+    if (!resolvedPlanId && planSlug) {
+      const { data: plan } = await admin
+        .from("plans")
+        .select("id")
+        .eq("space_id", spaceId)
+        .eq("slug", planSlug)
+        .single();
+      resolvedPlanId = plan?.id ?? undefined;
+    }
+
+    if (!resolvedPlanId) {
+      console.error("Could not resolve plan for guest checkout", { planSlug });
+      return;
+    }
+
+    // Check for existing member
+    const { data: existingMember } = await admin
+      .from("members")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("space_id", spaceId)
+      .maybeSingle();
+
+    if (existingMember) {
+      await admin
+        .from("members")
+        .update({
+          plan_id: resolvedPlanId,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+          status: "active" as const,
+          joined_at: new Date().toISOString(),
+          cancelled_at: null,
+          cancel_requested_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingMember.id);
+    } else {
+      await admin.from("members").insert({
+        space_id: spaceId,
+        user_id: userId,
+        plan_id: resolvedPlanId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        status: "active" as const,
+        joined_at: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Ensure space_users record exists
+  await admin.from("space_users").upsert(
+    {
+      user_id: userId,
+      space_id: spaceId,
+      role: "member",
+    },
+    { onConflict: "user_id,space_id", ignoreDuplicates: true },
+  );
+
+  // Send magic link email
+  const { error: linkError } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+  });
+
+  if (linkError) {
+    console.error("Failed to send magic link after guest checkout", {
+      email,
+      error: linkError.message,
+    });
+  }
 }
