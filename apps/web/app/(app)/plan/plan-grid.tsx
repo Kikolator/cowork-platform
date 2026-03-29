@@ -36,9 +36,10 @@ interface PlanGridProps {
   currentPlanId: string | null;
   memberStatus: string | null;
   capacity: SpaceCapacity | null;
+  referralCode?: string | null;
 }
 
-export function PlanGrid({ plans, currentPlanId, memberStatus, capacity }: PlanGridProps) {
+export function PlanGrid({ plans, currentPlanId, memberStatus, capacity, referralCode }: PlanGridProps) {
   const [error, setError] = useState<string | null>(null);
   const [fiscalIdPlanId, setFiscalIdPlanId] = useState<string | null>(null);
 
@@ -72,6 +73,7 @@ export function PlanGrid({ plans, currentPlanId, memberStatus, capacity }: PlanG
             }
             onError={setError}
             onFiscalIdRequired={(planId) => setFiscalIdPlanId(planId)}
+            referralCode={referralCode}
           />
         ))}
       </div>
@@ -81,6 +83,7 @@ export function PlanGrid({ plans, currentPlanId, memberStatus, capacity }: PlanG
         onOpenChange={(open) => { if (!open) setFiscalIdPlanId(null); }}
         planId={fiscalIdPlanId}
         onError={setError}
+        referralCode={referralCode}
       />
     </div>
   );

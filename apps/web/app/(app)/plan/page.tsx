@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { PlanGrid } from "./plan-grid";
 import { CurrentPlan } from "./current-plan";
@@ -24,7 +25,13 @@ interface Plan {
   plan_credit_config: PlanCreditConfig[];
 }
 
-export default async function PlanPage() {
+export default async function PlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const referralCode = typeof params.ref === "string" ? params.ref : null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -85,8 +92,58 @@ export default async function PlanPage() {
 
   const typedPlans = (plans ?? []) as unknown as Plan[];
 
+  // Validate referral code if present (uses admin client to bypass RLS on referral_codes)
+  let referralBanner: { referrerName: string | null; discountPercent: number; discountMonths: number } | null = null;
+  if (referralCode && (!member || member.status === "churned")) {
+    const admin = createAdminClient();
+    const { data: codeData } = await admin
+      .from("referral_codes")
+      .select("user_id")
+      .eq("space_id", spaceId)
+      .eq("code", referralCode.toUpperCase().trim())
+      .eq("active", true)
+      .maybeSingle();
+
+    if (codeData) {
+      const [{ data: profile }, { data: program }] = await Promise.all([
+        admin
+          .from("shared_profiles")
+          .select("full_name")
+          .eq("id", codeData.user_id)
+          .single(),
+        admin
+          .from("referral_programs")
+          .select("referred_discount_percent, referred_discount_months")
+          .eq("space_id", spaceId)
+          .eq("active", true)
+          .maybeSingle(),
+      ]);
+
+      if (program && program.referred_discount_percent > 0) {
+        referralBanner = {
+          referrerName: profile?.full_name ?? null,
+          discountPercent: program.referred_discount_percent,
+          discountMonths: program.referred_discount_months,
+        };
+      }
+    }
+  }
+
   return (
     <div className="space-y-8">
+      {referralBanner && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+          {referralBanner.referrerName
+            ? `${referralBanner.referrerName} referred you!`
+            : "You were referred!"}{" "}
+          You&apos;ll get {referralBanner.discountPercent}% off your first{" "}
+          {referralBanner.discountMonths === 1
+            ? "month"
+            : `${referralBanner.discountMonths} months`}
+          .
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-semibold">
           {member && member.status !== "churned" ? "My Plan" : "Choose a Plan"}
@@ -118,6 +175,7 @@ export default async function PlanPage() {
         currentPlanId={member && member.status !== "churned" ? member.plan_id : null}
         memberStatus={member?.status ?? null}
         capacity={capacity}
+        referralCode={referralCode}
       />
     </div>
   );

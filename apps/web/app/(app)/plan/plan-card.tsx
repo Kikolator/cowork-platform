@@ -30,6 +30,7 @@ interface PlanCardProps {
   spotsLeft: number | null;
   onError: (msg: string) => void;
   onFiscalIdRequired: (planId: string) => void;
+  referralCode?: string | null;
 }
 
 const ACCESS_LABELS: Record<string, string> = {
@@ -59,6 +60,7 @@ export function PlanCard({
   spotsLeft,
   onError,
   onFiscalIdRequired,
+  referralCode,
 }: PlanCardProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -73,7 +75,7 @@ export function PlanCard({
           onError(result.error);
         }
       } else {
-        const result = await subscribeToPlan(plan.id);
+        const result = await subscribeToPlan(plan.id, undefined, referralCode ?? undefined);
         if (!result.success) {
           if (result.error === "fiscal_id_required") {
             onFiscalIdRequired(plan.id);
