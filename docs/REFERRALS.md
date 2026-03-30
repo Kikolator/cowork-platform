@@ -11,7 +11,7 @@ Member-to-member referral program for coworking spaces. Each space can configure
 - **Per-member codes**: Every active member gets exactly one unique referral code per space. Codes are 8-character uppercase alphanumeric strings (ambiguous characters `I`, `O`, `0`, `1` are excluded).
 - **One program per space**: Each space has at most one active referral program, configured by space admins. The `referral_programs` table enforces this with a `UNIQUE(space_id)` constraint.
 - **Stripe coupon-based discounts**: Referred-member discounts are implemented as Stripe percent-off coupons created on the tenant's connected account. Referrer discount rewards also use Stripe coupons applied directly to the referrer's existing subscription.
-- **Feature-flag gated**: The entire referral system is behind the `referrals` feature flag on `spaces.feature_flags`. Both the member-facing UI and the admin configuration require this flag to be enabled.
+- **Feature-flag gated**: The entire referral system is behind the `referrals` feature flag on `spaces.features`. Both the member-facing UI and the admin configuration require this flag to be enabled.
 - **New members only**: Referral codes can only be used by people who have never held a membership (any status) at the target space. This prevents abuse from churned members re-subscribing with a discount.
 
 ---
@@ -322,17 +322,17 @@ The `referrals` table also stores both coupon IDs (`stripe_coupon_id` for the re
 
 ## Feature Flag
 
-The referral system is gated behind the `referrals` key in the `spaces.feature_flags` JSONB column.
+The referral system is gated behind the `referrals` key in the `spaces.features` JSONB column.
 
 ### Enabling
 
-Set `feature_flags.referrals = true` on the space record. This is typically done through the admin settings UI.
+Set `features.referrals = true` on the space record. This is typically done through the admin settings UI.
 
 ```sql
 -- Manual enable (for debugging)
 UPDATE spaces
-SET feature_flags = jsonb_set(
-  COALESCE(feature_flags, '{}'::jsonb),
+SET features = jsonb_set(
+  COALESCE(features, '{}'::jsonb),
   '{referrals}',
   'true'
 )
@@ -349,7 +349,7 @@ WHERE id = '<space-id>';
 
 The feature flag and the program's `active` boolean are independent. Both must be `true` for the referral system to function:
 
-1. `feature_flags.referrals = true` -- makes the UI available
+1. `features.referrals = true` -- makes the UI available
 2. `referral_programs.active = true` -- makes the program accept referrals
 
 This allows admins to configure a program before making it visible to members.
