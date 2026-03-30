@@ -62,7 +62,7 @@ export async function applyReferrerDiscountCoupon(params: {
 
   await getStripe().subscriptions.update(
     params.subscriptionId,
-    { coupon: coupon.id },
+    { discounts: [{ coupon: coupon.id }] },
     { stripeAccount: params.connectedAccountId },
   );
 

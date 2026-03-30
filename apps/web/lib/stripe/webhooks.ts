@@ -688,20 +688,20 @@ async function handleReferralCompletion(
     .eq("active", true)
     .maybeSingle();
 
-  // Atomic increment of uses_count (no read-then-write race)
-  await admin.rpc("exec_sql", {
-    query: "UPDATE referral_codes SET uses_count = uses_count + 1 WHERE id = $1",
-    params: [referral.referral_code_id],
-  }).then(
-    () => {},
-    // Fallback if exec_sql RPC doesn't exist — use direct update
-    async () => {
-      await admin
-        .from("referral_codes")
-        .update({ uses_count: 1 } as Record<string, unknown>)
-        .eq("id", referral.referral_code_id);
-    },
-  );
+  // Increment uses_count — safe because the atomic status guard above
+  // ensures only one invocation reaches this point per referral
+  const { data: codeData } = await admin
+    .from("referral_codes")
+    .select("uses_count")
+    .eq("id", referral.referral_code_id)
+    .single();
+
+  if (codeData) {
+    await admin
+      .from("referral_codes")
+      .update({ uses_count: codeData.uses_count + 1 })
+      .eq("id", referral.referral_code_id);
+  }
 
   // Fulfill referrer reward
   let rewardApplied = false;

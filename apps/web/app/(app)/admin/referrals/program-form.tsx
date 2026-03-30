@@ -140,7 +140,7 @@ export function ProgramForm({ program, resourceTypes }: ProgramFormProps) {
         </p>
         <div>
           <Label className="text-xs">Reward Type</Label>
-          <Select value={rewardType} onValueChange={setRewardType}>
+          <Select value={rewardType} onValueChange={(v) => v && setRewardType(v)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -165,7 +165,7 @@ export function ProgramForm({ program, resourceTypes }: ProgramFormProps) {
             </div>
             <div>
               <Label className="text-xs">Resource Type</Label>
-              <Select value={creditResourceTypeId} onValueChange={setCreditResourceTypeId}>
+              <Select value={creditResourceTypeId} onValueChange={(v) => v && setCreditResourceTypeId(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select resource type" />
                 </SelectTrigger>
