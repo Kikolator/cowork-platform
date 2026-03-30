@@ -42,18 +42,6 @@ export default async function BookPage() {
         .order("sort_order", { ascending: true })
     : { data: null };
 
-  // Fetch rates for display
-  const { data: rates } = spaceId
-    ? await supabase
-        .from("rate_config")
-        .select("resource_type_id, rate_cents, currency")
-        .eq("space_id", spaceId)
-    : { data: null };
-
-  const rateMap = new Map(
-    (rates ?? []).map((r) => [r.resource_type_id, r]),
-  );
-
   // Group rooms by resource type
   const roomsByType = new Map<string, typeof rooms>();
   for (const room of rooms ?? []) {
@@ -105,15 +93,6 @@ export default async function BookPage() {
       {/* Non-desk types with individual rooms */}
       {nonDeskTypes.map((rt) => {
         const typeRooms = roomsByType.get(rt.id) ?? [];
-        const rate = rateMap.get(rt.id);
-        const pricePerHour = rate
-          ? new Intl.NumberFormat("en", {
-              style: "currency",
-              currency: (rate.currency ?? "eur").toUpperCase(),
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            }).format(rate.rate_cents / 100)
-          : null;
 
         return (
           <div key={rt.id} className="mt-8">
@@ -155,11 +134,6 @@ export default async function BookPage() {
                         )}
                       </div>
 
-                      {pricePerHour && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {pricePerHour}/hr or use credits
-                        </p>
-                      )}
 
                       <div className="mt-4 flex items-center text-sm font-medium text-primary">
                         View Availability

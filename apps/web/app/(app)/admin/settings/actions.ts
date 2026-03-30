@@ -172,6 +172,7 @@ const ALLOWED_FEATURE_KEYS = [
   "recurring_bookings",
   "guest_passes",
   "open_registration",
+  "referrals",
 ] as const;
 
 export async function updateFeatureFlag(key: string, value: boolean) {

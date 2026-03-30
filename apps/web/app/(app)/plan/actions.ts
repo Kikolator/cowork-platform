@@ -15,6 +15,8 @@ import {
   cancelSubscriptionAtPeriodEnd,
   resumeSubscriptionCancellation,
 } from "@/lib/stripe/subscriptions";
+import { validateReferralCode } from "@/lib/referrals/validate";
+import { createReferralCoupon } from "@/lib/stripe/coupons";
 
 async function getSpaceContext() {
   const supabase = await createClient();
@@ -46,6 +48,7 @@ interface FiscalData {
 export async function subscribeToPlan(
   planId: string,
   fiscalData?: FiscalData,
+  referralCode?: string,
 ): Promise<
   | { success: true; url: string }
   | { success: false; error: string }
@@ -154,6 +157,60 @@ export async function subscribeToPlan(
         .eq("id", existingMember.id);
     }
 
+    // Validate referral code and create coupon if applicable
+    let couponId: string | undefined;
+    let referralId: string | undefined;
+
+    if (referralCode) {
+      const validation = await validateReferralCode(
+        referralCode,
+        spaceId,
+        user.email ?? "",
+      );
+
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      // Create pending referral record
+      const { data: referral, error: referralError } = await admin
+        .from("referrals")
+        .insert({
+          space_id: spaceId,
+          referral_code_id: validation.referralCodeId,
+          referrer_member_id: validation.referrerMemberId,
+          referrer_user_id: validation.referrerUserId,
+          referred_email: user.email?.toLowerCase() ?? "",
+          referred_user_id: user.id,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+
+      if (referralError || !referral) {
+        return { success: false, error: "Failed to process referral" };
+      }
+
+      referralId = referral.id;
+
+      // Create Stripe coupon for referred member discount
+      if (validation.program.referred_discount_percent > 0) {
+        couponId = await createReferralCoupon({
+          percentOff: validation.program.referred_discount_percent,
+          durationMonths: validation.program.referred_discount_months,
+          connectedAccountId: stripeAccountId,
+          spaceId,
+          referralId: referral.id,
+        });
+
+        // Store coupon ID on the referral record
+        await admin
+          .from("referrals")
+          .update({ stripe_coupon_id: couponId })
+          .eq("id", referral.id);
+      }
+    }
+
     // Build URLs
     const h = await headers();
     const { data: spaceData } = await admin
@@ -176,6 +233,8 @@ export async function subscribeToPlan(
       userId: user.id,
       successUrl,
       cancelUrl,
+      couponId,
+      referralId,
     });
 
     if (!session.url) {

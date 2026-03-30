@@ -1202,6 +1202,225 @@ export type Database = {
           },
         ]
       }
+      referral_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          member_id: string
+          space_id: string
+          updated_at: string
+          user_id: string
+          uses_count: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          member_id: string
+          space_id: string
+          updated_at?: string
+          user_id: string
+          uses_count?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          member_id?: string
+          space_id?: string
+          updated_at?: string
+          user_id?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_codes_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_programs: {
+        Row: {
+          active: boolean
+          code_expiry_days: number | null
+          created_at: string
+          id: string
+          max_referrals_per_member: number | null
+          max_referrals_total: number | null
+          referred_discount_months: number
+          referred_discount_percent: number
+          referrer_credit_minutes: number | null
+          referrer_credit_resource_type_id: string | null
+          referrer_discount_months: number | null
+          referrer_discount_percent: number | null
+          referrer_reward_type: string
+          space_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code_expiry_days?: number | null
+          created_at?: string
+          id?: string
+          max_referrals_per_member?: number | null
+          max_referrals_total?: number | null
+          referred_discount_months?: number
+          referred_discount_percent?: number
+          referrer_credit_minutes?: number | null
+          referrer_credit_resource_type_id?: string | null
+          referrer_discount_months?: number | null
+          referrer_discount_percent?: number | null
+          referrer_reward_type?: string
+          space_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code_expiry_days?: number | null
+          created_at?: string
+          id?: string
+          max_referrals_per_member?: number | null
+          max_referrals_total?: number | null
+          referred_discount_months?: number
+          referred_discount_percent?: number
+          referrer_credit_minutes?: number | null
+          referrer_credit_resource_type_id?: string | null
+          referrer_discount_months?: number | null
+          referrer_discount_percent?: number | null
+          referrer_reward_type?: string
+          space_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_programs_referrer_credit_resource_type_id_fkey"
+            columns: ["referrer_credit_resource_type_id"]
+            isOneToOne: false
+            referencedRelation: "resource_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_programs_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: true
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          referral_code_id: string
+          referred_email: string
+          referred_member_id: string | null
+          referred_user_id: string | null
+          referrer_credit_grant_id: string | null
+          referrer_member_id: string
+          referrer_reward_type: string | null
+          referrer_rewarded: boolean
+          referrer_stripe_coupon_id: string | null
+          referrer_user_id: string
+          space_id: string
+          status: string
+          stripe_coupon_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code_id: string
+          referred_email: string
+          referred_member_id?: string | null
+          referred_user_id?: string | null
+          referrer_credit_grant_id?: string | null
+          referrer_member_id: string
+          referrer_reward_type?: string | null
+          referrer_rewarded?: boolean
+          referrer_stripe_coupon_id?: string | null
+          referrer_user_id: string
+          space_id: string
+          status?: string
+          stripe_coupon_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code_id?: string
+          referred_email?: string
+          referred_member_id?: string | null
+          referred_user_id?: string | null
+          referrer_credit_grant_id?: string | null
+          referrer_member_id?: string
+          referrer_reward_type?: string | null
+          referrer_rewarded?: boolean
+          referrer_stripe_coupon_id?: string | null
+          referrer_user_id?: string
+          space_id?: string
+          status?: string
+          stripe_coupon_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referred_member_id_fkey"
+            columns: ["referred_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_credit_grant_id_fkey"
+            columns: ["referrer_credit_grant_id"]
+            isOneToOne: false
+            referencedRelation: "credit_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_member_id_fkey"
+            columns: ["referrer_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_types: {
         Row: {
           billable: boolean | null
@@ -1803,6 +2022,14 @@ export type Database = {
         Returns: boolean
       }
       remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
+      }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
     Enums: {
@@ -1813,7 +2040,12 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "no_show"
-      credit_grant_source: "subscription" | "purchase" | "manual" | "refund"
+      credit_grant_source:
+        | "subscription"
+        | "purchase"
+        | "manual"
+        | "refund"
+        | "referral"
       fiscal_id_type:
         | "nif"
         | "nie"
@@ -1985,7 +2217,13 @@ export const Constants = {
         "cancelled",
         "no_show",
       ],
-      credit_grant_source: ["subscription", "purchase", "manual", "refund"],
+      credit_grant_source: [
+        "subscription",
+        "purchase",
+        "manual",
+        "refund",
+        "referral",
+      ],
       fiscal_id_type: [
         "nif",
         "nie",

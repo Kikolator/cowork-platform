@@ -269,9 +269,9 @@ test.describe("Admin Settings - Features Tab Content", () => {
     await page.goto("/admin/settings?tab=features");
     await expect(page.locator("main").getByText("Passes", { exact: true })).toBeVisible();
 
-    // There should be 6 switch toggles (one per feature flag)
+    // There should be 7 switch toggles (one per feature flag)
     const switches = page.getByRole("switch");
-    await expect(switches).toHaveCount(6);
+    await expect(switches).toHaveCount(7);
   });
 });
 

@@ -37,9 +37,10 @@ interface FiscalIdFormProps {
   onOpenChange: (open: boolean) => void;
   planId: string | null;
   onError: (msg: string) => void;
+  referralCode?: string | null;
 }
 
-export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFormProps) {
+export function FiscalIdForm({ open, onOpenChange, planId, onError, referralCode }: FiscalIdFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [entityType, setEntityType] = useState("individual");
@@ -81,7 +82,7 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError }: FiscalIdFo
         billingCity: city.trim() || undefined,
         billingPostalCode: postalCode.trim() || undefined,
         billingCountry: country.trim() || undefined,
-      });
+      }, referralCode ?? undefined);
 
       if (!result.success) {
         if (result.error === "fiscal_id_required") {
