@@ -746,15 +746,22 @@ async function handleReferralCompletion(
         : { data: null };
 
       if (tenantData?.stripe_account_id) {
-        referrerCouponId = await applyReferrerDiscountCoupon({
-          percentOff: program.referrer_discount_percent,
-          durationMonths: program.referrer_discount_months,
-          subscriptionId: referrerMember.stripe_subscription_id,
-          connectedAccountId: tenantData.stripe_account_id,
-          spaceId,
-          referralId,
-        });
-        rewardApplied = true;
+        try {
+          referrerCouponId = await applyReferrerDiscountCoupon({
+            percentOff: program.referrer_discount_percent,
+            durationMonths: program.referrer_discount_months,
+            subscriptionId: referrerMember.stripe_subscription_id,
+            connectedAccountId: tenantData.stripe_account_id,
+            spaceId,
+            referralId,
+          });
+          rewardApplied = true;
+        } catch (err) {
+          console.error("Failed to apply referrer discount coupon", {
+            referralId,
+            error: String(err),
+          });
+        }
       } else {
         console.error("Could not apply referrer discount — missing Stripe account", {
           referralId,

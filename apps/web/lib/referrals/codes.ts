@@ -72,8 +72,8 @@ export async function getOrCreateReferralCode(
       return { code: data.code, expiresAt: data.expires_at };
     }
 
-    // If it's not a unique violation, throw
-    if (error && !error.message.includes("unique")) {
+    // If it's not a unique violation (23505), throw
+    if (error && error.code !== "23505") {
       throw new Error(`Failed to create referral code: ${error.message}`);
     }
   }

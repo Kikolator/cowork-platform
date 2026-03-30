@@ -60,13 +60,14 @@ export async function cancelReferral(referralId: string) {
     return { success: false as const, error: "Invalid referral ID" };
   }
 
-  const { supabase } = await getSpaceId();
+  const { supabase, spaceId } = await getSpaceId();
 
   const { error } = await supabase
     .from("referrals")
     .update({ status: "cancelled" })
     .eq("id", referralId)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .eq("space_id", spaceId);
 
   if (error) {
     return { success: false as const, error: error.message };
