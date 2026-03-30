@@ -12,6 +12,7 @@ const FEATURE_FLAGS = [
   { key: "recurring_bookings", label: "Recurring Bookings", description: "Allow members to set up recurring bookings" },
   { key: "guest_passes", label: "Guest Passes", description: "Allow members to purchase passes for guests" },
   { key: "open_registration", label: "Open Registration", description: "Allow anyone to create an account (vs invite-only)" },
+  { key: "referrals", label: "Referrals", description: "Allow members to refer new members and earn rewards" },
 ] as const;
 
 interface FeaturesFormProps {

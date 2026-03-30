@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
+import { applyReferrerDiscountCoupon } from "@/lib/stripe/coupons";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -169,6 +170,17 @@ async function handleSubscriptionCheckout(
     },
     { onConflict: "user_id,space_id", ignoreDuplicates: true },
   );
+
+  // Handle referral completion if this checkout was referred
+  const referralId = session.metadata?.referral_id;
+  if (referralId) {
+    const memberId = existingMember?.id
+      ?? (await admin.from("members").select("id").eq("user_id", userId).eq("space_id", spaceId).single()).data?.id;
+
+    if (memberId) {
+      await handleReferralCompletion(referralId, userId, memberId, spaceId);
+    }
+  }
 }
 
 async function handlePassCheckout(
@@ -638,4 +650,161 @@ async function handleGuestCheckout(
       error: linkError.message,
     });
   }
+}
+
+async function handleReferralCompletion(
+  referralId: string,
+  referredUserId: string,
+  referredMemberId: string,
+  spaceId: string,
+) {
+  const admin = createAdminClient();
+
+  // Atomically transition status from pending → completed (prevents double-processing)
+  const { data: referral } = await admin
+    .from("referrals")
+    .update({
+      status: "completed",
+      referred_user_id: referredUserId,
+      referred_member_id: referredMemberId,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", referralId)
+    .eq("status", "pending")
+    .select("id, referral_code_id, referrer_member_id, referrer_user_id")
+    .maybeSingle();
+
+  if (!referral) {
+    return; // Already processed, expired, or not found
+  }
+
+  // Load program config
+  const { data: program } = await admin
+    .from("referral_programs")
+    .select(
+      "referrer_reward_type, referrer_credit_minutes, referrer_credit_resource_type_id, referrer_discount_percent, referrer_discount_months",
+    )
+    .eq("space_id", spaceId)
+    .eq("active", true)
+    .maybeSingle();
+
+  // Increment uses_count — safe because the atomic status guard above
+  // ensures only one invocation reaches this point per referral
+  const { data: codeData } = await admin
+    .from("referral_codes")
+    .select("uses_count")
+    .eq("id", referral.referral_code_id)
+    .single();
+
+  if (codeData) {
+    await admin
+      .from("referral_codes")
+      .update({ uses_count: codeData.uses_count + 1 })
+      .eq("id", referral.referral_code_id);
+  }
+
+  // Fulfill referrer reward
+  let rewardApplied = false;
+  let creditGrantId: string | null = null;
+  let referrerCouponId: string | null = null;
+  const rewardType = program?.referrer_reward_type ?? "none";
+
+  if (program && rewardType === "credit" && program.referrer_credit_minutes && program.referrer_credit_resource_type_id) {
+    const { data: grantId } = await admin.rpc("grant_credits", {
+      p_space_id: spaceId,
+      p_user_id: referral.referrer_user_id,
+      p_resource_type_id: program.referrer_credit_resource_type_id,
+      p_source: "referral",
+      p_amount_minutes: program.referrer_credit_minutes,
+      p_valid_from: new Date().toISOString(),
+      p_metadata: JSON.stringify({ referral_id: referralId }),
+    });
+
+    creditGrantId = grantId;
+    rewardApplied = !!grantId;
+  } else if (program && rewardType === "discount" && program.referrer_discount_percent && program.referrer_discount_months) {
+    // Apply discount coupon to referrer's subscription
+    const { data: referrerMember } = await admin
+      .from("members")
+      .select("stripe_subscription_id")
+      .eq("id", referral.referrer_member_id)
+      .single();
+
+    if (referrerMember?.stripe_subscription_id) {
+      const { data: spaceData } = await admin
+        .from("spaces")
+        .select("tenant_id")
+        .eq("id", spaceId)
+        .single();
+
+      const { data: tenantData } = spaceData?.tenant_id
+        ? await admin
+            .from("tenants")
+            .select("stripe_account_id")
+            .eq("id", spaceData.tenant_id)
+            .single()
+        : { data: null };
+
+      if (tenantData?.stripe_account_id) {
+        try {
+          referrerCouponId = await applyReferrerDiscountCoupon({
+            percentOff: program.referrer_discount_percent,
+            durationMonths: program.referrer_discount_months,
+            subscriptionId: referrerMember.stripe_subscription_id,
+            connectedAccountId: tenantData.stripe_account_id,
+            spaceId,
+            referralId,
+          });
+          rewardApplied = true;
+        } catch (err) {
+          console.error("Failed to apply referrer discount coupon", {
+            referralId,
+            error: String(err),
+          });
+        }
+      } else {
+        console.error("Could not apply referrer discount — missing Stripe account", {
+          referralId,
+          referrerMemberId: referral.referrer_member_id,
+        });
+      }
+    } else {
+      console.error("Could not apply referrer discount — no active subscription", {
+        referralId,
+        referrerMemberId: referral.referrer_member_id,
+      });
+    }
+  } else if (rewardType === "none") {
+    rewardApplied = true; // No reward to apply
+  }
+
+  // Only mark as rewarded if the reward was actually applied
+  if (rewardApplied) {
+    await admin
+      .from("referrals")
+      .update({
+        referrer_rewarded: true,
+        referrer_reward_type: rewardType,
+        ...(creditGrantId && { referrer_credit_grant_id: creditGrantId }),
+        ...(referrerCouponId && { referrer_stripe_coupon_id: referrerCouponId }),
+      })
+      .eq("id", referralId);
+  }
+
+  // Create admin notification as member note on referrer's record
+  const { data: referredProfile } = await admin
+    .from("shared_profiles")
+    .select("full_name, email")
+    .eq("id", referredUserId)
+    .maybeSingle();
+
+  const referredName = referredProfile?.full_name ?? referredProfile?.email ?? "Someone";
+
+  await admin.from("member_notes").insert({
+    space_id: spaceId,
+    member_id: referral.referrer_member_id,
+    author_id: referral.referrer_user_id,
+    content: `[System] Referral completed: ${referredName} joined via referral code.${rewardApplied && rewardType === "credit" ? ` Referrer was awarded ${program?.referrer_credit_minutes} minutes of credits.` : ""}${rewardApplied && rewardType === "discount" ? ` Referrer received ${program?.referrer_discount_percent}% discount for ${program?.referrer_discount_months} month(s).` : ""}${!rewardApplied ? " Reward could not be applied — admin review required." : ""}`,
+    category: "billing",
+  });
 }

@@ -16,6 +16,7 @@ import {
   DollarSign,
   Package,
   Upload,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const navItems: NavItem[] = [
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Access", href: "/access", icon: KeyRound },
+  { label: "Referrals", href: "/referrals", icon: Gift },
 
   {
     label: "Members",
@@ -72,6 +74,12 @@ export const navItems: NavItem[] = [
     label: "Invoices",
     href: "/admin/invoices",
     icon: FileText,
+    adminOnly: true,
+  },
+  {
+    label: "Referrals",
+    href: "/admin/referrals",
+    icon: Gift,
     adminOnly: true,
   },
   {

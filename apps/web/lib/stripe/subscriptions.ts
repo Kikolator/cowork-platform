@@ -65,12 +65,17 @@ export async function createCheckoutSession(params: {
   userId: string;
   successUrl: string;
   cancelUrl: string;
+  couponId?: string;
+  referralId?: string;
 }): Promise<Stripe.Checkout.Session> {
   return getStripe().checkout.sessions.create(
     {
       mode: "subscription",
       customer: params.customerId,
       line_items: [{ price: params.priceId, quantity: 1 }],
+      ...(params.couponId && {
+        discounts: [{ coupon: params.couponId }],
+      }),
       subscription_data: {
         application_fee_percent: params.feePercent,
         metadata: {
@@ -85,6 +90,7 @@ export async function createCheckoutSession(params: {
         space_id: params.spaceId,
         plan_id: params.planId,
         user_id: params.userId,
+        ...(params.referralId && { referral_id: params.referralId }),
       },
     },
     { stripeAccount: params.connectedAccountId },
