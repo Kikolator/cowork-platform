@@ -1958,6 +1958,7 @@ export type Database = {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
       }
+      get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_credit_balance: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: {
