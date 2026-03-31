@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/react";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -41,6 +42,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );

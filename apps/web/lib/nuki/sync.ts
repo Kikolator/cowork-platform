@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createLogger } from "@cowork/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listAuths, createAuth, updateAuth, deleteAuth } from "./client";
 import { generatePin } from "./pin";
@@ -254,7 +255,7 @@ export async function deleteNukiCodeForMember(
   try {
     await deleteAuth(config.nuki_api_token, config.nuki_smartlock_id, member.nuki_auth_id);
   } catch (err) {
-    console.error(`Failed to delete Nuki code for member ${memberId}:`, err);
+    createLogger({ component: "nuki/sync", spaceId }).error("Failed to delete Nuki code", { memberId, error: err instanceof Error ? err.message : "Unknown error" });
   }
 
   await admin
