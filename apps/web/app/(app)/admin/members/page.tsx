@@ -19,7 +19,7 @@ export default async function MembersPage() {
           .order("joined_at", { ascending: false }),
         supabase
           .from("plans")
-          .select("id, name")
+          .select("id, name, price_cents, currency")
           .order("sort_order", { ascending: true }),
         supabase
           .from("resources")
@@ -59,6 +59,8 @@ export default async function MembersPage() {
     <MembersTable
       members={(members ?? []).map((m) => ({
         ...m,
+        billing_mode: (m as Record<string, unknown>).billing_mode as string | null ?? null,
+        custom_price_cents: (m as Record<string, unknown>).custom_price_cents as number | null ?? null,
         plan: m.plans as unknown as { id: string; name: string } | null,
       }))}
       plans={plans ?? []}

@@ -75,6 +75,8 @@ export interface Member {
   billing_postal_code: string | null;
   billing_state_province: string | null;
   billing_country: string | null;
+  billing_mode: string | null;
+  custom_price_cents: number | null;
   joined_at: string | null;
   paused_at: string | null;
   cancel_requested_at: string | null;
@@ -94,7 +96,7 @@ export interface MemberNote {
 
 interface MembersTableProps {
   members: Member[];
-  plans: { id: string; name: string }[];
+  plans: { id: string; name: string; price_cents: number; currency: string }[];
   desks: { id: string; name: string }[];
   profileMap: Record<string, ProfileEntry>;
   notes: MemberNote[];
