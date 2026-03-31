@@ -53,6 +53,7 @@ async function nukiFetch<T>(
 ): Promise<T> {
   const res = await fetch(`${NUKI_API_BASE}${path}`, {
     ...options,
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${apiToken}`,
       "Content-Type": "application/json",

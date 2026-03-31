@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrigin } from "@/lib/url";
@@ -352,15 +353,20 @@ export async function sendBulkInvites(input: unknown) {
     });
 
     if (otpError) {
+      createLogger({ component: "members/actions", spaceId }).warn("Bulk invite OTP failed", { email, error: otpError.message });
       failed++;
       continue;
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("members")
       .update({ invited_at: new Date().toISOString() })
       .eq("id", member.id)
       .eq("space_id", spaceId);
+
+    if (updateError) {
+      createLogger({ component: "members/actions", spaceId }).warn("Failed to update invited_at", { memberId: member.id, error: updateError.message });
+    }
 
     sent++;
   }

@@ -9,26 +9,34 @@ export default async function MembersPage() {
 
   const spaceId = user?.app_metadata?.space_id as string | undefined;
 
-  const [{ data: members }, { data: plans }, { data: desks }, { data: notes }] =
-    await Promise.all([
-      supabase
-        .from("members")
-        .select("*, plans(id, name)")
-        .order("joined_at", { ascending: false }),
-      supabase
-        .from("plans")
-        .select("id, name")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("resources")
-        .select("id, name, resource_types!inner(slug)")
-        .eq("resource_types.slug", "desk")
-        .order("name", { ascending: true }),
-      supabase
-        .from("member_notes")
-        .select("id, member_id, author_id, content, category, created_at")
-        .order("created_at", { ascending: false }),
-    ]);
+  let members, plans, desks, notes;
+  try {
+    [{ data: members }, { data: plans }, { data: desks }, { data: notes }] =
+      await Promise.all([
+        supabase
+          .from("members")
+          .select("*, plans(id, name)")
+          .order("joined_at", { ascending: false }),
+        supabase
+          .from("plans")
+          .select("id, name")
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("resources")
+          .select("id, name, resource_types!inner(slug)")
+          .eq("resource_types.slug", "desk")
+          .order("name", { ascending: true }),
+        supabase
+          .from("member_notes")
+          .select("id, member_id, author_id, content, category, created_at")
+          .order("created_at", { ascending: false }),
+      ]);
+  } catch {
+    members = null;
+    plans = null;
+    desks = null;
+    notes = null;
+  }
 
   // Collect all user IDs (members + note authors) for profile lookup
   const memberUserIds = (members ?? []).map((m) => m.user_id);

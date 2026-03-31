@@ -124,7 +124,10 @@ export async function subscribeToPlan(
         };
 
         if (existingMember) {
-          await admin.from("members").update(fiscalFields).eq("id", existingMember.id);
+          const { error: fiscalError } = await admin.from("members").update(fiscalFields).eq("id", existingMember.id);
+          if (fiscalError) {
+            return { success: false as const, error: `Failed to update billing info: ${fiscalError.message}` };
+          }
         }
         // For new members, the checkout webhook will create the member record.
         // We pass fiscal data through Stripe metadata to apply it after checkout.
