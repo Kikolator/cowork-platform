@@ -1,5 +1,6 @@
 import "server-only";
 import type Stripe from "stripe";
+import { createLogger } from "@cowork/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
@@ -10,6 +11,8 @@ export async function routeWebhookEvent(
   spaceId: string | null,
   tenantId: string | null,
 ) {
+  const logger = createLogger({ component: "stripe/webhooks", spaceId: spaceId ?? undefined, tenantId: tenantId ?? undefined });
+
   switch (event.type) {
     // Connect account events (platform-level)
     case "account.updated":
@@ -23,7 +26,7 @@ export async function routeWebhookEvent(
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       if (!spaceId) {
-        console.error(`${event.type} received but no spaceId resolved for connected account`);
+        logger.error("Event received but no spaceId resolved for connected account", { eventType: event.type });
         break;
       }
       switch (event.type) {
@@ -47,7 +50,7 @@ export async function routeWebhookEvent(
     }
 
     default:
-      console.log(`Unhandled webhook event: ${event.type}`);
+      logger.info("Unhandled webhook event", { eventType: event.type });
   }
 }
 
@@ -90,7 +93,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, spaceId: string) {
         // No special handling — payment is logged in payment_events by the main route handler
         break;
       default:
-        console.warn(`Unknown product category in checkout: ${category}`);
+        createLogger({ component: "stripe/webhooks", spaceId }).warn("Unknown product category in checkout", { category });
     }
   }
 }
@@ -105,8 +108,10 @@ async function handleSubscriptionCheckout(
   const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
 
+  const logger = createLogger({ component: "stripe/webhooks", spaceId, handler: "subscriptionCheckout" });
+
   if (!userId || !planId || !customerId || !subscriptionId) {
-    console.error("Checkout session missing required metadata", {
+    logger.error("Checkout session missing required metadata", {
       userId,
       planId,
       customerId,
@@ -117,9 +122,10 @@ async function handleSubscriptionCheckout(
 
   // Verify space matches
   if (metadataSpaceId && metadataSpaceId !== spaceId) {
-    console.error(
-      `Space mismatch: event space ${spaceId}, metadata space ${metadataSpaceId}`,
-    );
+    logger.error("Space mismatch", {
+      eventSpaceId: spaceId,
+      metadataSpaceId,
+    });
     return;
   }
 
@@ -189,8 +195,10 @@ async function handlePassCheckout(
 ) {
   const passId = session.metadata?.pass_id;
   const userId = session.metadata?.user_id;
+  const logger = createLogger({ component: "stripe/webhooks", spaceId, handler: "passCheckout" });
+
   if (!passId || !userId) {
-    console.error("Pass checkout missing metadata", { passId, userId });
+    logger.error("Pass checkout missing metadata", { passId, userId });
     return;
   }
 
@@ -204,7 +212,7 @@ async function handlePassCheckout(
   });
 
   if (activateError) {
-    console.error("Failed to activate pass:", activateError);
+    logger.error("Failed to activate pass", { error: activateError.message });
     return;
   }
 
@@ -228,7 +236,7 @@ async function handlePassCheckout(
         .update({ assigned_desk_id: deskId })
         .eq("id", passId);
     } else {
-      console.warn(`No desk available for pass ${passId} — pass still active`);
+      logger.warn("No desk available for pass — pass still active", { passId });
     }
   }
 }
@@ -239,8 +247,10 @@ async function handleHourBundleCheckout(
 ) {
   const productId = session.metadata?.product_id;
   const userId = session.metadata?.user_id;
+  const logger = createLogger({ component: "stripe/webhooks", spaceId, handler: "hourBundleCheckout" });
+
   if (!productId || !userId) {
-    console.error("Hour bundle checkout missing metadata", { productId, userId });
+    logger.error("Hour bundle checkout missing metadata", { productId, userId });
     return;
   }
 
@@ -254,7 +264,7 @@ async function handleHourBundleCheckout(
     .single();
 
   if (!product?.credit_grant_config) {
-    console.error(`Product ${productId} has no credit_grant_config`);
+    logger.error("Product has no credit_grant_config", { productId });
     return;
   }
 
@@ -264,7 +274,7 @@ async function handleHourBundleCheckout(
   };
 
   if (!config.resource_type_id || !config.minutes) {
-    console.error(`Product ${productId} has invalid credit_grant_config`, config);
+    logger.error("Product has invalid credit_grant_config", { productId, config });
     return;
   }
 
@@ -284,6 +294,7 @@ async function handleHourBundleCheckout(
 }
 
 async function handleInvoicePaid(event: Stripe.Event, spaceId: string) {
+  const logger = createLogger({ component: "stripe/webhooks", spaceId, handler: "invoicePaid" });
   const invoice = event.data.object as Stripe.Invoice;
 
   // In the new Stripe API, subscription is under parent.subscription_details
@@ -308,9 +319,9 @@ async function handleInvoicePaid(event: Stripe.Event, spaceId: string) {
     .maybeSingle();
 
   if (!member) {
-    console.warn(
+    logger.warn(
       "Member not found for invoice.paid — checkout handler may not have run yet",
-      { subscriptionId, spaceId },
+      { subscriptionId },
     );
     return;
   }
@@ -472,9 +483,11 @@ async function handleGuestCheckout(
   session: Stripe.Checkout.Session,
   spaceId: string,
 ) {
+  const logger = createLogger({ component: "stripe/webhooks", spaceId, handler: "guestCheckout" });
+
   // Only proceed if payment is confirmed
   if (session.payment_status !== "paid") {
-    console.warn("Guest checkout session not paid, skipping", {
+    logger.warn("Guest checkout session not paid, skipping", {
       sessionId: session.id,
       paymentStatus: session.payment_status,
     });
@@ -487,7 +500,7 @@ async function handleGuestCheckout(
   const type = metadata.type; // "daypass" | "membership"
 
   if (!email || !type) {
-    console.error("Guest checkout missing required metadata", { metadata });
+    logger.error("Guest checkout missing required metadata", { metadata });
     return;
   }
 
@@ -512,7 +525,7 @@ async function handleGuestCheckout(
       (u: { email?: string }) => u.email === email,
     );
     if (!existingUser) {
-      console.error("Failed to create or find user for guest checkout", {
+      logger.error("Failed to create or find user for guest checkout", {
         email,
         error: createError.message,
       });
@@ -544,7 +557,7 @@ async function handleGuestCheckout(
       .single();
 
     if (passError) {
-      console.error("Failed to create pass for guest checkout", passError);
+      logger.error("Failed to create pass for guest checkout", { error: passError.message });
       return;
     }
 
@@ -572,7 +585,7 @@ async function handleGuestCheckout(
       typeof session.subscription === "string" ? session.subscription : null;
 
     if (!planId && !planSlug) {
-      console.error("Guest membership checkout missing plan info", { metadata });
+      logger.error("Guest membership checkout missing plan info", { metadata });
       return;
     }
 
@@ -589,7 +602,7 @@ async function handleGuestCheckout(
     }
 
     if (!resolvedPlanId) {
-      console.error("Could not resolve plan for guest checkout", { planSlug });
+      logger.error("Could not resolve plan for guest checkout", { planSlug });
       return;
     }
 
@@ -645,7 +658,7 @@ async function handleGuestCheckout(
   });
 
   if (linkError) {
-    console.error("Failed to send magic link after guest checkout", {
+    logger.error("Failed to send magic link after guest checkout", {
       email,
       error: linkError.message,
     });
@@ -658,6 +671,7 @@ async function handleReferralCompletion(
   referredMemberId: string,
   spaceId: string,
 ) {
+  const logger = createLogger({ component: "stripe/webhooks", spaceId, handler: "referralCompletion", referralId });
   const admin = createAdminClient();
 
   // Atomically transition status from pending → completed (prevents double-processing)
@@ -757,20 +771,17 @@ async function handleReferralCompletion(
           });
           rewardApplied = true;
         } catch (err) {
-          console.error("Failed to apply referrer discount coupon", {
-            referralId,
+          logger.error("Failed to apply referrer discount coupon", {
             error: String(err),
           });
         }
       } else {
-        console.error("Could not apply referrer discount — missing Stripe account", {
-          referralId,
+        logger.error("Could not apply referrer discount — missing Stripe account", {
           referrerMemberId: referral.referrer_member_id,
         });
       }
     } else {
-      console.error("Could not apply referrer discount — no active subscription", {
-        referralId,
+      logger.error("Could not apply referrer discount — no active subscription", {
         referrerMemberId: referral.referrer_member_id,
       });
     }

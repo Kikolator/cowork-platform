@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { createLogger } from "@cowork/shared";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { routeWebhookEvent } from "@/lib/stripe/webhooks";
 
 export async function POST(request: NextRequest) {
+  const logger = createLogger({ component: "stripe/route" });
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
@@ -48,9 +50,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!tenant) {
-      console.error(
-        `Webhook for unknown Stripe account: ${connectedAccountId}`,
-      );
+      logger.error("Webhook for unknown Stripe account", { connectedAccountId });
       return NextResponse.json({ received: true });
     }
 
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         .eq("stripe_event_id", event.id);
     }
   } catch (err) {
-    console.error(`Webhook error for ${event.type}:`, err);
+    logger.error("Webhook handler error", { eventType: event.type, spaceId, error: err instanceof Error ? err.message : "Unknown error" });
     if (spaceId) {
       await admin
         .from("payment_events")
