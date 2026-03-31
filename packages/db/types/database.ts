@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       booking_credit_deductions: {
@@ -1958,6 +1933,7 @@ export type Database = {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
       }
+      get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_credit_balance: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: {
@@ -2022,14 +1998,6 @@ export type Database = {
         Returns: boolean
       }
       remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
-      test_role_context: {
-        Args: never
-        Returns: {
-          pg_current_user: string
-          pg_role: string
-          pg_session_user: string
-        }[]
-      }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
     Enums: {
@@ -2204,9 +2172,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       booking_status: [
