@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
@@ -210,11 +211,20 @@ export async function purchasePass(
       },
     });
 
-    // Save stripe session ID to pass
-    await admin
+    // Save stripe session ID to pass — critical for webhook matching
+    const { error: updateError } = await admin
       .from("passes")
       .update({ stripe_session_id: session.id })
       .eq("id", passRecord.id);
+
+    if (updateError) {
+      createLogger({ component: "store/actions", spaceId }).error("Failed to save stripe_session_id to pass", {
+        passId: passRecord.id,
+        sessionId: session.id,
+        error: updateError.message,
+      });
+      return { success: false, error: "Failed to link payment session" };
+    }
 
     if (!session.url) {
       return { success: false, error: "Failed to create checkout session" };

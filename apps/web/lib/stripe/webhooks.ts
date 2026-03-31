@@ -141,7 +141,7 @@ async function handleSubscriptionCheckout(
 
   if (existingMember) {
     // Reactivate churned member or update existing
-    await admin
+    const { error: updateErr } = await admin
       .from("members")
       .update({
         plan_id: planId,
@@ -154,9 +154,14 @@ async function handleSubscriptionCheckout(
         updated_at: new Date().toISOString(),
       })
       .eq("id", existingMember.id);
+
+    if (updateErr) {
+      logger.error("Failed to update existing member", { memberId: existingMember.id, error: updateErr.message });
+      throw new Error(`Member update failed: ${updateErr.message}`);
+    }
   } else {
     // Create new member
-    await admin.from("members").insert({
+    const { error: insertErr } = await admin.from("members").insert({
       space_id: spaceId,
       user_id: userId,
       plan_id: planId,
@@ -165,6 +170,11 @@ async function handleSubscriptionCheckout(
       status: "active",
       joined_at: new Date().toISOString(),
     });
+
+    if (insertErr) {
+      logger.error("Failed to create member", { userId, error: insertErr.message });
+      throw new Error(`Member insert failed: ${insertErr.message}`);
+    }
   }
 
   // Ensure space_users record exists
@@ -224,13 +234,15 @@ async function handlePassCheckout(
     .single();
 
   if (pass) {
-    const { data: deskId } = await admin.rpc("auto_assign_desk", {
+    const { data: deskId, error: deskError } = await admin.rpc("auto_assign_desk", {
       p_space_id: spaceId,
       p_start_date: pass.start_date,
       p_end_date: pass.end_date,
     });
 
-    if (deskId) {
+    if (deskError) {
+      logger.error("auto_assign_desk RPC failed", { passId, error: deskError.message });
+    } else if (deskId) {
       await admin
         .from("passes")
         .update({ assigned_desk_id: deskId })
@@ -281,7 +293,7 @@ async function handleHourBundleCheckout(
   // Get a line item ID for idempotency
   const lineItemId = session.id; // Use session ID as idempotency key for one-off purchases
 
-  await admin.rpc("grant_credits", {
+  const { error: grantError } = await admin.rpc("grant_credits", {
     p_space_id: spaceId,
     p_user_id: userId,
     p_resource_type_id: config.resource_type_id,
@@ -291,6 +303,11 @@ async function handleHourBundleCheckout(
     // Purchased credits don't expire
     p_stripe_line_item_id: lineItemId,
   });
+
+  if (grantError) {
+    logger.error("Failed to grant credits for hour bundle purchase", { userId, productId, error: grantError.message });
+    throw new Error(`grant_credits failed: ${grantError.message}`);
+  }
 }
 
 async function handleInvoicePaid(event: Stripe.Event, spaceId: string) {
