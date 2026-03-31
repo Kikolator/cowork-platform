@@ -37,11 +37,13 @@ export default async function TenantDetailPage({
     .eq("tenant_id", tenant.id);
 
   // Get member counts per space
-  const spaceIds = spaces?.map((s) => s.id) ?? [];
-  const { data: members } = await db
-    .from("members")
-    .select("space_id, status")
-    .in("space_id", spaceIds);
+  const spaceIds = (spaces ?? []).map((s) => s.id);
+  const { data: members } = spaceIds.length > 0
+    ? await db
+        .from("members")
+        .select("space_id, status")
+        .in("space_id", spaceIds)
+    : { data: [] };
 
   const membersBySpace = new Map<string, { active: number; total: number }>();
   for (const m of members ?? []) {

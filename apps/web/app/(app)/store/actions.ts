@@ -389,30 +389,54 @@ export async function purchaseAddon(
     );
 
     // Add line item to existing subscription
-    const subscription = await getStripe().subscriptions.retrieve(
-      member.stripe_subscription_id,
-      { stripeAccount: stripeAccountId },
-    );
+    let subscription;
+    try {
+      subscription = await getStripe().subscriptions.retrieve(
+        member.stripe_subscription_id,
+        { stripeAccount: stripeAccountId },
+      );
+    } catch (err) {
+      createLogger({ component: "store/actions", spaceId }).error("Failed to retrieve subscription for addon", {
+        subscriptionId: member.stripe_subscription_id,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      return { success: false, error: "Failed to retrieve subscription" };
+    }
 
     const existingItems = subscription.items.data.map((item) => ({
       id: item.id,
     }));
 
-    await getStripe().subscriptions.update(
-      member.stripe_subscription_id,
-      {
-        items: [...existingItems, { price: priceId }],
-        proration_behavior: "create_prorations",
-      },
-      { stripeAccount: stripeAccountId },
-    );
+    try {
+      await getStripe().subscriptions.update(
+        member.stripe_subscription_id,
+        {
+          items: [...existingItems, { price: priceId }],
+          proration_behavior: "create_prorations",
+        },
+        { stripeAccount: stripeAccountId },
+      );
+    } catch (err) {
+      createLogger({ component: "store/actions", spaceId }).error("Failed to add addon to subscription", {
+        subscriptionId: member.stripe_subscription_id,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      return { success: false, error: "Failed to add addon to subscription" };
+    }
 
     // For 24/7 access addon, update the member record
     if (product.slug.includes("24-7") || product.slug.includes("twenty-four-seven")) {
-      await admin
+      const { error: memberUpdateErr } = await admin
         .from("members")
         .update({ has_twenty_four_seven: true, updated_at: new Date().toISOString() })
         .eq("id", member.id);
+
+      if (memberUpdateErr) {
+        createLogger({ component: "store/actions", spaceId }).error("Failed to update member addon flag", {
+          memberId: member.id,
+          error: memberUpdateErr.message,
+        });
+      }
     }
 
     revalidatePath("/store");

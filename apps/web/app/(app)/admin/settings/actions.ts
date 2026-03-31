@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
@@ -90,27 +91,39 @@ export async function updateSpaceBranding(input: unknown) {
 
   if (error) return { success: false as const, error: error.message };
 
-  // Clean up old storage files when logo/favicon URLs change
+  // Clean up old storage files when logo/favicon URLs change (best-effort)
   if (current) {
+    const filesToRemove: string[] = [];
+
     const oldLogo = current.logo_url;
     const newLogo = parsed.data.logoUrl || null;
     if (oldLogo && oldLogo !== newLogo) {
       const path = extractStoragePath(oldLogo, "space-assets");
-      if (path) await supabase.storage.from("space-assets").remove([path]);
+      if (path) filesToRemove.push(path);
     }
 
     const oldLogoDark = current.logo_dark_url;
     const newLogoDark = parsed.data.logoDarkUrl || null;
     if (oldLogoDark && oldLogoDark !== newLogoDark) {
       const path = extractStoragePath(oldLogoDark, "space-assets");
-      if (path) await supabase.storage.from("space-assets").remove([path]);
+      if (path) filesToRemove.push(path);
     }
 
     const oldFavicon = current.favicon_url;
     const newFavicon = parsed.data.faviconUrl || null;
     if (oldFavicon && oldFavicon !== newFavicon) {
       const path = extractStoragePath(oldFavicon, "space-assets");
-      if (path) await supabase.storage.from("space-assets").remove([path]);
+      if (path) filesToRemove.push(path);
+    }
+
+    if (filesToRemove.length > 0) {
+      const { error: storageError } = await supabase.storage.from("space-assets").remove(filesToRemove);
+      if (storageError) {
+        createLogger({ component: "settings/actions", spaceId }).warn("Failed to clean up old storage files", {
+          files: filesToRemove,
+          error: storageError.message,
+        });
+      }
     }
   }
 

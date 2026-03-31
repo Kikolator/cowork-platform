@@ -52,10 +52,16 @@ export function CheckoutForm({ type, planSlug }: CheckoutFormProps) {
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setServerError(
-          (body as { error?: string }).error ?? "Something went wrong",
-        );
+        let errorMessage = "Something went wrong";
+        try {
+          const body = await res.json();
+          if (body && typeof body === "object" && "error" in body) {
+            errorMessage = String(body.error);
+          }
+        } catch {
+          // Response wasn't JSON — use default message
+        }
+        setServerError(errorMessage);
         setIsSubmitting(false);
         return;
       }

@@ -533,14 +533,13 @@ async function handleGuestCheckout(
     });
 
   if (createError) {
-    // User may already exist — look them up
-    const { data: listData } = await admin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-    });
-    const existingUser = listData?.users?.find(
-      (u: { email?: string }) => u.email === email,
-    );
+    // User already exists — look them up by email
+    const { data: userData } = await admin
+      .from("shared_profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    const existingUser = userData ? { id: userData.id } : null;
     if (!existingUser) {
       logger.error("Failed to create or find user for guest checkout", {
         email,

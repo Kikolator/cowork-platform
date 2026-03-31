@@ -15,24 +15,31 @@ export default async function StorePage() {
   if (!spaceId) redirect("/login");
 
   // Fetch active products, member context, and space config in parallel
-  const [productsResult, memberResult, spaceResult] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, slug, description, price_cents, currency, category, purchase_flow, sort_order, visibility_rules")
-      .eq("active", true)
-      .neq("category", "subscription")
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("members")
-      .select("id, plan_id, status, plan:plans(id, plan_credit_config(is_unlimited))")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("spaces")
-      .select("features")
-      .eq("id", spaceId)
-      .single(),
-  ]);
+  let productsResult, memberResult, spaceResult;
+  try {
+    [productsResult, memberResult, spaceResult] = await Promise.all([
+      supabase
+        .from("products")
+        .select("id, name, slug, description, price_cents, currency, category, purchase_flow, sort_order, visibility_rules")
+        .eq("active", true)
+        .neq("category", "subscription")
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("members")
+        .select("id, plan_id, status, plan:plans(id, plan_credit_config(is_unlimited))")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("spaces")
+        .select("features")
+        .eq("id", spaceId)
+        .single(),
+    ]);
+  } catch {
+    productsResult = { data: null };
+    memberResult = { data: null };
+    spaceResult = { data: null };
+  }
 
   const products = productsResult.data ?? [];
   const member = memberResult.data;
