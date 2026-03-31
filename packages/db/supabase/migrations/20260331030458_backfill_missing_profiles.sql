@@ -24,7 +24,10 @@ $$;
 
 -- Only callable via service_role (used by addMember admin client).
 -- Do NOT grant to authenticated — it would expose email-to-UUID lookups.
+-- Supabase propagates PUBLIC grants to anon/authenticated, so revoke explicitly.
 REVOKE ALL ON FUNCTION get_auth_user_id_by_email(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_auth_user_id_by_email(text) FROM anon;
+REVOKE EXECUTE ON FUNCTION get_auth_user_id_by_email(text) FROM authenticated;
 
 -- ==========================================================================
 -- 2. Backfill: create shared_profiles for any auth users missing one
