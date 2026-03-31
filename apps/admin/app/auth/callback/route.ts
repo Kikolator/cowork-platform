@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    console.error("[admin/auth/callback] exchangeCodeForSession failed:", error.message);
+    createLogger({ component: "admin/auth/callback" }).error("exchangeCodeForSession failed", { error: error.message });
     return NextResponse.redirect(new URL("/login?error=auth_failed", origin));
   }
 

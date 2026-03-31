@@ -15,6 +15,8 @@
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@cowork/db": "*",
+    "@cowork/shared": "*",
+    "@vercel/analytics": "^1.5.0",
     "@hookform/resolvers": "^5.2.2",
     "@react-email/components": "^1.0.10",
     "@supabase/ssr": "^0.9.0",
