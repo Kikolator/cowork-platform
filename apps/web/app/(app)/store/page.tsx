@@ -20,13 +20,13 @@ export default async function StorePage() {
     [productsResult, memberResult, spaceResult] = await Promise.all([
       supabase
         .from("products")
-        .select("id, name, slug, description, price_cents, currency, category, purchase_flow, sort_order, visibility_rules")
+        .select("id, name, slug, description, price_cents, currency, category, purchase_flow, sort_order, visibility_rules, credit_grant_config")
         .eq("active", true)
         .neq("category", "subscription")
         .order("sort_order", { ascending: true }),
       supabase
         .from("members")
-        .select("id, plan_id, status, plan:plans(id, plan_credit_config(is_unlimited))")
+        .select("id, plan_id, status, plan:plans(id, plan_credit_config(resource_type_id, is_unlimited))")
         .eq("user_id", user.id)
         .maybeSingle(),
       supabase
@@ -49,19 +49,26 @@ export default async function StorePage() {
   const planCreditConfigs = (
     member?.plan as unknown as {
       id: string;
-      plan_credit_config: Array<{ is_unlimited: boolean }>;
+      plan_credit_config: Array<{ resource_type_id: string; is_unlimited: boolean }>;
     } | null
   )?.plan_credit_config;
 
   const memberContext = {
     isMember: member?.status === "active",
     planId: member?.plan_id ?? null,
-    isUnlimited: planCreditConfigs?.some((c) => c.is_unlimited) ?? false,
+    unlimitedResourceTypeIds:
+      planCreditConfigs
+        ?.filter((c) => c.is_unlimited)
+        .map((c) => c.resource_type_id) ?? [],
   };
 
   // Filter products by visibility and enabled features
   const visibleProducts = products.filter((p) => {
-    if (!isProductVisible(p.visibility_rules, memberContext)) return false;
+    const productResourceTypeId = (
+      p.credit_grant_config as { resource_type_id?: string } | null
+    )?.resource_type_id;
+    if (!isProductVisible(p.visibility_rules, memberContext, productResourceTypeId))
+      return false;
     if (p.category === "pass" && features.passes === false) return false;
     if (p.category === "hour_bundle" && features.credits === false) return false;
     return true;
