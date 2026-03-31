@@ -122,16 +122,44 @@ export async function addMember(input: unknown) {
 
   if (authError) {
     // User likely already exists — look up via shared_profiles
-    const { data: profile } = await admin
+    const { data: profile, error: profileLookupError } = await admin
       .from("shared_profiles")
       .select("id")
       .eq("email", d.email.toLowerCase())
       .maybeSingle();
 
-    if (!profile) {
-      return { success: false as const, error: `Cannot create user for ${d.email}: ${authError.message}` };
+    if (profileLookupError) {
+      console.error("[addMember] profile lookup failed", { email: d.email, error: profileLookupError.message });
+      return { success: false as const, error: "Failed to look up user profile. Please try again." };
     }
-    userId = profile.id;
+
+    if (profile) {
+      userId = profile.id;
+    } else {
+      // Profile missing for existing auth user — resolve via auth.users
+      const { data: authUserId, error: rpcError } = await admin.rpc(
+        "get_auth_user_id_by_email",
+        { p_email: d.email.toLowerCase() },
+      );
+
+      if (rpcError || !authUserId) {
+        console.error("[addMember] RPC get_auth_user_id_by_email failed", { email: d.email, rpcError: rpcError?.message });
+        return { success: false as const, error: `Cannot find user for ${d.email}. Please try again.` };
+      }
+
+      userId = authUserId;
+
+      // Create the missing shared_profiles row
+      const { error: profileInsertError } = await admin.from("shared_profiles").insert({
+        id: userId,
+        email: d.email.toLowerCase(),
+      });
+
+      if (profileInsertError) {
+        console.error("[addMember] failed to create missing profile", { userId, error: profileInsertError.message });
+        return { success: false as const, error: "Failed to create user profile. Please try again." };
+      }
+    }
   } else {
     userId = authUser.user.id;
   }
@@ -141,13 +169,16 @@ export async function addMember(input: unknown) {
   if (d.fullName) profileUpdates.full_name = d.fullName;
   if (d.phone) profileUpdates.phone = d.phone;
   if (Object.keys(profileUpdates).length > 0) {
-    await admin.from("shared_profiles").update(profileUpdates).eq("id", userId);
+    const { error: profileUpdateError } = await admin.from("shared_profiles").update(profileUpdates).eq("id", userId);
+    if (profileUpdateError) {
+      console.error("[addMember] profile update failed", { userId, error: profileUpdateError.message });
+    }
   }
 
-  // 3. Ensure space_users entry exists
+  // 3. Ensure space_users entry exists (atomic, won't downgrade existing roles)
   await admin.from("space_users").upsert(
     { user_id: userId, space_id: spaceId, role: "member" },
-    { onConflict: "user_id,space_id" },
+    { onConflict: "user_id,space_id", ignoreDuplicates: true },
   );
 
   // 4. Guard: check for existing member in this space
@@ -163,10 +194,14 @@ export async function addMember(input: unknown) {
   }
 
   // 4b. Check space capacity for the selected plan
-  const { data: capacity } = await admin.rpc("check_space_capacity", {
+  const { data: capacity, error: capacityError } = await admin.rpc("check_space_capacity", {
     p_space_id: spaceId,
     p_plan_id: d.planId,
   });
+  if (capacityError) {
+    console.error("[addMember] capacity check failed", { spaceId, planId: d.planId, error: capacityError.message });
+    return { success: false as const, error: "Failed to check space capacity. Please try again." };
+  }
   if (capacity && typeof capacity === "object" && "has_capacity" in capacity && !capacity.has_capacity) {
     return { success: false as const, error: "No desk capacity available for this plan. Consider adding more desks or choosing a different plan." };
   }
@@ -189,21 +224,32 @@ export async function addMember(input: unknown) {
   }
 
   // 6. Optionally send invite
+  let inviteFailed = false;
   if (d.sendInvite) {
     const headersList = await headers();
     const origin = getOrigin(headersList);
-    await admin.auth.signInWithOtp({
+    const { error: otpError } = await admin.auth.signInWithOtp({
       email: d.email,
       options: { emailRedirectTo: `${origin}/auth/callback` },
     });
-    await supabase
-      .from("members")
-      .update({ invited_at: new Date().toISOString() })
-      .eq("id", newMember.id)
-      .eq("space_id", spaceId);
+
+    if (otpError) {
+      console.error("[addMember] invite OTP failed", { email: d.email, error: otpError.message });
+      inviteFailed = true;
+    } else {
+      await supabase
+        .from("members")
+        .update({ invited_at: new Date().toISOString() })
+        .eq("id", newMember.id)
+        .eq("space_id", spaceId);
+    }
   }
 
   revalidatePath("/admin/members");
+
+  if (inviteFailed) {
+    return { success: true as const, warning: "Member added but the invite email failed to send. You can retry from the member detail page." };
+  }
   return { success: true as const };
 }
 
