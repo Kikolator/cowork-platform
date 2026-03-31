@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isReservedSlug } from "@/lib/reserved-slugs";
@@ -267,15 +268,24 @@ export async function createTenantAndSpace(input: OnboardInput): Promise<{
 
     return { success: true, spaceSlug: data.slug };
   } catch (err) {
-    if (spaceId) {
-      await admin.from("resources").delete().eq("space_id", spaceId);
-      await admin.from("rate_config").delete().eq("space_id", spaceId);
-      await admin.from("resource_types").delete().eq("space_id", spaceId);
-      await admin.from("space_users").delete().eq("space_id", spaceId);
-      await admin.from("spaces").delete().eq("id", spaceId);
-    }
-    if (tenantId) {
-      await admin.from("tenants").delete().eq("id", tenantId);
+    // Best-effort cleanup — log failures but don't throw from the catch block
+    try {
+      if (spaceId) {
+        await admin.from("resources").delete().eq("space_id", spaceId);
+        await admin.from("rate_config").delete().eq("space_id", spaceId);
+        await admin.from("resource_types").delete().eq("space_id", spaceId);
+        await admin.from("space_users").delete().eq("space_id", spaceId);
+        await admin.from("spaces").delete().eq("id", spaceId);
+      }
+      if (tenantId) {
+        await admin.from("tenants").delete().eq("id", tenantId);
+      }
+    } catch (cleanupErr) {
+      createLogger({ component: "onboard" }).error("Cleanup after failed onboarding also failed", {
+        spaceId,
+        tenantId,
+        error: cleanupErr instanceof Error ? cleanupErr.message : "Unknown error",
+      });
     }
 
     const message =

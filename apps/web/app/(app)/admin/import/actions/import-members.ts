@@ -108,17 +108,25 @@ export async function importMembers(
       const updates: Record<string, string> = {};
       if (data.full_name) updates.full_name = data.full_name;
       if (data.phone) updates.phone = data.phone;
-      await admin
+      const { error: profileError } = await admin
         .from("shared_profiles")
         .update(updates)
         .eq("id", userId);
+
+      if (profileError) {
+        result.errors.push({ row: i + 1, message: `Profile update failed: ${profileError.message}` });
+      }
     }
 
     // Ensure space_users entry exists
-    await admin.from("space_users").upsert(
+    const { error: spaceUserError } = await admin.from("space_users").upsert(
       { user_id: userId, space_id: spaceId, role: "member" },
       { onConflict: "user_id,space_id" },
     );
+
+    if (spaceUserError) {
+      result.errors.push({ row: i + 1, message: `Space user upsert failed: ${spaceUserError.message}` });
+    }
 
     // Resolve plan
     const planName = data.plan_name?.toLowerCase();

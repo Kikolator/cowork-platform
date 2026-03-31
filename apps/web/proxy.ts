@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { createLogger } from "@cowork/shared";
 import { updateSession } from "@/lib/supabase/middleware";
 import {
   resolveSpaceFromHostname,
@@ -51,7 +52,18 @@ export async function proxy(request: NextRequest) {
   const preserveSlug = isPreview ? (space?.slug ?? spaceSlugParam ?? undefined) : undefined;
 
   // Refresh Supabase session
-  const { response, user } = await updateSession(request);
+  let response: NextResponse;
+  let user: Awaited<ReturnType<typeof updateSession>>["user"];
+  try {
+    ({ response, user } = await updateSession(request));
+  } catch (err) {
+    createLogger({ component: "proxy" }).error("updateSession failed", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    // Treat session failure as unauthenticated — forces login
+    response = NextResponse.next({ request });
+    user = null;
+  }
 
   if (space) {
     // === Space mode (subdomain or ?space= param) ===

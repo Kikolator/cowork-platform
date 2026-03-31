@@ -54,7 +54,7 @@ export function FeaturesForm({ features: initialFeatures }: FeaturesFormProps) {
             <p className="mt-0.5 text-xs text-muted-foreground">{flag.description}</p>
           </div>
           <Switch
-            checked={features[flag.key] ?? (flag.key === "open_registration" ? false : true)}
+            checked={features[flag.key] ?? false}
             onCheckedChange={(checked) => handleToggle(flag.key, checked)}
             disabled={isPending}
           />

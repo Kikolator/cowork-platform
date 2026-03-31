@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { getDeskAvailabilityRange } from "@/lib/booking/availability";
 import { getAdvanceBookingLimit } from "@/lib/booking/rules";
@@ -63,35 +64,46 @@ export default async function DeskBookingPage() {
   endDate.setDate(endDate.getDate() + limit);
   const endDateStr = endDate.toISOString().slice(0, 10);
 
-  const [
-    { data: space },
-    { data: creditBalance },
-    availability,
-    { data: upcomingBookings },
-  ] = await Promise.all([
-    supabase
-      .from("spaces")
-      .select("timezone, business_hours, min_booking_minutes")
-      .eq("id", spaceId)
-      .single(),
+  let space, creditBalance, availability, upcomingBookings;
+  try {
+    [
+      { data: space },
+      { data: creditBalance },
+      availability,
+      { data: upcomingBookings },
+    ] = await Promise.all([
+      supabase
+        .from("spaces")
+        .select("timezone, business_hours, min_booking_minutes")
+        .eq("id", spaceId)
+        .single(),
 
-    supabase.rpc("get_credit_balance", {
-      p_space_id: spaceId,
-      p_user_id: user.id,
-    }),
+      supabase.rpc("get_credit_balance", {
+        p_space_id: spaceId,
+        p_user_id: user.id,
+      }),
 
-    getDeskAvailabilityRange(supabase, spaceId, user.id, todayStr, endDateStr),
+      getDeskAvailabilityRange(supabase, spaceId, user.id, todayStr, endDateStr),
 
-    supabase
-      .from("bookings")
-      .select("id, start_time, end_time, status, resource:resources(name)")
-      .eq("user_id", user.id)
-      .eq("space_id", spaceId)
-      .gte("start_time", todayStr)
-      .in("status", ["confirmed", "checked_in"])
-      .order("start_time", { ascending: true })
-      .limit(10),
-  ]);
+      supabase
+        .from("bookings")
+        .select("id, start_time, end_time, status, resource:resources(name)")
+        .eq("user_id", user.id)
+        .eq("space_id", spaceId)
+        .gte("start_time", todayStr)
+        .in("status", ["confirmed", "checked_in"])
+        .order("start_time", { ascending: true })
+        .limit(10),
+    ]);
+  } catch (err) {
+    createLogger({ component: "book/desk" }).error("Failed to load desk booking data", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    space = null;
+    creditBalance = null;
+    availability = {};
+    upcomingBookings = null;
+  }
 
   const timezone = space?.timezone ?? "Europe/Madrid";
   const businessHours = (space?.business_hours ?? {}) as BusinessHours;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createLogger } from "@cowork/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { getEffectiveFeePercent, calculateApplicationFee } from "@/lib/stripe/fees";
@@ -94,57 +95,65 @@ export async function POST(request: NextRequest) {
 
     // Ensure Stripe price exists for day pass
     let priceId = space.daypass_stripe_price_id;
-    if (!priceId) {
-      const stripeProduct = await getStripe().products.create(
+
+    try {
+      if (!priceId) {
+        const stripeProduct = await getStripe().products.create(
+          {
+            name: "Day Pass",
+            metadata: { space_id: spaceId },
+          },
+          { stripeAccount: connectedAccountId },
+        );
+
+        const stripePrice = await getStripe().prices.create(
+          {
+            product: stripeProduct.id,
+            unit_amount: space.daypass_price_cents,
+            currency: space.daypass_currency,
+            metadata: { space_id: spaceId },
+          },
+          { stripeAccount: connectedAccountId },
+        );
+
+        priceId = stripePrice.id;
+        await admin
+          .from("spaces")
+          .update({ daypass_stripe_price_id: priceId })
+          .eq("id", spaceId);
+      }
+
+      const session = await getStripe().checkout.sessions.create(
         {
-          name: "Day Pass",
-          metadata: { space_id: spaceId },
+          mode: "payment",
+          customer_email: email,
+          line_items: [{ price: priceId, quantity: 1 }],
+          payment_intent_data: {
+            application_fee_amount: calculateApplicationFee(
+              space.daypass_price_cents,
+              feePercent,
+            ),
+          },
+          success_url: `${origin}/checkout/confirmation?session_id={CHECKOUT_SESSION_ID}${slugParam ? `&space=${spaceSlug}` : ""}`,
+          cancel_url: `${origin}/checkout/daypass${slugParam}`,
+          metadata: {
+            type: "daypass",
+            guest_checkout: "true",
+            space_id: spaceId,
+            email,
+            ...(name ? { name } : {}),
+          },
         },
         { stripeAccount: connectedAccountId },
       );
 
-      const stripePrice = await getStripe().prices.create(
-        {
-          product: stripeProduct.id,
-          unit_amount: space.daypass_price_cents,
-          currency: space.daypass_currency,
-          metadata: { space_id: spaceId },
-        },
-        { stripeAccount: connectedAccountId },
-      );
-
-      priceId = stripePrice.id;
-      await admin
-        .from("spaces")
-        .update({ daypass_stripe_price_id: priceId })
-        .eq("id", spaceId);
+      return NextResponse.json({ url: session.url });
+    } catch (err) {
+      createLogger({ component: "checkout/session", spaceId }).error("Daypass checkout failed", {
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
     }
-
-    const session = await getStripe().checkout.sessions.create(
-      {
-        mode: "payment",
-        customer_email: email,
-        line_items: [{ price: priceId, quantity: 1 }],
-        payment_intent_data: {
-          application_fee_amount: calculateApplicationFee(
-            space.daypass_price_cents,
-            feePercent,
-          ),
-        },
-        success_url: `${origin}/checkout/confirmation?session_id={CHECKOUT_SESSION_ID}${slugParam ? `&space=${spaceSlug}` : ""}`,
-        cancel_url: `${origin}/checkout/daypass${slugParam}`,
-        metadata: {
-          type: "daypass",
-          guest_checkout: "true",
-          space_id: spaceId,
-          email,
-          ...(name ? { name } : {}),
-        },
-      },
-      { stripeAccount: connectedAccountId },
-    );
-
-    return NextResponse.json({ url: session.url });
   }
 
   // type === "membership"
@@ -180,38 +189,45 @@ export async function POST(request: NextRequest) {
   }
 
   // Ensure Stripe price exists for plan
-  const priceId = await ensureStripePriceExists(
-    plan,
-    connectedAccountId,
-    spaceId,
-  );
+  try {
+    const priceId = await ensureStripePriceExists(
+      plan,
+      connectedAccountId,
+      spaceId,
+    );
 
-  const session = await getStripe().checkout.sessions.create(
-    {
-      mode: "subscription",
-      customer_email: email,
-      line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: {
-        application_fee_percent: feePercent,
+    const session = await getStripe().checkout.sessions.create(
+      {
+        mode: "subscription",
+        customer_email: email,
+        line_items: [{ price: priceId, quantity: 1 }],
+        subscription_data: {
+          application_fee_percent: feePercent,
+          metadata: {
+            space_id: spaceId,
+            plan_id: plan.id,
+          },
+        },
+        success_url: `${origin}/checkout/confirmation?session_id={CHECKOUT_SESSION_ID}${slugParam ? `&space=${spaceSlug}` : ""}`,
+        cancel_url: `${origin}/checkout/membership?plan=${plan_slug}${slugParam ? `&space=${spaceSlug}` : ""}`,
         metadata: {
+          type: "membership",
+          guest_checkout: "true",
           space_id: spaceId,
+          plan_slug: plan_slug!,
           plan_id: plan.id,
+          email,
+          ...(name ? { name } : {}),
         },
       },
-      success_url: `${origin}/checkout/confirmation?session_id={CHECKOUT_SESSION_ID}${slugParam ? `&space=${spaceSlug}` : ""}`,
-      cancel_url: `${origin}/checkout/membership?plan=${plan_slug}${slugParam ? `&space=${spaceSlug}` : ""}`,
-      metadata: {
-        type: "membership",
-        guest_checkout: "true",
-        space_id: spaceId,
-        plan_slug: plan_slug!,
-        plan_id: plan.id,
-        email,
-        ...(name ? { name } : {}),
-      },
-    },
-    { stripeAccount: connectedAccountId },
-  );
+      { stripeAccount: connectedAccountId },
+    );
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    createLogger({ component: "checkout/session", spaceId }).error("Membership checkout failed", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
+  }
 }

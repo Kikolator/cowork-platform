@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { createLogger } from "@cowork/shared";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/denied"]);
@@ -19,7 +20,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { response, user } = await updateSession(request);
+  let response: NextResponse;
+  let user: Awaited<ReturnType<typeof updateSession>>["user"];
+  try {
+    ({ response, user } = await updateSession(request));
+  } catch (err) {
+    createLogger({ component: "admin/proxy" }).error("updateSession failed", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    response = NextResponse.next({ request });
+    user = null;
+  }
 
   if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/auth/")) {
     // Don't auto-redirect from /login if user explicitly navigated there

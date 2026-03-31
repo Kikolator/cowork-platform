@@ -1958,6 +1958,7 @@ export type Database = {
         Args: { p_space_id: string; p_user_id: string }
         Returns: number
       }
+      get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_credit_balance: {
         Args: { p_space_id: string; p_user_id: string }
         Returns: {
@@ -2022,6 +2023,14 @@ export type Database = {
         Returns: boolean
       }
       remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
+      }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
     Enums: {
