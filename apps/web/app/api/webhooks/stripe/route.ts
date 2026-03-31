@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const eventUserId =
       ((eventObject.metadata as Record<string, unknown> | undefined)?.user_id as string | undefined) ?? null;
 
-    await admin.from("payment_events").upsert(
+    const { error: upsertError } = await admin.from("payment_events").upsert(
       {
         stripe_event_id: event.id,
         event_type: event.type,
@@ -92,6 +92,10 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: "stripe_event_id" },
     );
+
+    if (upsertError) {
+      logger.error("Failed to log payment event", { eventId: event.id, error: upsertError.message });
+    }
   }
 
   // Route to handler based on event type

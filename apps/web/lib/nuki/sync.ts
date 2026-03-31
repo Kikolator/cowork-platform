@@ -135,7 +135,15 @@ export async function syncNukiCodes(spaceId: string): Promise<{
   );
 
   // Get existing Nuki auths on this smartlock
-  const existingAuths = await listAuths(config.nuki_api_token, config.nuki_smartlock_id);
+  let existingAuths;
+  try {
+    existingAuths = await listAuths(config.nuki_api_token, config.nuki_smartlock_id);
+  } catch (err) {
+    createLogger({ component: "nuki/sync", spaceId }).error("Failed to list existing Nuki auths", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    throw new Error("Failed to connect to Nuki API");
+  }
   const existingCodes = new Set(existingAuths.map((a) => a.code));
 
   const activeStatuses = new Set(["active", "past_due", "cancelling", "paused"]);

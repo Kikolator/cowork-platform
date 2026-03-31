@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
-import { getRoomSlots } from "@/lib/booking/availability";
+import { getRoomSlots, type TimeSlot } from "@/lib/booking/availability";
 import { formatDuration } from "@/lib/booking/format";
 import { SlotPicker } from "./slot-picker";
 
@@ -26,28 +27,36 @@ export default async function RoomBookingPage({ params, searchParams }: PageProp
   const date = dateParam ?? today;
 
   // Fetch resource, space, member credit balance in parallel
-  const [{ data: resource }, { data: space }, { data: member }] = await Promise.all([
-    supabase
-      .from("resources")
-      .select("id, name, capacity, floor, image_url, resource_type_id, resource_type:resource_types!inner(id, slug, name)")
-      .eq("id", resourceId)
-      .eq("space_id", spaceId)
-      .single(),
+  let resource, space, member;
+  try {
+    [{ data: resource }, { data: space }, { data: member }] = await Promise.all([
+      supabase
+        .from("resources")
+        .select("id, name, capacity, floor, image_url, resource_type_id, resource_type:resource_types!inner(id, slug, name)")
+        .eq("id", resourceId)
+        .eq("space_id", spaceId)
+        .single(),
 
-    supabase
-      .from("spaces")
-      .select("timezone, business_hours")
-      .eq("id", spaceId)
-      .single(),
+      supabase
+        .from("spaces")
+        .select("timezone, business_hours")
+        .eq("id", spaceId)
+        .single(),
 
-    supabase
-      .from("members")
-      .select("id, plan_id, status")
-      .eq("user_id", user.id)
-      .eq("space_id", spaceId)
-      .eq("status", "active")
-      .maybeSingle(),
-  ]);
+      supabase
+        .from("members")
+        .select("id, plan_id, status")
+        .eq("user_id", user.id)
+        .eq("space_id", spaceId)
+        .eq("status", "active")
+        .maybeSingle(),
+    ]);
+  } catch (err) {
+    createLogger({ component: "book/room" }).error("Failed to load room booking data", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    throw err; // Let error boundary handle it
+  }
 
   if (!resource) notFound();
 
@@ -55,13 +64,22 @@ export default async function RoomBookingPage({ params, searchParams }: PageProp
   const rt = resource.resource_type as unknown as { id: string; slug: string; name: string };
 
   // Fetch slots and credit balance in parallel
-  const [slots, { data: creditBalance }] = await Promise.all([
-    getRoomSlots(supabase, spaceId, resourceId, date),
-    supabase.rpc("get_credit_balance", {
-      p_space_id: spaceId,
-      p_user_id: user.id,
-    }),
-  ]);
+  let slots: TimeSlot[], creditBalance;
+  try {
+    [slots, { data: creditBalance }] = await Promise.all([
+      getRoomSlots(supabase, spaceId, resourceId, date),
+      supabase.rpc("get_credit_balance", {
+        p_space_id: spaceId,
+        p_user_id: user.id,
+      }),
+    ]);
+  } catch (err) {
+    createLogger({ component: "book/room" }).error("Failed to load slots/credits", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    slots = [];
+    creditBalance = null;
+  }
 
   // Find credits for this resource type
   const credit = (creditBalance ?? []).find(

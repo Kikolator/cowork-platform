@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Plug,
 } from "lucide-react";
+import { createLogger } from "@cowork/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformBalance, getApplicationFeesSummary } from "@/lib/stripe/platform";
 import { MetricCard } from "@/components/metric-card";
@@ -21,45 +22,59 @@ function formatCurrency(cents: number, currency = "eur") {
 async function getPlatformStats() {
   const db = createAdminClient();
 
-  const [
-    { count: totalTenants },
-    { count: activeTenants },
-    { count: trialTenants },
-    { count: totalMembers },
-    { count: pastDueMembers },
-    { count: stripeConnected },
-  ] = await Promise.all([
-    db.from("tenants").select("*", { count: "exact", head: true }),
-    db
-      .from("tenants")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active"),
-    db
-      .from("tenants")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "trial"),
-    db
-      .from("members")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active"),
-    db
-      .from("members")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "past_due"),
-    db
-      .from("tenants")
-      .select("*", { count: "exact", head: true })
-      .eq("stripe_onboarding_complete", true),
-  ]);
+  try {
+    const [
+      { count: totalTenants },
+      { count: activeTenants },
+      { count: trialTenants },
+      { count: totalMembers },
+      { count: pastDueMembers },
+      { count: stripeConnected },
+    ] = await Promise.all([
+      db.from("tenants").select("*", { count: "exact", head: true }),
+      db
+        .from("tenants")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active"),
+      db
+        .from("tenants")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "trial"),
+      db
+        .from("members")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active"),
+      db
+        .from("members")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "past_due"),
+      db
+        .from("tenants")
+        .select("*", { count: "exact", head: true })
+        .eq("stripe_onboarding_complete", true),
+    ]);
 
-  return {
-    totalTenants: totalTenants ?? 0,
-    activeTenants: activeTenants ?? 0,
-    trialTenants: trialTenants ?? 0,
-    totalMembers: totalMembers ?? 0,
-    pastDueMembers: pastDueMembers ?? 0,
-    stripeConnected: stripeConnected ?? 0,
-  };
+    return {
+      totalTenants: totalTenants ?? 0,
+      activeTenants: activeTenants ?? 0,
+      trialTenants: trialTenants ?? 0,
+      totalMembers: totalMembers ?? 0,
+      pastDueMembers: pastDueMembers ?? 0,
+      stripeConnected: stripeConnected ?? 0,
+    };
+  } catch (err) {
+    createLogger({ component: "admin/dashboard" }).error("Failed to load platform stats", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    return {
+      totalTenants: 0,
+      activeTenants: 0,
+      trialTenants: 0,
+      totalMembers: 0,
+      pastDueMembers: 0,
+      stripeConnected: 0,
+    };
+  }
 }
 
 export default async function OverviewPage() {

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { formatCredits, toUTC } from "@/lib/booking/format";
 import { CalendarPlus, CalendarDays, CreditCard, Store } from "lucide-react";
@@ -58,7 +59,9 @@ export default async function DashboardPage() {
     localHour < 12 ? "Good morning" : localHour < 18 ? "Good afternoon" : "Good evening";
 
   // Fetch member data, upcoming count, today's bookings, closures, profile, and recent resources
-  const [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult] = await Promise.all([
+  let memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult;
+  try {
+  [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult] = await Promise.all([
     spaceId
       ? supabase
           .from("members")
@@ -115,6 +118,17 @@ export default async function DashboardPage() {
           .limit(20)
       : Promise.resolve({ data: null }),
   ]);
+  } catch (err) {
+    createLogger({ component: "dashboard" }).error("Failed to load dashboard data", {
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    memberResult = { data: null };
+    upcomingResult = { data: null };
+    todayResult = { data: null };
+    closuresResult = { data: null };
+    profileResult = { data: null };
+    recentBookingsResult = { data: null };
+  }
 
   const member = memberResult.data;
   const closures = closuresResult.data ?? [];
@@ -162,20 +176,26 @@ export default async function DashboardPage() {
     member && (member.status === "active" || member.status === "cancelling");
 
   if (hasActiveMembership && spaceId) {
-    const [balanceResult, rtResult] = await Promise.all([
-      supabase.rpc("get_credit_balance", {
-        p_space_id: spaceId,
-        p_user_id: user.id,
-      }),
-      supabase
-        .from("resource_types")
-        .select("id, name")
-        .eq("space_id", spaceId),
-    ]);
-    creditBalances = balanceResult.data ?? [];
-    resourceTypeNames = Object.fromEntries(
-      (rtResult.data ?? []).map((rt) => [rt.id, rt.name]),
-    );
+    try {
+      const [balanceResult, rtResult] = await Promise.all([
+        supabase.rpc("get_credit_balance", {
+          p_space_id: spaceId,
+          p_user_id: user.id,
+        }),
+        supabase
+          .from("resource_types")
+          .select("id, name")
+          .eq("space_id", spaceId),
+      ]);
+      creditBalances = balanceResult.data ?? [];
+      resourceTypeNames = Object.fromEntries(
+        (rtResult.data ?? []).map((rt) => [rt.id, rt.name]),
+      );
+    } catch (err) {
+      createLogger({ component: "dashboard" }).error("Failed to load credit balances", {
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
   }
 
   // Build plan display
@@ -210,30 +230,36 @@ export default async function DashboardPage() {
   let hasStripe = false;
 
   if (isAdmin && spaceId) {
-    const [members, resources, plans, tenant] = await Promise.all([
-      supabase
-        .from("members")
-        .select("id", { count: "exact", head: true })
-        .eq("space_id", spaceId),
-      supabase
-        .from("resources")
-        .select("id", { count: "exact", head: true })
-        .eq("space_id", spaceId),
-      supabase
-        .from("plans")
-        .select("id", { count: "exact", head: true })
-        .eq("space_id", spaceId),
-      supabase
-        .from("tenants")
-        .select("stripe_onboarding_complete")
-        .eq("id", user.app_metadata?.tenant_id)
-        .single(),
-    ]);
+    try {
+      const [members, resources, plans, tenant] = await Promise.all([
+        supabase
+          .from("members")
+          .select("id", { count: "exact", head: true })
+          .eq("space_id", spaceId),
+        supabase
+          .from("resources")
+          .select("id", { count: "exact", head: true })
+          .eq("space_id", spaceId),
+        supabase
+          .from("plans")
+          .select("id", { count: "exact", head: true })
+          .eq("space_id", spaceId),
+        supabase
+          .from("tenants")
+          .select("stripe_onboarding_complete")
+          .eq("id", user.app_metadata?.tenant_id)
+          .single(),
+      ]);
 
-    memberCount = members.count ?? 0;
-    resourceCount = resources.count ?? 0;
-    planCount = plans.count ?? 0;
-    hasStripe = tenant.data?.stripe_onboarding_complete ?? false;
+      memberCount = members.count ?? 0;
+      resourceCount = resources.count ?? 0;
+      planCount = plans.count ?? 0;
+      hasStripe = tenant.data?.stripe_onboarding_complete ?? false;
+    } catch (err) {
+      createLogger({ component: "dashboard" }).error("Failed to load admin stats", {
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
   }
 
   const checklist = [

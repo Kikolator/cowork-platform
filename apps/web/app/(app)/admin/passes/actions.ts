@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -89,13 +90,15 @@ export async function createManualPass(
     }
 
     // Auto-assign desk
-    const { data: deskId } = await admin.rpc("auto_assign_desk", {
+    const { data: deskId, error: deskError } = await admin.rpc("auto_assign_desk", {
       p_space_id: spaceId,
       p_start_date: startDate,
       p_end_date: endDate,
     });
 
-    if (deskId) {
+    if (deskError) {
+      createLogger({ component: "passes/actions", spaceId }).error("auto_assign_desk RPC failed", { error: deskError.message, passId: pass.id });
+    } else if (deskId) {
       await admin
         .from("passes")
         .update({ assigned_desk_id: deskId })
