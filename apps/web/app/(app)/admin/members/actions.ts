@@ -6,6 +6,11 @@ import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrigin } from "@/lib/url";
+import { verifyStripeReady } from "@/lib/stripe/connect";
+import { getEffectiveFeePercent } from "@/lib/stripe/fees";
+import { findOrCreateCustomer, ensureStripePriceExists } from "@/lib/stripe/subscriptions";
+import { getStripe } from "@/lib/stripe/client";
+import { grantMonthlyCredits } from "@/lib/credits/grant";
 import type { Database } from "@cowork/db/types/database";
 import {
   updateMemberSchema,
@@ -41,13 +46,33 @@ export async function updateMember(memberId: string, input: unknown) {
   }
 
   const { supabase, spaceId } = await getSpaceId();
+  const admin = createAdminClient();
   const d = parsed.data;
+
+  // Check if custom price changed on a Stripe-billed member
+  // TODO: remove unknown casts after running `supabase gen types` with billing_mode migration
+  const { data: currentRaw } = await admin
+    .from("members")
+    .select("custom_price_cents")
+    .eq("id", memberId)
+    .eq("space_id", spaceId)
+    .single();
+  const current = currentRaw as unknown as {
+    billing_mode?: string;
+    custom_price_cents: number | null;
+  } | null;
+
+  const priceChanged =
+    current &&
+    current.billing_mode === "stripe" &&
+    d.customPriceCents !== current.custom_price_cents;
 
   const { error } = await supabase
     .from("members")
     .update({
       plan_id: d.planId,
       status: d.status,
+      custom_price_cents: d.customPriceCents,
       fixed_desk_id: emptyToNull(d.fixedDeskId),
       has_twenty_four_seven: d.hasTwentyFourSeven,
       access_code: emptyToNull(d.accessCode),
@@ -75,6 +100,14 @@ export async function updateMember(memberId: string, input: unknown) {
   }
 
   revalidatePath("/admin/members");
+
+  if (priceChanged) {
+    return {
+      success: true as const,
+      warning: "Custom price updated in the database. The active Stripe subscription was not changed — update it manually in the Stripe dashboard if needed.",
+    };
+  }
+
   return { success: true as const };
 }
 
@@ -215,6 +248,8 @@ export async function addMember(input: unknown) {
       user_id: userId,
       plan_id: d.planId,
       status: "active",
+      billing_mode: d.billingMode,
+      custom_price_cents: d.customPriceCents,
       company: d.company || null,
     })
     .select("id")
@@ -224,7 +259,142 @@ export async function addMember(input: unknown) {
     return { success: false as const, error: insertError?.message ?? "Failed to create member" };
   }
 
-  // 6. Optionally send invite
+  const logger = createLogger({ component: "members/actions", spaceId });
+
+  // 6. Handle billing mode
+  if (d.billingMode === "stripe") {
+    // Create Stripe subscription with send_invoice collection method
+    try {
+      const { data: space } = await admin
+        .from("spaces")
+        .select("tenant_id")
+        .eq("id", spaceId)
+        .single();
+
+      if (!space?.tenant_id) throw new Error("Space has no tenant");
+
+      const { stripeAccountId, platformPlan, platformFeePercent } =
+        await verifyStripeReady(space.tenant_id);
+      const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
+
+      // Get member's email for customer creation
+      const { data: profile } = await admin
+        .from("shared_profiles")
+        .select("email, full_name")
+        .eq("id", userId)
+        .single();
+
+      const customerId = await findOrCreateCustomer({
+        email: profile?.email ?? d.email,
+        name: profile?.full_name ?? d.fullName ?? null,
+        existingCustomerId: null,
+        connectedAccountId: stripeAccountId,
+        spaceId,
+        userId,
+      });
+
+      // Get plan for price creation
+      const { data: plan } = await admin
+        .from("plans")
+        .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id")
+        .eq("id", d.planId)
+        .single();
+
+      if (!plan) throw new Error("Plan not found");
+
+      // Use custom price or plan price
+      const effectivePrice = d.customPriceCents ?? plan.price_cents;
+
+      let priceId: string;
+      if (d.customPriceCents != null && d.customPriceCents !== plan.price_cents) {
+        // Ensure Stripe product exists, then resolve the product ID
+        let productId = plan.stripe_product_id;
+        if (!productId) {
+          await ensureStripePriceExists(plan, stripeAccountId, spaceId);
+          const { data: refreshedPlan } = await admin
+            .from("plans")
+            .select("stripe_product_id")
+            .eq("id", plan.id)
+            .single();
+          productId = refreshedPlan?.stripe_product_id ?? null;
+        }
+
+        if (!productId) throw new Error("Could not resolve Stripe product");
+
+        const customPrice = await getStripe().prices.create(
+          {
+            product: productId,
+            unit_amount: effectivePrice,
+            currency: plan.currency,
+            recurring: { interval: "month" },
+            metadata: { space_id: spaceId, plan_id: plan.id, custom_for_member: newMember.id },
+          },
+          { stripeAccount: stripeAccountId },
+        );
+        priceId = customPrice.id;
+      } else {
+        priceId = await ensureStripePriceExists(plan, stripeAccountId, spaceId);
+      }
+
+      // Create subscription with send_invoice (no immediate payment required)
+      const subscription = await getStripe().subscriptions.create(
+        {
+          customer: customerId,
+          items: [{ price: priceId }],
+          collection_method: "send_invoice",
+          days_until_due: 7,
+          application_fee_percent: feePercent,
+          metadata: {
+            space_id: spaceId,
+            plan_id: d.planId,
+            user_id: userId,
+          },
+        },
+        { stripeAccount: stripeAccountId },
+      );
+
+      // Update member with Stripe fields
+      await admin
+        .from("members")
+        .update({
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+        })
+        .eq("id", newMember.id);
+    } catch (err) {
+      logger.error("Failed to create Stripe subscription for admin-added member", {
+        memberId: newMember.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // Member is created but without Stripe — admin can retry or switch to manual
+      return {
+        success: true as const,
+        warning: `Member added but Stripe subscription failed: ${err instanceof Error ? err.message : "Unknown error"}. You can switch to manual billing or retry.`,
+      };
+    }
+  } else {
+    // Manual billing — grant initial credits immediately
+    try {
+      // Credits valid until same day next month
+      const now = new Date();
+      const validUntil = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+      await grantMonthlyCredits({
+        spaceId,
+        userId,
+        planId: d.planId,
+        stripeInvoiceId: `manual_initial_${newMember.id}`,
+        validUntil,
+      });
+    } catch (err) {
+      logger.error("Failed to grant initial credits for manual member", {
+        memberId: newMember.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // 7. Optionally send invite
   let inviteFailed = false;
   if (d.sendInvite) {
     const headersList = await headers();
@@ -235,7 +405,7 @@ export async function addMember(input: unknown) {
     });
 
     if (otpError) {
-      console.error("[addMember] invite OTP failed", { email: d.email, error: otpError.message });
+      logger.error("Invite OTP failed", { email: d.email, error: otpError.message });
       inviteFailed = true;
     } else {
       await supabase

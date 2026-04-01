@@ -66,6 +66,7 @@ interface MemberDetailProps {
   member: Member;
   profile: ProfileEntry;
   planName: string;
+  planCurrency: string;
   deskName: string | null;
   notes: MemberNote[];
   profileMap: Record<string, ProfileEntry>;
@@ -117,6 +118,7 @@ export function MemberDetail({
   member,
   profile,
   planName,
+  planCurrency,
   deskName,
   notes,
   profileMap,
@@ -178,6 +180,27 @@ export function MemberDetail({
               }
             />
             <DetailRow label="Joined" value={formatDate(member.joined_at)} />
+            <DetailRow
+              label="Billing"
+              value={
+                <Badge
+                  variant="outline"
+                  className={`border-transparent capitalize ${
+                    (member.billing_mode ?? "stripe") === "manual"
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                      : "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                  }`}
+                >
+                  {member.billing_mode ?? "stripe"}
+                </Badge>
+              }
+            />
+            {member.custom_price_cents != null && (
+              <DetailRow
+                label="Custom price"
+                value={`${(member.custom_price_cents / 100).toFixed(2)} ${planCurrency.toUpperCase()}`}
+              />
+            )}
             <DetailRow
               label="Last login"
               value={

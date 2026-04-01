@@ -95,21 +95,30 @@ export async function purchasePass(
       .eq("space_id", spaceId)
       .maybeSingle();
 
-    let isUnlimited = false;
+    let unlimitedResourceTypeIds: string[] = [];
     if (member?.plan_id) {
       const { data: configs } = await admin
         .from("plan_credit_config")
-        .select("is_unlimited")
+        .select("resource_type_id, is_unlimited")
         .eq("plan_id", member.plan_id);
-      isUnlimited = configs?.some((c) => c.is_unlimited) ?? false;
+      unlimitedResourceTypeIds =
+        configs?.filter((c) => c.is_unlimited).map((c) => c.resource_type_id) ?? [];
     }
 
+    const productResourceTypeId = (
+      product.credit_grant_config as { resource_type_id?: string } | null
+    )?.resource_type_id;
+
     if (
-      !isProductVisible(product.visibility_rules, {
-        isMember: member?.status === "active",
-        planId: member?.plan_id ?? null,
-        isUnlimited,
-      })
+      !isProductVisible(
+        product.visibility_rules,
+        {
+          isMember: member?.status === "active",
+          planId: member?.plan_id ?? null,
+          unlimitedResourceTypeIds,
+        },
+        productResourceTypeId,
+      )
     ) {
       return { success: false, error: "This product is not available for your membership" };
     }
@@ -265,23 +274,28 @@ export async function purchaseProduct(
       .eq("space_id", spaceId)
       .maybeSingle();
 
-    // Check if member has unlimited credits (for visibility filtering)
-    let isUnlimited = false;
+    // Check which resource types member has unlimited credits for
+    let unlimitedResourceTypeIds: string[] = [];
     if (member?.plan_id) {
       const { data: configs } = await admin
         .from("plan_credit_config")
-        .select("is_unlimited")
+        .select("resource_type_id, is_unlimited")
         .eq("plan_id", member.plan_id);
-      isUnlimited = configs?.some((c) => c.is_unlimited) ?? false;
+      unlimitedResourceTypeIds =
+        configs?.filter((c) => c.is_unlimited).map((c) => c.resource_type_id) ?? [];
     }
+
+    const productResourceTypeId = (
+      product.credit_grant_config as { resource_type_id?: string } | null
+    )?.resource_type_id;
 
     const memberContext = {
       isMember: member?.status === "active",
       planId: member?.plan_id ?? null,
-      isUnlimited,
+      unlimitedResourceTypeIds,
     };
 
-    if (!isProductVisible(product.visibility_rules, memberContext)) {
+    if (!isProductVisible(product.visibility_rules, memberContext, productResourceTypeId)) {
       return { success: false, error: "This product is not available for your membership" };
     }
 

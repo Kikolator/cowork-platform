@@ -16,6 +16,7 @@ Each coworking business (tenant) gets its own branded subdomain, Stripe Connect 
 | Payments | Stripe Connect (Standard accounts) |
 | Email | Resend + React Email |
 | Access Control | Nuki smart lock integration |
+| Observability | Vercel Analytics, structured logging, error boundaries |
 | Validation | Zod at all API boundaries |
 | Forms | React Hook Form + Zod resolvers |
 | Data Fetching | Supabase JS + `@supabase/ssr` (web), TanStack Query v5 (mobile) |
@@ -38,6 +39,8 @@ cowork-platform/
 │   │   │   │   ├── plan/           # Membership plans
 │   │   │   │   ├── invoices/       # Member invoices
 │   │   │   │   ├── access/         # Door access codes (Nuki)
+│   │   │   │   ├── store/          # Product store (passes, hour bundles)
+│   │   │   │   ├── referrals/      # Member referral program
 │   │   │   │   └── admin/          # Role-gated admin section
 │   │   │   │       ├── bookings/   # Daily view, walk-ins
 │   │   │   │       ├── members/    # Directory, import, bulk actions
@@ -46,13 +49,17 @@ cowork-platform/
 │   │   │   │       ├── plans/      # Tier configuration
 │   │   │   │       ├── products/   # Store catalogue
 │   │   │   │       ├── resources/  # Desks, rooms, pricing
+│   │   │   │       ├── referrals/  # Referral program config
 │   │   │   │       ├── invoices/   # Admin billing view
 │   │   │   │       ├── import/     # Bulk imports
-│   │   │   │       └── settings/   # Branding, hours, Stripe Connect
+│   │   │   │       └── settings/   # Branding, hours, features, Stripe Connect
 │   │   │   ├── (auth)/             # Login, auth callback, space claim
 │   │   │   ├── (platform)/         # Onboarding, space selection
+│   │   │   ├── checkout/           # Guest checkout flow
 │   │   │   └── api/
 │   │   │       ├── health/         # Health check endpoint
+│   │   │       ├── cron/
+│   │   │       │   └── renew-credits/ # Daily manual credit renewal
 │   │   │       └── webhooks/
 │   │   │           └── stripe/     # Stripe Connect webhook handler
 │   │   ├── components/
@@ -69,7 +76,7 @@ cowork-platform/
 │   │   │   ├── space/              # Space resolution from hostname
 │   │   │   ├── stripe/             # Stripe client, Connect, checkout, webhooks
 │   │   │   └── supabase/           # Server, client, admin, middleware helpers
-│   │   └── middleware.ts           # Space resolution + auth gate
+│   │   └── proxy.ts                # Space resolution + auth gate (Next.js 16)
 │   ├── admin/                       # Platform admin dashboard (:3001)
 │   │   └── app/
 │   │       ├── (dashboard)/         # Tenant & space management
@@ -86,7 +93,7 @@ cowork-platform/
 │   │   │   └── MT-SCHEMA-SPEC.md    # Full schema specification
 │   │   ├── supabase/
 │   │   │   ├── config.toml          # Local Supabase configuration
-│   │   │   ├── migrations/          # 29 migrations
+│   │   │   ├── migrations/          # SQL migrations (sequential + timestamped)
 │   │   │   ├── functions/           # Edge functions (cron jobs)
 │   │   │   └── seed.sql             # Seed data for local development
 │   │   └── types/
@@ -192,6 +199,7 @@ npm run format             # Prettier across the repo
 | `STRIPE_WEBHOOK_SECRET` | Stripe platform webhook signing secret |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | Stripe Connect webhook signing secret |
 | `RESEND_API_KEY` | Resend email API key |
+| `CRON_SECRET` | Secret for Vercel Cron Job authentication |
 
 ### Admin App (`apps/admin/.env.local`)
 
@@ -220,6 +228,9 @@ For local development, Supabase URL and keys are printed by `supabase start`.
 - **Plan** -- Configurable membership tier defined per space. Controls access level, pricing, and monthly credit allowances.
 - **Credit** -- Time-based currency (in minutes) for booking resources. Granted monthly by subscription or purchased as hour bundles.
 - **Pass** -- Day or week pass for non-members. Includes auto-assigned desk.
+- **Product** -- Store item (pass, hour bundle, addon, subscription). Has configurable visibility rules (plan-gated, exclude unlimited).
+- **Referral** -- Member-to-member referral with configurable rewards (credits or subscription discounts).
+- **Billing Mode** -- Per-member: `stripe` (Stripe invoices) or `manual` (admin handles billing externally).
 
 ## Architecture Highlights
 
@@ -229,6 +240,11 @@ For local development, Supabase URL and keys are printed by `supabase start`.
 - **Booking**: Multi-slot desk selection with hourly time ranges. Overlap prevention via Postgres `EXCLUDE` constraints. Credits deducted FIFO by expiry date.
 - **Access**: Nuki smart lock integration for door access codes per member.
 - **Email**: Branded transactional emails via Resend + React Email (welcome, booking confirmations, invoices).
+- **Store**: Product catalogue with per-resource-type visibility rules. Passes, hour bundles, and subscription addons.
+- **Referrals**: Configurable reward programs (credit grants or subscription discounts) with atomic completion tracking.
+- **Observability**: Vercel Analytics, structured logging (`@cowork/shared` logger), React error boundaries.
+- **Cron**: Daily credit renewal for manual-billing members (Vercel Cron Jobs).
+- **Feature Flags**: Per-space feature toggles (passes, credits, guest passes, referrals) stored in `spaces.features` JSONB.
 - **Mobile**: Expo with Expo Router. All data fetched client-side via Supabase SDK + TanStack Query. RLS is the security boundary.
 
 ## Documentation
@@ -240,4 +256,4 @@ For local development, Supabase URL and keys are printed by `supabase start`.
 
 ## License
 
-Private. All rights reserved.
+Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). Copyright (C) 2026 SAVAGE HUB SL.

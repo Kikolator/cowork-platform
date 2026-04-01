@@ -510,7 +510,9 @@ export function ProductForm({
                 <div>
                   <span className="text-sm font-medium">Hide from unlimited members</span>
                   <p className="text-xs text-muted-foreground">
-                    Members with unlimited credits won&apos;t see this product.
+                    For hour bundles, hides from members with unlimited credits
+                    for the bundle&apos;s resource type. Other products hide from
+                    members with any unlimited credits.
                   </p>
                 </div>
               </label>

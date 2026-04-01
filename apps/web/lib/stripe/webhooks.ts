@@ -147,6 +147,7 @@ async function handleSubscriptionCheckout(
         plan_id: planId,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscriptionId,
+        billing_mode: "stripe",
         status: "active",
         joined_at: new Date().toISOString(),
         cancelled_at: null,
@@ -167,6 +168,7 @@ async function handleSubscriptionCheckout(
       plan_id: planId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
+      billing_mode: "stripe",
       status: "active",
       joined_at: new Date().toISOString(),
     });

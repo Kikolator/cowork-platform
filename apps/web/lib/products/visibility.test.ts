@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { isProductVisible } from "./visibility";
 
-const member = { isMember: true, planId: "plan_a", isUnlimited: false };
-const nonMember = { isMember: false, planId: null, isUnlimited: false };
-const unlimitedMember = { isMember: true, planId: "plan_u", isUnlimited: true };
+const DESK_RT = "rt_desk";
+const MEETING_RT = "rt_meeting";
+
+const member = { isMember: true, planId: "plan_a", unlimitedResourceTypeIds: [] as string[] };
+const nonMember = { isMember: false, planId: null, unlimitedResourceTypeIds: [] as string[] };
+const unlimitedAllMember = {
+  isMember: true,
+  planId: "plan_u",
+  unlimitedResourceTypeIds: [DESK_RT, MEETING_RT],
+};
+const unlimitedDeskMember = {
+  isMember: true,
+  planId: "plan_d",
+  unlimitedResourceTypeIds: [DESK_RT],
+};
+const unlimitedMeetingMember = {
+  isMember: true,
+  planId: "plan_m",
+  unlimitedResourceTypeIds: [MEETING_RT],
+};
 
 describe("isProductVisible", () => {
   // ── No rules (permissive default) ──────────────────────────────────
@@ -81,22 +98,69 @@ describe("isProductVisible", () => {
     expect(isProductVisible({ require_plan_ids: ["plan"] }, member)).toBe(false);
   });
 
-  // ── exclude_unlimited ──────────────────────────────────────────────
+  // ── exclude_unlimited (no product resource type — blanket behavior) ─
 
-  it("hides product when exclude_unlimited and member is unlimited", () => {
-    expect(isProductVisible({ exclude_unlimited: true }, unlimitedMember)).toBe(false);
+  it("hides product when exclude_unlimited and member has any unlimited", () => {
+    expect(isProductVisible({ exclude_unlimited: true }, unlimitedAllMember)).toBe(false);
   });
 
-  it("shows product when exclude_unlimited and member is not unlimited", () => {
+  it("shows product when exclude_unlimited and member has no unlimited", () => {
     expect(isProductVisible({ exclude_unlimited: true }, member)).toBe(true);
   });
 
   it("shows product when exclude_unlimited is false for unlimited member", () => {
-    expect(isProductVisible({ exclude_unlimited: false }, unlimitedMember)).toBe(true);
+    expect(isProductVisible({ exclude_unlimited: false }, unlimitedAllMember)).toBe(true);
   });
 
   it("shows product for non-member when exclude_unlimited is true", () => {
     expect(isProductVisible({ exclude_unlimited: true }, nonMember)).toBe(true);
+  });
+
+  // ── exclude_unlimited (with product resource type — per-type behavior) ─
+
+  it("hides meeting room bundle for member with unlimited meeting rooms", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: true }, unlimitedMeetingMember, MEETING_RT),
+    ).toBe(false);
+  });
+
+  it("shows meeting room bundle for member with unlimited desks only", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: true }, unlimitedDeskMember, MEETING_RT),
+    ).toBe(true);
+  });
+
+  it("hides desk bundle for member with unlimited desks", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: true }, unlimitedDeskMember, DESK_RT),
+    ).toBe(false);
+  });
+
+  it("shows desk bundle for member with unlimited meeting rooms only", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: true }, unlimitedMeetingMember, DESK_RT),
+    ).toBe(true);
+  });
+
+  it("hides both bundles for member with all unlimited", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: true }, unlimitedAllMember, DESK_RT),
+    ).toBe(false);
+    expect(
+      isProductVisible({ exclude_unlimited: true }, unlimitedAllMember, MEETING_RT),
+    ).toBe(false);
+  });
+
+  it("shows resource-typed product when exclude_unlimited is false", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: false }, unlimitedDeskMember, DESK_RT),
+    ).toBe(true);
+  });
+
+  it("shows resource-typed product for limited member", () => {
+    expect(
+      isProductVisible({ exclude_unlimited: true }, member, DESK_RT),
+    ).toBe(true);
   });
 
   // ── Combined rules ─────────────────────────────────────────────────
@@ -128,11 +192,11 @@ describe("isProductVisible", () => {
     ).toBe(true);
   });
 
-  it("applies require_membership + exclude_unlimited — unlimited member is hidden", () => {
+  it("applies require_membership + exclude_unlimited — unlimited member is hidden (no resource type)", () => {
     expect(
       isProductVisible(
         { require_membership: true, exclude_unlimited: true },
-        unlimitedMember,
+        unlimitedAllMember,
       ),
     ).toBe(false);
   });
@@ -142,6 +206,16 @@ describe("isProductVisible", () => {
       isProductVisible(
         { require_membership: true, exclude_unlimited: true },
         member,
+      ),
+    ).toBe(true);
+  });
+
+  it("applies membership + exclude_unlimited with resource type — desk-unlimited member sees meeting bundle", () => {
+    expect(
+      isProductVisible(
+        { require_membership: true, exclude_unlimited: true },
+        unlimitedDeskMember,
+        MEETING_RT,
       ),
     ).toBe(true);
   });
