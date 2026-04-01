@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const MEMBER_STATUSES = ["active", "paused", "past_due", "cancelling", "churned"] as const;
+const BILLING_MODES = ["stripe", "manual"] as const;
 const BILLING_ENTITY_TYPES = ["individual", "company"] as const;
 const FISCAL_ID_TYPES = ["nif", "nie", "cif", "passport", "eu_vat", "foreign_tax_id", "other"] as const;
 const NOTE_CATEGORIES = ["general", "billing", "access", "incident", "support"] as const;
@@ -9,6 +10,7 @@ const NOTE_CATEGORIES = ["general", "billing", "access", "incident", "support"] 
 export const updateMemberSchema = z.object({
   planId: z.string().uuid(),
   status: z.enum(MEMBER_STATUSES),
+  customPriceCents: z.number().int().min(0).nullable(),
   fixedDeskId: z.string().nullable(),
   hasTwentyFourSeven: z.boolean(),
   accessCode: z.string().nullable(),
@@ -41,6 +43,8 @@ export const addMemberSchema = z.object({
   phone: z.string().max(50).optional().or(z.literal("")),
   planId: z.string().uuid("Select a plan"),
   company: z.string().max(200).optional().or(z.literal("")),
+  billingMode: z.enum(BILLING_MODES),
+  customPriceCents: z.number().int().min(0).nullable(),
   sendInvite: z.boolean(),
 });
 

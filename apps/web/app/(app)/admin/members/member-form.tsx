@@ -97,6 +97,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
     defaultValues: {
       planId: member.plan_id,
       status: member.status as UpdateMemberValues["status"],
+      customPriceCents: member.custom_price_cents ?? null,
       fixedDeskId: member.fixed_desk_id ?? null,
       hasTwentyFourSeven: member.has_twenty_four_seven ?? false,
       accessCode: member.access_code ?? null,
@@ -123,6 +124,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
   const watchFixedDeskId = watch("fixedDeskId");
   const watchHasTwentyFourSeven = watch("hasTwentyFourSeven");
   const watchAlarmApproved = watch("alarmApproved");
+  const watchCustomPrice = watch("customPriceCents");
   const watchBillingEntityType = watch("billingEntityType");
   const watchFiscalIdType = watch("fiscalIdType");
   const watchBillingCompanyTaxIdType = watch("billingCompanyTaxIdType");
@@ -210,6 +212,36 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Billing mode</Label>
+                <div className="flex h-9 items-center rounded-md border border-border bg-muted/50 px-3 text-sm capitalize">
+                  {member.billing_mode ?? "stripe"}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="customPrice">Custom price</Label>
+                <Input
+                  id="customPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Plan default"
+                  value={
+                    watchCustomPrice != null
+                      ? (watchCustomPrice / 100).toFixed(2)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setValue(
+                      "customPriceCents",
+                      val === "" ? null : Math.round(parseFloat(val) * 100),
+                    );
+                  }}
+                />
               </div>
             </div>
           </FormSection>
