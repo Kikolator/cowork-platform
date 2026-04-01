@@ -69,6 +69,13 @@ export function AddMemberForm({ open, onOpenChange, plans }: AddMemberFormProps)
       const result = await addMember(data);
       if (!result.success) {
         setServerError(result.error);
+      } else if ("warning" in result && result.warning) {
+        // Show warning but still close — member was created
+        setServerError(result.warning);
+        setTimeout(() => {
+          reset();
+          onOpenChange(false);
+        }, 4000);
       } else {
         reset();
         onOpenChange(false);

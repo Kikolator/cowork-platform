@@ -5,12 +5,17 @@
 -- ============================================================================
 
 -- ==========================================================================
--- 1. Add columns
+-- 1. Create enum type
+-- ==========================================================================
+
+CREATE TYPE billing_mode AS ENUM ('stripe', 'manual');
+
+-- ==========================================================================
+-- 2. Add columns
 -- ==========================================================================
 
 ALTER TABLE members
-  ADD COLUMN billing_mode text NOT NULL DEFAULT 'stripe'
-    CHECK (billing_mode IN ('stripe', 'manual')),
+  ADD COLUMN billing_mode billing_mode NOT NULL DEFAULT 'stripe',
   ADD COLUMN custom_price_cents integer
     CHECK (custom_price_cents IS NULL OR custom_price_cents >= 0);
 
@@ -22,7 +27,8 @@ UPDATE members
     AND stripe_customer_id IS NULL;
 
 -- ==========================================================================
--- 2. Rollback
+-- 3. Rollback
 -- ==========================================================================
 -- ALTER TABLE members DROP COLUMN custom_price_cents;
 -- ALTER TABLE members DROP COLUMN billing_mode;
+-- DROP TYPE IF EXISTS billing_mode;
