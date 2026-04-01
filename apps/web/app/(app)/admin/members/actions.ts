@@ -46,7 +46,26 @@ export async function updateMember(memberId: string, input: unknown) {
   }
 
   const { supabase, spaceId } = await getSpaceId();
+  const admin = createAdminClient();
   const d = parsed.data;
+
+  // Check if custom price changed on a Stripe-billed member
+  // TODO: remove unknown casts after running `supabase gen types` with billing_mode migration
+  const { data: currentRaw } = await admin
+    .from("members")
+    .select("custom_price_cents")
+    .eq("id", memberId)
+    .eq("space_id", spaceId)
+    .single();
+  const current = currentRaw as unknown as {
+    billing_mode?: string;
+    custom_price_cents: number | null;
+  } | null;
+
+  const priceChanged =
+    current &&
+    current.billing_mode === "stripe" &&
+    d.customPriceCents !== current.custom_price_cents;
 
   const { error } = await supabase
     .from("members")
@@ -81,6 +100,14 @@ export async function updateMember(memberId: string, input: unknown) {
   }
 
   revalidatePath("/admin/members");
+
+  if (priceChanged) {
+    return {
+      success: true as const,
+      warning: "Custom price updated in the database. The active Stripe subscription was not changed — update it manually in the Stripe dashboard if needed.",
+    };
+  }
+
   return { success: true as const };
 }
 
@@ -280,10 +307,17 @@ export async function addMember(input: unknown) {
 
       let priceId: string;
       if (d.customPriceCents != null && d.customPriceCents !== plan.price_cents) {
-        // Create a custom Stripe price for this member
-        const productId = plan.stripe_product_id
-          ?? (await ensureStripePriceExists(plan, stripeAccountId, spaceId),
-             (await admin.from("plans").select("stripe_product_id").eq("id", plan.id).single()).data?.stripe_product_id);
+        // Ensure Stripe product exists, then resolve the product ID
+        let productId = plan.stripe_product_id;
+        if (!productId) {
+          await ensureStripePriceExists(plan, stripeAccountId, spaceId);
+          const { data: refreshedPlan } = await admin
+            .from("plans")
+            .select("stripe_product_id")
+            .eq("id", plan.id)
+            .single();
+          productId = refreshedPlan?.stripe_product_id ?? null;
+        }
 
         if (!productId) throw new Error("Could not resolve Stripe product");
 
@@ -341,8 +375,9 @@ export async function addMember(input: unknown) {
   } else {
     // Manual billing — grant initial credits immediately
     try {
-      const validUntil = new Date();
-      validUntil.setDate(validUntil.getDate() + 30);
+      // Credits valid until same day next month
+      const now = new Date();
+      const validUntil = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
       await grantMonthlyCredits({
         spaceId,

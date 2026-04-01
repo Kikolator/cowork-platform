@@ -637,6 +637,7 @@ export function MembersTable({
           member={detailMember}
           profile={detailProfile}
           planName={detailMember.plan?.name ?? "Unknown"}
+          planCurrency={plans.find((p) => p.id === detailMember.plan_id)?.currency ?? "eur"}
           deskName={detailDeskName}
           notes={detailNotes}
           profileMap={profileMap}

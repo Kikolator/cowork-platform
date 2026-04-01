@@ -57,6 +57,7 @@ export default async function MembersPage() {
 
   return (
     <MembersTable
+      // TODO: remove casts after running `supabase gen types` with the billing_mode migration
       members={(members ?? []).map((m) => ({
         ...m,
         billing_mode: (m as Record<string, unknown>).billing_mode as string | null ?? null,
