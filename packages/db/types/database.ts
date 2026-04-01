@@ -460,12 +460,14 @@ export type Database = {
             | null
           billing_country: string | null
           billing_entity_type: string | null
+          billing_mode: string
           billing_postal_code: string | null
           billing_state_province: string | null
           cancel_requested_at: string | null
           cancelled_at: string | null
           company: string | null
           created_at: string | null
+          custom_price_cents: number | null
           external_id: string | null
           fiscal_id: string | null
           fiscal_id_type: Database["public"]["Enums"]["fiscal_id_type"] | null
@@ -498,12 +500,14 @@ export type Database = {
             | null
           billing_country?: string | null
           billing_entity_type?: string | null
+          billing_mode?: string
           billing_postal_code?: string | null
           billing_state_province?: string | null
           cancel_requested_at?: string | null
           cancelled_at?: string | null
           company?: string | null
           created_at?: string | null
+          custom_price_cents?: number | null
           external_id?: string | null
           fiscal_id?: string | null
           fiscal_id_type?: Database["public"]["Enums"]["fiscal_id_type"] | null
@@ -536,12 +540,14 @@ export type Database = {
             | null
           billing_country?: string | null
           billing_entity_type?: string | null
+          billing_mode?: string
           billing_postal_code?: string | null
           billing_state_province?: string | null
           cancel_requested_at?: string | null
           cancelled_at?: string | null
           company?: string | null
           created_at?: string | null
+          custom_price_cents?: number | null
           external_id?: string | null
           fiscal_id?: string | null
           fiscal_id_type?: Database["public"]["Enums"]["fiscal_id_type"] | null
