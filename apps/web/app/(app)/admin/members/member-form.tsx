@@ -148,6 +148,9 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
       const result = await updateMember(member.id, data);
       if (!result.success) {
         setServerError(result.error);
+      } else if ("warning" in result && result.warning) {
+        setServerError(result.warning);
+        setTimeout(() => onOpenChange(false), 4000);
       } else {
         onOpenChange(false);
       }

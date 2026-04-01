@@ -66,6 +66,7 @@ interface MemberDetailProps {
   member: Member;
   profile: ProfileEntry;
   planName: string;
+  planCurrency: string;
   deskName: string | null;
   notes: MemberNote[];
   profileMap: Record<string, ProfileEntry>;
@@ -117,6 +118,7 @@ export function MemberDetail({
   member,
   profile,
   planName,
+  planCurrency,
   deskName,
   notes,
   profileMap,
@@ -196,7 +198,7 @@ export function MemberDetail({
             {member.custom_price_cents != null && (
               <DetailRow
                 label="Custom price"
-                value={`${(member.custom_price_cents / 100).toFixed(2)} EUR`}
+                value={`${(member.custom_price_cents / 100).toFixed(2)} ${planCurrency.toUpperCase()}`}
               />
             )}
             <DetailRow
