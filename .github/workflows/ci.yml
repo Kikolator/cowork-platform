@@ -5,7 +5,7 @@
 #   - Path-based filtering skips expensive jobs when irrelevant files change
 #   - E2E only runs on PRs to main (most expensive job at ~6 min)
 #   - DB jobs only run when migration files change
-#   - Schema drift detection moved to deploy-dev (informational only)
+#   - DB lint runs locally (no remote Supabase project needed)
 #   - Skipped jobs satisfy required status checks in GitHub rulesets
 #   - npm ci with cache — reproducible installs, no lockfile deletion
 name: CI
@@ -65,6 +65,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch base branch ref
+        run: git fetch origin "$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -89,6 +94,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Fetch base branch ref
+        run: git fetch origin "$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -116,6 +126,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch base branch ref
+        run: git fetch origin "$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -140,6 +155,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Fetch base branch ref
+        run: git fetch origin "$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -277,17 +297,22 @@ jobs:
         with:
           version: latest
 
-      - name: Link to dev project
-        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+      - name: Start local Supabase (db only)
+        run: supabase start -x realtime,storage,imgproxy,inbucket,postgrest,gotrue,studio,edge-runtime,logflare,vector,supavisor
         working-directory: packages/db
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Reset DB (replay migrations)
+        run: supabase db reset
+        working-directory: packages/db
 
       - name: Lint migrations
-        run: supabase db lint --linked
+        run: supabase db lint
         working-directory: packages/db
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+        working-directory: packages/db
 
       - name: Summary
         if: always()
