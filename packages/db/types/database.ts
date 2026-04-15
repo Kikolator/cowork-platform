@@ -460,7 +460,7 @@ export type Database = {
             | null
           billing_country: string | null
           billing_entity_type: string | null
-          billing_mode: Database["public"]["Enums"]["billing_mode"]
+          billing_mode: string
           billing_postal_code: string | null
           billing_state_province: string | null
           cancel_requested_at: string | null
@@ -500,7 +500,7 @@ export type Database = {
             | null
           billing_country?: string | null
           billing_entity_type?: string | null
-          billing_mode?: Database["public"]["Enums"]["billing_mode"]
+          billing_mode?: string
           billing_postal_code?: string | null
           billing_state_province?: string | null
           cancel_requested_at?: string | null
@@ -540,7 +540,7 @@ export type Database = {
             | null
           billing_country?: string | null
           billing_entity_type?: string | null
-          billing_mode?: Database["public"]["Enums"]["billing_mode"]
+          billing_mode?: string
           billing_postal_code?: string | null
           billing_state_province?: string | null
           cancel_requested_at?: string | null
@@ -2029,10 +2029,17 @@ export type Database = {
         Returns: boolean
       }
       remove_platform_admin: { Args: { p_user_id: string }; Returns: boolean }
+      test_role_context: {
+        Args: never
+        Returns: {
+          pg_current_user: string
+          pg_role: string
+          pg_session_user: string
+        }[]
+      }
       verify_space_access: { Args: { p_space_id: string }; Returns: undefined }
     }
     Enums: {
-      billing_mode: "stripe" | "manual"
       booking_status:
         | "pending_payment"
         | "confirmed"
@@ -2209,7 +2216,6 @@ export const Constants = {
   },
   public: {
     Enums: {
-      billing_mode: ["stripe", "manual"],
       booking_status: [
         "pending_payment",
         "confirmed",
