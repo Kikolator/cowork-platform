@@ -23,7 +23,11 @@ VALUES (
     'image/x-icon',
     'image/vnd.microsoft.icon'
   ]
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 ----------------------------------------------------------------------
 -- 2. RLS policies on storage.objects
