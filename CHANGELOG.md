@@ -7,13 +7,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-04-15
+
 ### Added
 - Hybrid billing mode: admin can choose Stripe or manual billing per member (#141)
 - Custom per-member pricing overrides plan price (#141)
 - Daily cron job for manual-billing credit renewal (#141)
 - Per-resource-type product visibility filtering (#140)
 - README updated for public repo, AGPL-3.0 license, new features (#144)
-- Version tracking and changelog (#143)
+- Version tracking and changelog (#145)
 
 ### Fixed
 - Product visibility `exclude_unlimited` now checks per resource type instead of blanket boolean (#140)
@@ -21,6 +23,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Credit validity uses next anniversary date instead of fixed 30 days (#142)
 - Hardcoded EUR currency in member detail view (#142)
 - Swallowed warnings in add/edit member forms (#142)
+- Storage bucket migrations now idempotent — fixes `supabase db reset --linked` failures (#147)
 
 ## [0.7.0] - 2026-03-31
 
