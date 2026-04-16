@@ -36,6 +36,19 @@ packages/shared   → Shared logic: Zod schemas, validation, constants, types (u
 - **Build/Deploy**: EAS Build + EAS Submit (cloud CI, no local Xcode/Gradle needed)
 - **OTA Updates**: EAS Update for JS bundle hot-patches without store review
 
+## Git Strategy (NON-NEGOTIABLE)
+
+**Branch hierarchy:** `main` ← `dev` ← `feat/*` | `fix/*` | `chore/*`
+
+**Rules:**
+- **NEVER commit or push directly to `main` or `dev`.** All changes flow through pull requests.
+- **All work happens on feature branches:** `feat/<name>`, `fix/<name>`, `chore/<name>`, `docs/<name>`, `refactor/<name>`.
+- **Feature branches → `dev` via squash merge.** One commit per PR on `dev`.
+- **`dev` → `main` via regular merge** (preserves history). Only when releasing.
+- **Version tag on every `main` release.** Run `npm version <patch|minor|major>` which updates `package.json` and creates a git tag.
+- **Every `dev` merge to `main` must include a CHANGELOG.md update** documenting what's in the release.
+- **Never bypass hooks** (`--no-verify`) or force-push to `main`/`dev`.
+
 ## Commands
 
 ```bash
