@@ -246,7 +246,7 @@ export default async function DashboardPage() {
           .eq("space_id", spaceId),
         supabase
           .from("tenants")
-          .select("stripe_onboarding_complete")
+          .select("stripe_account_id")
           .eq("id", user.app_metadata?.tenant_id)
           .single(),
       ]);
@@ -254,7 +254,7 @@ export default async function DashboardPage() {
       memberCount = members.count ?? 0;
       resourceCount = resources.count ?? 0;
       planCount = plans.count ?? 0;
-      hasStripe = tenant.data?.stripe_onboarding_complete ?? false;
+      hasStripe = !!tenant.data?.stripe_account_id;
     } catch (err) {
       createLogger({ component: "dashboard" }).error("Failed to load admin stats", {
         error: err instanceof Error ? err.message : "Unknown error",

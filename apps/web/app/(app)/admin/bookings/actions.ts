@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { toUTC } from "@/lib/booking/format";
 
 async function getAdminContext() {
@@ -12,7 +13,9 @@ async function getAdminContext() {
   if (!user) throw new Error("Not authenticated");
   const spaceId = user.app_metadata?.space_id as string | undefined;
   if (!spaceId) throw new Error("No space context");
-  return { supabase, user, spaceId };
+  const role = user.app_metadata?.space_role as string | undefined;
+  if (role !== "admin" && role !== "owner") throw new Error("Not authorized");
+  return { user, spaceId, admin: createAdminClient() };
 }
 
 // ── Admin check-in ─────────────────────────────────────────────────────
@@ -20,9 +23,9 @@ async function getAdminContext() {
 export async function adminCheckIn(
   bookingId: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("bookings")
     .update({
       status: "checked_in" as const,
@@ -45,9 +48,9 @@ export async function adminCheckIn(
 export async function adminCheckOut(
   bookingId: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("bookings")
     .update({
       status: "completed" as const,
@@ -71,9 +74,9 @@ export async function adminCancelBooking(
   bookingId: string,
   userId: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
-  const { error } = await supabase.rpc("cancel_booking_refund_credits", {
+  const { error } = await admin.rpc("cancel_booking_refund_credits", {
     p_space_id: spaceId,
     p_booking_id: bookingId,
     p_user_id: userId,
@@ -95,20 +98,20 @@ export async function adminCreateBooking(
   startTime: string,
   endTime: string,
 ): Promise<{ success: true; bookingId: string } | { success: false; error: string }> {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
   // Admin override: insert directly without credit deduction
   const durationMinutes = Math.round(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / 60_000,
   );
 
-  const { data: resource } = await supabase
+  const { data: resource } = await admin
     .from("resources")
     .select("resource_type_id")
     .eq("id", resourceId)
     .single();
 
-  const { data: booking, error } = await supabase
+  const { data: booking, error } = await admin
     .from("bookings")
     .insert({
       space_id: spaceId,
@@ -145,9 +148,9 @@ export async function adminCreateWalkIn(
   startTimeLocal: string,
   endTimeLocal: string,
 ): Promise<{ success: true; bookingId: string } | { success: false; error: string }> {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
-  const { data: space } = await supabase
+  const { data: space } = await admin
     .from("spaces")
     .select("timezone")
     .eq("id", spaceId)
@@ -163,15 +166,15 @@ export async function adminCreateWalkIn(
 // ── Fetch form data for walk-in dialog ────────────────────────────────
 
 export async function getWalkInFormData() {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
   const [{ data: members }, { data: resources }] = await Promise.all([
-    supabase
+    admin
       .from("members")
       .select("user_id")
       .eq("space_id", spaceId)
       .eq("status", "active"),
-    supabase
+    admin
       .from("resources")
       .select("id, name, resource_type:resource_types!inner(slug, name)")
       .eq("space_id", spaceId)
@@ -181,7 +184,7 @@ export async function getWalkInFormData() {
 
   const userIds = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = userIds.length > 0
-    ? await supabase
+    ? await admin
         .from("shared_profiles")
         .select("id, full_name, email")
         .in("id", userIds)
@@ -203,9 +206,9 @@ export async function getWalkInFormData() {
 // ── Fetch daily bookings for a specific date ───────────────────────────
 
 export async function getDailyBookings(date: string) {
-  const { supabase, spaceId } = await getAdminContext();
+  const { admin, spaceId } = await getAdminContext();
 
-  const { data: space } = await supabase
+  const { data: space } = await admin
     .from("spaces")
     .select("timezone, business_hours")
     .eq("id", spaceId)
@@ -215,7 +218,7 @@ export async function getDailyBookings(date: string) {
 
   // Fetch bookings, active passes, and fixed desk members in parallel
   const [{ data: bookings }, { data: passes }, { data: fixedDeskMembers }] = await Promise.all([
-    supabase
+    admin
       .from("bookings")
       .select(
         "id, user_id, start_time, end_time, status, checked_in_at, checked_out_at, credits_deducted, resource:resources!inner(id, name, resource_type:resource_types!inner(slug, name))",
@@ -226,7 +229,7 @@ export async function getDailyBookings(date: string) {
       .in("status", ["confirmed", "checked_in", "completed"])
       .order("start_time", { ascending: true }),
 
-    supabase
+    admin
       .from("passes")
       .select("id, user_id, pass_type, status, start_date, end_date, assigned_desk_id")
       .eq("space_id", spaceId)
@@ -234,7 +237,7 @@ export async function getDailyBookings(date: string) {
       .lte("start_date", date)
       .gte("end_date", date),
 
-    supabase
+    admin
       .from("members")
       .select("id, user_id, fixed_desk_id")
       .eq("space_id", spaceId)
@@ -252,7 +255,7 @@ export async function getDailyBookings(date: string) {
   }
 
   const { data: deskResources } = deskIds.size > 0
-    ? await supabase.from("resources").select("id, name").in("id", [...deskIds])
+    ? await admin.from("resources").select("id, name").in("id", [...deskIds])
     : { data: [] as { id: string; name: string }[] };
 
   const deskNameMap = Object.fromEntries(
@@ -266,7 +269,7 @@ export async function getDailyBookings(date: string) {
   for (const m of fixedDeskMembers ?? []) userIds.add(m.user_id);
 
   const { data: profiles } = userIds.size > 0
-    ? await supabase
+    ? await admin
         .from("shared_profiles")
         .select("id, full_name, email")
         .in("id", [...userIds])
