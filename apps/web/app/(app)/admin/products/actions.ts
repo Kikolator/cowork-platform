@@ -90,6 +90,20 @@ export async function updateProduct(productId: string, input: unknown) {
     return { success: false as const, error: "A product with this slug already exists" };
   }
 
+  // Fetch current price to detect price/currency changes
+  const { data: current, error: fetchError } = await supabase
+    .from("products")
+    .select("price_cents, currency")
+    .eq("id", productId)
+    .eq("space_id", spaceId)
+    .single();
+
+  if (fetchError || !current) {
+    return { success: false as const, error: "Product not found" };
+  }
+
+  const priceChanged = current.price_cents !== priceCents || current.currency !== rest.currency;
+
   const { error } = await supabase
     .from("products")
     .update({
@@ -113,6 +127,9 @@ export async function updateProduct(productId: string, input: unknown) {
       },
       active: rest.active,
       sort_order: sortOrder,
+      // Invalidate Stripe price so lazy sync creates a fresh one on next checkout
+      // Keep stripe_product_id — ensureOneTimePriceExists reuses it
+      ...(priceChanged && { stripe_price_id: null }),
     })
     .eq("id", productId)
     .eq("space_id", spaceId);
