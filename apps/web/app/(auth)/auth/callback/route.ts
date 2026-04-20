@@ -8,17 +8,24 @@ import { getOrigin } from "@/lib/url";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
   const origin = getOrigin(request.headers);
 
-  if (!code) {
+  if (!code && !tokenHash) {
     return NextResponse.redirect(new URL("/login?error=no_code", origin));
   }
 
-  // 1. Exchange code for session
+  // 1. Exchange code or token_hash for session
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = code
+    ? await supabase.auth.exchangeCodeForSession(code)
+    : await supabase.auth.verifyOtp({
+        token_hash: tokenHash!,
+        type: (type as "invite" | "email" | "magiclink") ?? "invite",
+      });
   if (error) {
-    createLogger({ component: "auth/callback" }).error("exchangeCodeForSession failed", { error: error.message, status: error.status });
+    createLogger({ component: "auth/callback" }).error("Auth verification failed", { error: error.message, status: error.status, method: code ? "code" : "token_hash" });
     return NextResponse.redirect(
       new URL("/login?error=auth_failed", origin)
     );
