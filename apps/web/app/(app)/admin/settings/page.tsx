@@ -88,7 +88,13 @@ export default async function SettingsPage({
         </TabsList>
 
         <TabsContent value="branding" className="mt-6">
-          <BrandingForm space={space} />
+          <BrandingForm
+            space={{
+              ...space,
+              // header_logo_mode added by migration; not yet in generated types
+              header_logo_mode: (space as Record<string, unknown>).header_logo_mode as string | null ?? null,
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="operations" className="mt-6">

@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { RogueOpsLogo } from "@/components/rogueops-logo";
 
-async function getSpaceName() {
-  const headersList = await headers();
-  return headersList.get("x-space-name");
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const spaceName = await getSpaceName();
+  const headersList = await headers();
+  const spaceName = headersList.get("x-space-name");
+  const faviconUrl = headersList.get("x-space-favicon-url");
   return {
     title: spaceName && spaceName !== "RogueOps" ? `${spaceName} | RogueOps` : "RogueOps",
+    ...(faviconUrl && { icons: { icon: faviconUrl } }),
   };
 }
 
@@ -19,7 +17,8 @@ export default async function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const spaceName = await getSpaceName();
+  const headersList = await headers();
+  const spaceName = headersList.get("x-space-name");
 
   return (
     <div className="glass-gradient-bg flex min-h-screen flex-col items-center justify-center px-4">

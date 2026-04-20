@@ -76,17 +76,20 @@ export async function updateSpaceBranding(input: unknown) {
     }
   }
 
+  const d = parsed.data;
   const { error } = await supabase
     .from("spaces")
     .update({
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      logo_url: parsed.data.logoUrl || null,
-      logo_dark_url: parsed.data.logoDarkUrl || null,
-      favicon_url: parsed.data.faviconUrl || null,
-      primary_color: parsed.data.primaryColor,
-      accent_color: parsed.data.accentColor,
-    })
+      name: d.name,
+      slug: d.slug,
+      logo_url: d.logoUrl || null,
+      logo_dark_url: d.logoDarkUrl || null,
+      favicon_url: d.faviconUrl || null,
+      primary_color: d.primaryColor,
+      accent_color: d.accentColor,
+      // header_logo_mode added by migration; not yet in generated types
+      header_logo_mode: d.headerLogoMode,
+    } as Record<string, unknown>)
     .eq("id", spaceId);
 
   if (error) return { success: false as const, error: error.message };
