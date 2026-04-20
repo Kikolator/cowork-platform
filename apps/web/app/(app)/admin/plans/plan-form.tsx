@@ -420,8 +420,20 @@ export function PlanForm({
             />
           </FormSection>
 
-          {/* Hidden sort order */}
-          <input type="hidden" {...register("sortOrder", { valueAsNumber: true })} />
+          <Separator />
+
+          {/* ── Sort Order ── */}
+          <div className="flex items-center gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="sortOrder">Sort order</Label>
+              <Input
+                id="sortOrder"
+                type="number"
+                className="w-20"
+                {...register("sortOrder", { valueAsNumber: true })}
+              />
+            </div>
+          </div>
 
           <DialogFooter>
             <Button
