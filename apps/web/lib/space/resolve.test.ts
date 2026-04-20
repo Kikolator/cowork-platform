@@ -31,6 +31,7 @@ const SPACE_ROW = {
   name: "Urban Hive Coworking",
   logo_url: "https://cdn.example.com/logo.png",
   logo_dark_url: null,
+  favicon_url: null,
   primary_color: "#1a1a2e",
   accent_color: "#e94560",
 };
@@ -79,6 +80,7 @@ describe("resolveSpaceFromHostname", () => {
       name: "Urban Hive Coworking",
       logoUrl: "https://cdn.example.com/logo.png",
       logoDarkUrl: null,
+      faviconUrl: null,
       primaryColor: "#1a1a2e",
       accentColor: "#e94560",
     });
@@ -178,6 +180,7 @@ describe("resolveSpaceBySlug", () => {
       name: "Urban Hive Coworking",
       logoUrl: "https://cdn.example.com/logo.png",
       logoDarkUrl: null,
+      faviconUrl: null,
       primaryColor: "#1a1a2e",
       accentColor: "#e94560",
     });
