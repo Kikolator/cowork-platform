@@ -104,6 +104,20 @@ export async function updatePlan(planId: string, input: unknown) {
     return { success: false as const, error: "A plan with this slug already exists" };
   }
 
+  // Fetch current price to detect price/currency changes
+  const { data: current, error: fetchError } = await supabase
+    .from("plans")
+    .select("price_cents, currency")
+    .eq("id", planId)
+    .eq("space_id", spaceId)
+    .single();
+
+  if (fetchError || !current) {
+    return { success: false as const, error: "Plan not found" };
+  }
+
+  const priceChanged = current.price_cents !== priceCents || current.currency !== rest.currency;
+
   const { error: planError } = await supabase
     .from("plans")
     .update({
@@ -117,6 +131,8 @@ export async function updatePlan(planId: string, input: unknown) {
       has_fixed_desk: hasFixedDesk,
       desk_weight: deskWeight,
       sort_order: sortOrder,
+      // Invalidate Stripe price so lazy sync creates a fresh one on next checkout
+      ...(priceChanged && { stripe_price_id: null, stripe_product_id: null }),
     })
     .eq("id", planId)
     .eq("space_id", spaceId);
