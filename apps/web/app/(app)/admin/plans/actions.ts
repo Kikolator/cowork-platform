@@ -132,7 +132,8 @@ export async function updatePlan(planId: string, input: unknown) {
       desk_weight: deskWeight,
       sort_order: sortOrder,
       // Invalidate Stripe price so lazy sync creates a fresh one on next checkout
-      ...(priceChanged && { stripe_price_id: null, stripe_product_id: null }),
+      // Keep stripe_product_id — ensureStripePriceExists reuses it
+      ...(priceChanged && { stripe_price_id: null }),
     })
     .eq("id", planId)
     .eq("space_id", spaceId);

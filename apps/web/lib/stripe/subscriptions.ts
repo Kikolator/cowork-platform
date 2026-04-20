@@ -21,17 +21,22 @@ export async function ensureStripePriceExists(
 ): Promise<string> {
   if (plan.stripe_price_id) return plan.stripe_price_id;
 
-  const product = await getStripe().products.create(
-    {
-      name: plan.name,
-      metadata: { space_id: spaceId, plan_id: plan.id },
-    },
-    { stripeAccount: connectedAccountId },
-  );
+  let stripeProductId = plan.stripe_product_id;
+
+  if (!stripeProductId) {
+    const product = await getStripe().products.create(
+      {
+        name: plan.name,
+        metadata: { space_id: spaceId, plan_id: plan.id },
+      },
+      { stripeAccount: connectedAccountId },
+    );
+    stripeProductId = product.id;
+  }
 
   const price = await getStripe().prices.create(
     {
-      product: product.id,
+      product: stripeProductId,
       unit_amount: plan.price_cents,
       currency: plan.currency,
       recurring: { interval: "month" },
@@ -44,7 +49,7 @@ export async function ensureStripePriceExists(
   await admin
     .from("plans")
     .update({
-      stripe_product_id: product.id,
+      stripe_product_id: stripeProductId,
       stripe_price_id: price.id,
     })
     .eq("id", plan.id);
