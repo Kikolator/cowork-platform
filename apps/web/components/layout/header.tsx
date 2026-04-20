@@ -7,6 +7,7 @@ interface HeaderProps {
   spaceName: string;
   logoUrl: string | null;
   logoDarkUrl?: string | null;
+  headerLogoMode?: "icon_and_name" | "logo_only";
   userEmail: string;
   spaceRole: string;
   userAvatarUrl: string | null;
@@ -16,6 +17,7 @@ export function Header({
   spaceName,
   logoUrl,
   logoDarkUrl,
+  headerLogoMode,
   userEmail,
   spaceRole,
   userAvatarUrl,
@@ -28,6 +30,7 @@ export function Header({
           spaceName={spaceName}
           logoUrl={logoUrl}
           logoDarkUrl={logoDarkUrl}
+          headerLogoMode={headerLogoMode}
         />
         <span className="text-sm font-semibold text-foreground lg:hidden">
           {spaceName}

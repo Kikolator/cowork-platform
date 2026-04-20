@@ -8,6 +8,7 @@ export const brandingSchema = z.object({
   faviconUrl: z.string().url().optional().or(z.literal("")),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color"),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color"),
+  headerLogoMode: z.enum(["icon_and_name", "logo_only"]),
 });
 
 export type BrandingFormValues = z.infer<typeof brandingSchema>;

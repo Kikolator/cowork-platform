@@ -9,8 +9,10 @@ import { hexToOklch, contrastForeground } from "@/lib/color";
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
   const spaceName = headersList.get("x-space-name");
+  const faviconUrl = headersList.get("x-space-favicon-url");
   return {
     title: spaceName ?? undefined,
+    ...(faviconUrl && { icons: { icon: faviconUrl } }),
   };
 }
 
@@ -46,11 +48,12 @@ export default async function AppLayout({
   let logoDarkUrl: string | null = null;
   let primaryColor = "#000000";
   let accentColor = "#3b82f6";
+  let headerLogoMode: "icon_and_name" | "logo_only" = "icon_and_name";
 
   if (spaceId) {
     const { data: space } = await supabase
       .from("spaces")
-      .select("logo_url, logo_dark_url, primary_color, accent_color")
+      .select("*")
       .eq("id", spaceId)
       .single();
 
@@ -59,6 +62,9 @@ export default async function AppLayout({
       logoDarkUrl = space.logo_dark_url;
       primaryColor = space.primary_color ?? primaryColor;
       accentColor = space.accent_color ?? accentColor;
+      // header_logo_mode is added by migration; not yet in generated types
+      const mode = (space as Record<string, unknown>).header_logo_mode;
+      if (mode === "logo_only") headerLogoMode = "logo_only";
     }
   }
 
@@ -86,6 +92,7 @@ export default async function AppLayout({
           spaceName={spaceName}
           logoUrl={logoUrl}
           logoDarkUrl={logoDarkUrl}
+          headerLogoMode={headerLogoMode}
         />
       </div>
 
@@ -95,6 +102,7 @@ export default async function AppLayout({
           spaceName={spaceName}
           logoUrl={logoUrl}
           logoDarkUrl={logoDarkUrl}
+          headerLogoMode={headerLogoMode}
           userEmail={user.email ?? ""}
           spaceRole={spaceRole}
           userAvatarUrl={profile?.avatar_url ?? null}
