@@ -224,11 +224,11 @@ otp_expiry = 3600
 
 # Custom email templates — use token_hash for SSR-compatible auth callbacks
 [auth.email.template.invite]
-subject = "You have been invited"
+subject = "You've been invited"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.magic_link]
-subject = "Your Magic Link"
+subject = "Sign in"
 content_path = "./supabase/templates/magic_link.html"
 
 # Uncomment to customize notification email template
