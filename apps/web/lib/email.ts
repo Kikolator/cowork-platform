@@ -1,5 +1,5 @@
 import "server-only";
-import { resend } from "./resend";
+import { getResend } from "./resend";
 import { createAdminClient } from "./supabase/admin";
 import type { TenantBranding } from "../emails/components/tenant-layout";
 
@@ -44,7 +44,7 @@ async function sendEmail(options: SendEmailOptions & { from: string }) {
     idempotencyKey,
   } = options;
 
-  const { data, error } = await resend.emails.send(
+  const { data, error } = await getResend().emails.send(
     { from, to, subject, react },
     idempotencyKey
       ? { headers: { "Idempotency-Key": idempotencyKey } }
