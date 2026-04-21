@@ -124,3 +124,67 @@
     radial-gradient(ellipse at 50% 80%, oklch(0.22 0.03 230 / 25%) 0%, transparent 50%),
     oklch(0.13 0.012 270);
 }
+
+/* Scroll reveal */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Geometric floating animation */
+@keyframes geo-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+
+@keyframes geo-float-reverse {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(12px) rotate(-2deg); }
+}
+
+@keyframes geo-pulse {
+  0%, 100% { opacity: var(--geo-opacity, 0.12); transform: scale(1); }
+  50% { opacity: calc(var(--geo-opacity, 0.12) * 1.5); transform: scale(1.04); }
+}
+
+@keyframes geo-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.geo-float {
+  animation: geo-float 8s ease-in-out infinite;
+}
+
+.geo-float-reverse {
+  animation: geo-float-reverse 10s ease-in-out infinite;
+}
+
+.geo-pulse {
+  animation: geo-pulse 6s ease-in-out infinite;
+}
+
+.geo-spin-slow {
+  animation: geo-spin-slow 40s linear infinite;
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .geo-float,
+  .geo-float-reverse,
+  .geo-pulse,
+  .geo-spin-slow {
+    animation: none;
+  }
+}
