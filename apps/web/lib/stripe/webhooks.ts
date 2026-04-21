@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
 import { applyReferrerDiscountCoupon } from "@/lib/stripe/coupons";
+import { notifySpaceSignup } from "@/lib/email/notifications";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -669,10 +670,26 @@ async function handleGuestCheckout(
     { onConflict: "user_id,space_id", ignoreDuplicates: true },
   );
 
-  // Send magic link email
+  // Resolve space slug for redirect URL
+  const { data: spaceData } = await admin
+    .from("spaces")
+    .select("slug, custom_domain")
+    .eq("id", spaceId)
+    .single();
+
+  const platformDomain =
+    process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
+  const proto = platformDomain.startsWith("localhost") ? "http" : "https";
+  const spaceOrigin = spaceData?.custom_domain
+    ? `${proto}://${spaceData.custom_domain}`
+    : `${proto}://${spaceData?.slug ?? "app"}.${platformDomain}`;
+  const redirectTo = `${spaceOrigin}/auth/callback`;
+
+  // Send magic link email with correct space redirect
   const { error: linkError } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
+    options: { redirectTo },
   });
 
   if (linkError) {
@@ -681,6 +698,9 @@ async function handleGuestCheckout(
       error: linkError.message,
     });
   }
+
+  // Fire-and-forget welcome email
+  notifySpaceSignup({ spaceId, userId, email, name: name ?? undefined });
 }
 
 async function handleReferralCompletion(
