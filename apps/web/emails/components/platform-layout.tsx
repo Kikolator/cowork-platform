@@ -10,10 +10,13 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-
-const PLATFORM_NAME = "Cowork Platform";
-const PLATFORM_URL = "https://rogueops.app";
-const LOGO_URL = `${PLATFORM_URL}/logo.png`;
+import {
+  colors,
+  layout,
+  PLATFORM_LOGO_URL,
+  PLATFORM_NAME,
+  PLATFORM_URL,
+} from "./styles";
 
 interface PlatformLayoutProps {
   preview: string;
@@ -25,26 +28,32 @@ export function PlatformLayout({ preview, children }: PlatformLayoutProps) {
     <Html>
       <Head />
       <Preview>{preview}</Preview>
-      <Body style={body}>
-        <Container style={container}>
-          {/* Platform header */}
-          <Section style={header}>
-            <Img src={LOGO_URL} width="140" height="40" alt={PLATFORM_NAME} />
+      <Body style={layout.body}>
+        <Container style={layout.container}>
+          {/* RogueOps logo */}
+          <Section style={layout.header}>
+            <Img
+              src={PLATFORM_LOGO_URL}
+              width="140"
+              height="40"
+              alt={PLATFORM_NAME}
+              style={{ margin: "0 auto" }}
+            />
           </Section>
 
-          {/* Content */}
-          <Section style={content}>{children}</Section>
+          {/* Content card */}
+          <Section style={layout.card}>{children}</Section>
 
-          {/* Platform footer */}
-          <Hr style={hr} />
-          <Section style={footer}>
+          {/* Footer */}
+          <Hr style={layout.hr} />
+          <Section style={layout.footerCenter}>
             <Text style={footerText}>
               Sent by{" "}
-              <Link href={PLATFORM_URL} style={link}>
+              <Link href={PLATFORM_URL} style={footerLink}>
                 {PLATFORM_NAME}
               </Link>
             </Text>
-            <Text style={footerMuted}>
+            <Text style={copyright}>
               &copy; {new Date().getFullYear()} {PLATFORM_NAME}. All rights
               reserved.
             </Text>
@@ -55,54 +64,21 @@ export function PlatformLayout({ preview, children }: PlatformLayoutProps) {
   );
 }
 
-const body = {
-  backgroundColor: "#f4f4f5",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  margin: "0",
-  padding: "0",
-};
-
-const container = {
-  maxWidth: "560px",
-  margin: "0 auto",
-  padding: "40px 20px",
-};
-
-const header = {
-  textAlign: "center" as const,
-  paddingBottom: "24px",
-};
-
-const content = {
-  backgroundColor: "#ffffff",
-  borderRadius: "8px",
-  padding: "32px 24px",
-  border: "1px solid #e4e4e7",
-};
-
-const hr = {
-  borderColor: "#e4e4e7",
-  margin: "24px 0",
-};
-
-const footer = {
-  textAlign: "center" as const,
-};
+/* ── Footer styles ───────────────────────────────────────────── */
 
 const footerText = {
   fontSize: "13px",
-  color: "#71717a",
+  color: colors.muted,
   margin: "0 0 4px",
 };
 
-const footerMuted = {
-  fontSize: "12px",
-  color: "#a1a1aa",
-  margin: "0",
+const footerLink = {
+  color: colors.heading,
+  textDecoration: "underline",
 };
 
-const link = {
-  color: "#18181b",
-  textDecoration: "underline",
+const copyright = {
+  fontSize: "12px",
+  color: colors.faint,
+  margin: "0",
 };
