@@ -1721,6 +1721,7 @@ export type Database = {
           default_locale: string
           favicon_url: string | null
           features: Json
+          header_logo_mode: string
           id: string
           logo_dark_url: string | null
           logo_url: string | null
@@ -1752,6 +1753,7 @@ export type Database = {
           default_locale?: string
           favicon_url?: string | null
           features?: Json
+          header_logo_mode?: string
           id?: string
           logo_dark_url?: string | null
           logo_url?: string | null
@@ -1783,6 +1785,7 @@ export type Database = {
           default_locale?: string
           favicon_url?: string | null
           features?: Json
+          header_logo_mode?: string
           id?: string
           logo_dark_url?: string | null
           logo_url?: string | null
