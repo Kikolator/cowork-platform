@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getDeskAvailabilityRange, getClosures } from "@/lib/booking/availability";
+import { notifyBookingConfirmation } from "@/lib/email/notifications";
 import {
   validateDeskBookingDate,
   validateBookingTime,
@@ -199,6 +200,16 @@ export async function bookDesk(
 
   revalidatePath("/book/desk");
   revalidatePath("/bookings");
+
+  // Fire-and-forget booking confirmation email
+  notifyBookingConfirmation({
+    spaceId,
+    userId: user.id,
+    resourceName: desk.name,
+    date,
+    startTime,
+    endTime,
+  });
 
   return {
     success: true,

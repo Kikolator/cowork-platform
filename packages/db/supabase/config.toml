@@ -224,11 +224,11 @@ otp_expiry = 3600
 
 # Custom email templates — use token_hash for SSR-compatible auth callbacks
 [auth.email.template.invite]
-subject = "You have been invited"
+subject = "You've been invited"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.magic_link]
-subject = "Your Magic Link"
+subject = "Sign in"
 content_path = "./supabase/templates/magic_link.html"
 
 # Uncomment to customize notification email template
@@ -257,6 +257,21 @@ max_frequency = "5s"
 # timebox = "24h"
 # Force log out if the user has been inactive longer than the specified duration.
 # inactivity_timeout = "8h"
+
+# Send Email Hook — intercepts auth emails for tenant-branded rendering via Resend.
+# Enable in production via the Supabase Dashboard (Auth > Hooks) with:
+#   - Hook type: HTTPS
+#   - URL: https://<project-ref>.supabase.co/functions/v1/send-auth-email
+#   - Secret: generate in dashboard, store as SEND_EMAIL_HOOK_SECRET
+#
+# Required edge function secrets (set via `supabase secrets set`):
+#   RESEND_API_KEY, SEND_EMAIL_HOOK_SECRET, PLATFORM_DOMAIN
+#
+# For local dev, uncomment below (emails go to Inbucket without this):
+# [auth.hook.send_email]
+# enabled = true
+# uri = "http://host.docker.internal:54321/functions/v1/send-auth-email"
+# secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]

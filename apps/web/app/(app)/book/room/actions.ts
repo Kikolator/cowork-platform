@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getRoomSlots, getClosures } from "@/lib/booking/availability";
 import { validateBookingTime } from "@/lib/booking/rules";
+import { notifyBookingConfirmation } from "@/lib/email/notifications";
 import type { BusinessHours } from "@/lib/booking/format";
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -85,7 +86,14 @@ export async function bookRoom(
     return { success: false, error: validation.error! };
   }
 
-  // 4. Call create_booking_with_credits RPC
+  // 4. Get resource name for the confirmation email
+  const { data: resource } = await supabase
+    .from("resources")
+    .select("name")
+    .eq("id", resourceId)
+    .single();
+
+  // 5. Call create_booking_with_credits RPC
   const { data: bookingId, error: rpcError } = await supabase.rpc(
     "create_booking_with_credits",
     {
@@ -113,6 +121,33 @@ export async function bookRoom(
 
   revalidatePath(`/book/room/${resourceId}`);
   revalidatePath("/bookings");
+
+  // Fire-and-forget booking confirmation email
+  if (resource?.name) {
+    const bookingStart = new Date(startTime);
+    const dateStr = bookingStart.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: timezone,
+    });
+    const fmtTime = (iso: string) =>
+      new Date(iso).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: timezone,
+      });
+
+    notifyBookingConfirmation({
+      spaceId,
+      userId: user.id,
+      resourceName: resource.name,
+      date: dateStr,
+      startTime: fmtTime(startTime),
+      endTime: fmtTime(endTime),
+    });
+  }
 
   return { success: true, bookingId: bookingId as string };
 }
