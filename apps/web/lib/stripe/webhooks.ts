@@ -368,14 +368,16 @@ async function handleInvoicePaid(event: Stripe.Event, spaceId: string) {
     ? new Date(periodEnd * 1000)
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback: 30 days
 
-  // Grant credits
-  await grantMonthlyCredits({
-    spaceId,
-    userId: member.user_id,
-    planId: member.plan_id,
-    stripeInvoiceId: invoiceId,
-    validUntil,
-  });
+  // Grant credits (skip if member has no plan assigned)
+  if (member.plan_id) {
+    await grantMonthlyCredits({
+      spaceId,
+      userId: member.user_id,
+      planId: member.plan_id,
+      stripeInvoiceId: invoiceId,
+      validUntil,
+    });
+  }
 }
 
 async function handleInvoicePaymentFailed(

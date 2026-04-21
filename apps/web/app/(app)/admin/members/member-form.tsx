@@ -129,7 +129,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
   const watchFiscalIdType = watch("fiscalIdType");
   const watchBillingCompanyTaxIdType = watch("billingCompanyTaxIdType");
 
-  const planLabel = plans.find((p) => p.id === watchPlanId)?.name ?? "Select plan";
+  const planLabel = plans.find((p) => p.id === watchPlanId)?.name ?? "No plan";
   const deskLabel = watchFixedDeskId
     ? desks.find((d) => d.id === watchFixedDeskId)?.name ?? "Unknown"
     : "None";
@@ -183,14 +183,18 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
               <div className="space-y-1.5">
                 <Label>Plan</Label>
                 <Select
-                  value={watchPlanId}
-                  onValueChange={(v) => { if (v) setValue("planId", v); }}
-                  items={plans.map((p) => ({ value: p.id, label: p.name }))}
+                  value={watchPlanId ?? "__none__"}
+                  onValueChange={(v) => setValue("planId", v === "__none__" ? null : v)}
+                  items={[
+                    { value: "__none__", label: "No plan" },
+                    ...plans.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue>{planLabel}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">No plan</SelectItem>
                     {plans.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}

@@ -55,7 +55,7 @@ export interface ProfileEntry {
 export interface Member {
   id: string;
   user_id: string;
-  plan_id: string;
+  plan_id: string | null;
   status: string;
   fixed_desk_id: string | null;
   has_twenty_four_seven: boolean | null;
@@ -513,7 +513,7 @@ export function MembersTable({
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {member.plan?.name ?? "Unknown"}
+                          {member.plan?.name ?? "No plan"}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -636,7 +636,7 @@ export function MembersTable({
           }}
           member={detailMember}
           profile={detailProfile}
-          planName={detailMember.plan?.name ?? "Unknown"}
+          planName={detailMember.plan?.name ?? "No plan"}
           planCurrency={plans.find((p) => p.id === detailMember.plan_id)?.currency ?? "eur"}
           deskName={detailDeskName}
           notes={detailNotes}

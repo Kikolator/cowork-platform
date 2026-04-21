@@ -155,7 +155,7 @@ export default async function PlanPage({
         </p>
       </div>
 
-      {member && member.status !== "churned" && (
+      {member && member.status !== "churned" && member.plan_id && (
         <CurrentPlan
           member={{
             id: member.id,

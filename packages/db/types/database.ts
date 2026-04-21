@@ -478,7 +478,7 @@ export type Database = {
           joined_at: string | null
           nuki_auth_id: number | null
           paused_at: string | null
-          plan_id: string
+          plan_id: string | null
           role_title: string | null
           space_id: string
           status: Database["public"]["Enums"]["member_status"]
@@ -518,7 +518,7 @@ export type Database = {
           joined_at?: string | null
           nuki_auth_id?: number | null
           paused_at?: string | null
-          plan_id: string
+          plan_id?: string | null
           role_title?: string | null
           space_id: string
           status?: Database["public"]["Enums"]["member_status"]
@@ -558,7 +558,7 @@ export type Database = {
           joined_at?: string | null
           nuki_auth_id?: number | null
           paused_at?: string | null
-          plan_id?: string
+          plan_id?: string | null
           role_title?: string | null
           space_id?: string
           status?: Database["public"]["Enums"]["member_status"]
