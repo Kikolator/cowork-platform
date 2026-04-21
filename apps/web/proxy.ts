@@ -71,6 +71,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("x-space-slug", space.slug);
     response.headers.set("x-space-tenant-id", space.tenantId);
     response.headers.set("x-space-name", space.name);
+    response.headers.set("x-space-favicon-url", space.faviconUrl ?? "");
 
     if (SPACE_PUBLIC_PATHS.has(pathname) || pathname.startsWith("/auth/")) {
       if (pathname === "/login" && user) {

@@ -29,6 +29,7 @@ interface BrandingFormProps {
     favicon_url: string | null;
     primary_color: string | null;
     accent_color: string | null;
+    header_logo_mode: string | null;
   };
 }
 
@@ -54,11 +55,13 @@ export function BrandingForm({ space }: BrandingFormProps) {
       faviconUrl: space.favicon_url ?? "",
       primaryColor: space.primary_color ?? "#000000",
       accentColor: space.accent_color ?? "#3b82f6",
+      headerLogoMode: (space.header_logo_mode === "logo_only" ? "logo_only" : "icon_and_name") as "icon_and_name" | "logo_only",
     },
   });
 
   const primaryColor = watch("primaryColor");
   const accentColor = watch("accentColor");
+  const headerLogoMode = watch("headerLogoMode");
 
   function submitBranding(data: BrandingFormValues) {
     setServerError(null);
@@ -174,6 +177,45 @@ export function BrandingForm({ space }: BrandingFormProps) {
               onCleared={() => setValue("faviconUrl", "", { shouldDirty: true })}
             />
             {errors.faviconUrl && <p className="text-xs text-destructive">{errors.faviconUrl.message}</p>}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Header display</Label>
+          <p className="text-xs text-muted-foreground">Choose what appears in the sidebar header.</p>
+          <div className="flex gap-3">
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                headerLogoMode === "icon_and_name"
+                  ? "border-primary bg-primary/5 font-medium"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <input
+                type="radio"
+                value="icon_and_name"
+                checked={headerLogoMode === "icon_and_name"}
+                onChange={() => setValue("headerLogoMode", "icon_and_name", { shouldDirty: true })}
+                className="sr-only"
+              />
+              Icon with name
+            </label>
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                headerLogoMode === "logo_only"
+                  ? "border-primary bg-primary/5 font-medium"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <input
+                type="radio"
+                value="logo_only"
+                checked={headerLogoMode === "logo_only"}
+                onChange={() => setValue("headerLogoMode", "logo_only", { shouldDirty: true })}
+                className="sr-only"
+              />
+              Logo only
+            </label>
           </div>
         </div>
 

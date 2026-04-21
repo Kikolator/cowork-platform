@@ -36,6 +36,36 @@ packages/shared   → Shared logic: Zod schemas, validation, constants, types (u
 - **Build/Deploy**: EAS Build + EAS Submit (cloud CI, no local Xcode/Gradle needed)
 - **OTA Updates**: EAS Update for JS bundle hot-patches without store review
 
+## Git Strategy (NON-NEGOTIABLE)
+
+**Branch hierarchy:** `main` ← `dev` ← `feat/*` | `fix/*` | `chore/*`
+
+**Rules:**
+- **NEVER commit or push directly to `main` or `dev`.** All changes flow through pull requests.
+- **All work happens on feature branches:** `feat/<name>`, `fix/<name>`, `chore/<name>`, `docs/<name>`, `refactor/<name>`.
+- **Feature branches → `dev` via squash merge.** One commit per PR on `dev`.
+- **`dev` → `main` via regular merge** (preserves history). Only when releasing.
+- **Never bypass hooks** (`--no-verify`) or force-push to `main`/`dev`.
+
+### PR Test Plans
+
+Every PR that changes behavior must include a `## Test plan` section with a checklist. Test against local dev (`supabase start` + `turbo dev`) or staging before merging.
+
+### Release Process
+
+When `dev` is ready to ship:
+
+1. **Create release branch** from `dev`: `chore/release-vX.Y.Z`
+2. **Update `CHANGELOG.md`** — move items from `[Unreleased]` into a new version section. Follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+3. **Bump version**: `npm version patch|minor|major` (updates `package.json`, creates git tag).
+   - `patch` — bug fixes only (e.g., 0.8.1 → 0.8.2)
+   - `minor` — new features, non-breaking (e.g., 0.8.2 → 0.9.0)
+   - `major` — breaking changes (e.g., 0.9.0 → 1.0.0)
+4. **PR to `main`** — include combined test plan from all PRs in the release. Verify on staging first.
+5. **Merge** (regular merge, not squash) — preserves commit history.
+6. **Push tag**: `git push origin vX.Y.Z`
+7. **Smoke test** production after deploy.
+
 ## Commands
 
 ```bash

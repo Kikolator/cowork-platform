@@ -71,33 +71,43 @@ export async function importMembers(
       });
 
     if (authError) {
-      // User likely already exists — look them up
-      const { data: existingUsers } = await admin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-      });
-      const found = existingUsers?.users?.find(
-        (u) => u.email?.toLowerCase() === data.email,
-      );
+      // User likely already exists — look up via shared_profiles
+      const { data: profile } = await admin
+        .from("shared_profiles")
+        .select("id")
+        .eq("email", data.email)
+        .maybeSingle();
 
-      if (!found) {
-        // Try lookup via shared_profiles
-        const { data: profile } = await admin
-          .from("shared_profiles")
-          .select("id")
-          .eq("email", data.email)
-          .maybeSingle();
+      if (profile) {
+        userId = profile.id;
+      } else {
+        // Profile missing — resolve via auth.users directly
+        const { data: authUserId } = await admin.rpc(
+          "get_auth_user_id_by_email",
+          { p_email: data.email },
+        );
 
-        if (!profile) {
+        if (!authUserId) {
           result.errors.push({
             row: i + 1,
             message: `Cannot create user for ${data.email}: ${authError.message}`,
           });
           continue;
         }
-        userId = profile.id;
-      } else {
-        userId = found.id;
+        userId = authUserId;
+
+        // Create the missing shared_profiles row
+        const { error: profileInsertError } = await admin.from("shared_profiles").insert({
+          id: userId,
+          email: data.email,
+        });
+        if (profileInsertError) {
+          result.errors.push({
+            row: i + 1,
+            message: `Failed to create profile for ${data.email}: ${profileInsertError.message}`,
+          });
+          continue;
+        }
       }
     } else {
       userId = authUser.user.id;

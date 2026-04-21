@@ -21,6 +21,8 @@ jobs:
   # ─── Preflight: detect if migrations changed ──────────────────
   preflight:
     name: Preflight
+    # Skip if triggered by the auto-generated types commit to prevent loops
+    if: "!startsWith(github.event.head_commit.message, 'chore(db): regenerate')"
     runs-on: ubuntu-latest
     outputs:
       has_new_migrations: ${{ steps.check.outputs.has_new_migrations }}

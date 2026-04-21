@@ -7,6 +7,28 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-04-21
+
+### Added
+- Favicon + header display mode: per-tenant favicon rendering and `header_logo_mode` setting to choose between logo or icon+name in header (#169, closes #153)
+- Plan sort order exposed in admin form so tenants can reorder subscriptions just like products (#168, closes #152)
+- SSR email templates with space-direct redirects for invites and auth flows (#173)
+- Release workflow docs, Git Strategy, PR Test Plans, and Release Process sections in CLAUDE.md (#162, #163)
+- README env var documentation and Stripe setup guide (#164)
+
+### Fixed
+- Favicon override and `last_login_at` not updating after invite accept (#176, closes #174, #175)
+- Invite auth callback flow and Stripe price invalidation on plan/product price change (#167, closes #165, #166)
+- Stripe price invalidation when plan or product price changes (#160)
+- Invite email link no longer invalid (#158, closes #154)
+- Walk-in booking RLS policy violation (#158, closes #155)
+- Setup checklist correctly reflects connected Stripe status (#158, closes #156)
+- OfficeRnd CSV member import no longer skips valid rows (#158, closes #157)
+
+### Changed
+- CI: removed deploy-dev workflow and fixed CI issues (#150)
+- Cleaned up `.env.example`: added missing `CRON_SECRET`, removed unused `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (#163)
+
 ## [0.8.1] - 2026-04-15
 
 ### Added

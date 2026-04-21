@@ -33,6 +33,30 @@ async function getSpaceId() {
   return { supabase, user, spaceId };
 }
 
+/**
+ * Send an invite email via Supabase admin API.
+ * Tries inviteUserByEmail first (works for new/unconfirmed users).
+ * Falls back to signInWithOtp for already-confirmed users (re-invites).
+ */
+async function sendInviteEmail(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+  redirectTo: string,
+): Promise<{ error: { message: string } | null }> {
+  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+    email,
+    { redirectTo },
+  );
+  if (!inviteError) return { error: null };
+
+  // User likely already confirmed — fall back to magic link OTP
+  const { error: otpError } = await admin.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+  return { error: otpError };
+}
+
 /** Coerce empty strings and sentinel values to null */
 function emptyToNull(v: string | null | undefined): string | null {
   if (v == null || v === "" || v === "__none__") return null;
@@ -399,13 +423,14 @@ export async function addMember(input: unknown) {
   if (d.sendInvite) {
     const headersList = await headers();
     const origin = getOrigin(headersList);
-    const { error: otpError } = await admin.auth.signInWithOtp({
-      email: d.email,
-      options: { emailRedirectTo: `${origin}/auth/callback` },
-    });
+    const { error: inviteError } = await sendInviteEmail(
+      admin,
+      d.email,
+      `${origin}/auth/callback`,
+    );
 
-    if (otpError) {
-      logger.error("Invite OTP failed", { email: d.email, error: otpError.message });
+    if (inviteError) {
+      logger.error("Invite email failed", { email: d.email, error: inviteError.message });
       inviteFailed = true;
     } else {
       await supabase
@@ -457,13 +482,14 @@ export async function sendMemberInvite(input: unknown) {
   const headersList = await headers();
   const origin = getOrigin(headersList);
 
-  const { error: otpError } = await admin.auth.signInWithOtp({
-    email: profile.email,
-    options: { emailRedirectTo: `${origin}/auth/callback` },
-  });
+  const { error: inviteError } = await sendInviteEmail(
+    admin,
+    profile.email,
+    `${origin}/auth/callback`,
+  );
 
-  if (otpError) {
-    return { success: false as const, error: otpError.message };
+  if (inviteError) {
+    return { success: false as const, error: inviteError.message };
   }
 
   await supabase
@@ -517,13 +543,14 @@ export async function sendBulkInvites(input: unknown) {
       continue;
     }
 
-    const { error: otpError } = await admin.auth.signInWithOtp({
+    const { error: inviteError } = await sendInviteEmail(
+      admin,
       email,
-      options: { emailRedirectTo: `${origin}/auth/callback` },
-    });
+      `${origin}/auth/callback`,
+    );
 
-    if (otpError) {
-      createLogger({ component: "members/actions", spaceId }).warn("Bulk invite OTP failed", { email, error: otpError.message });
+    if (inviteError) {
+      createLogger({ component: "members/actions", spaceId }).warn("Bulk invite failed", { email, error: inviteError.message });
       failed++;
       continue;
     }

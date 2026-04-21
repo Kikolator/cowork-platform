@@ -188,37 +188,90 @@ npm run format             # Prettier across the repo
 
 ### Web App (`apps/web/.env.local`)
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUB_KEY` | Supabase publishable (anon) key |
-| `SUPABASE_SECRET_KEY` | Supabase service role key (server-only) |
-| `NEXT_PUBLIC_PLATFORM_DOMAIN` | Platform domain (e.g., `localhost:3000`) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
-| `STRIPE_SECRET_KEY` | Stripe platform secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe platform webhook signing secret |
-| `STRIPE_CONNECT_WEBHOOK_SECRET` | Stripe Connect webhook signing secret |
-| `RESEND_API_KEY` | Resend email API key |
-| `CRON_SECRET` | Secret for Vercel Cron Job authentication |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUB_KEY` | Yes | Supabase publishable key (`sb_publishable_...`) |
+| `SUPABASE_SECRET_KEY` | Yes | Supabase secret key (`sb_secret_...`) — server-only, bypasses RLS |
+| `NEXT_PUBLIC_PLATFORM_DOMAIN` | No | Platform domain (default: `localhost:3000`) |
+| `NEXT_PUBLIC_APP_ENV` | No | Set to `development` to enable dev-only features (e.g. password auth) |
+| `STRIPE_SECRET_KEY` | Yes | Stripe secret key (use test mode key for dev) |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe platform webhook signing secret |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | Yes | Stripe Connect webhook signing secret |
+| `RESEND_API_KEY` | Yes | Resend email API key |
+| `CRON_SECRET` | Yes | Bearer token for Vercel Cron Job authentication |
 
 ### Admin App (`apps/admin/.env.local`)
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUB_KEY` | Supabase publishable (anon) key |
-| `SUPABASE_SECRET_KEY` | Supabase service role key (server-only) |
-| `NEXT_PUBLIC_PLATFORM_DOMAIN` | Platform domain |
-| `STRIPE_SECRET_KEY` | Stripe platform secret key |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUB_KEY` | Yes | Supabase publishable key |
+| `SUPABASE_SECRET_KEY` | Yes | Supabase secret key — server-only |
+| `NEXT_PUBLIC_PLATFORM_DOMAIN` | No | Platform domain |
+| `NEXT_PUBLIC_APP_ENV` | No | Set to `development` for dev login features |
+| `STRIPE_SECRET_KEY` | Yes | Stripe secret key |
 
 ### Mobile App (`apps/mobile/.env`)
 
-| Variable | Description |
-|----------|-------------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_PUB_KEY` | Supabase publishable (anon) key |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EXPO_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `EXPO_PUBLIC_SUPABASE_PUB_KEY` | Yes | Supabase publishable key |
 
 For local development, Supabase URL and keys are printed by `supabase start`.
+
+## Stripe Setup
+
+The platform uses Stripe Connect (Standard accounts) for multi-tenant payments. Each tenant connects their own Stripe account.
+
+### 1. Create webhook endpoints
+
+You need **two** webhook endpoints in the Stripe Dashboard, both pointing to the same URL:
+
+**URL:** `https://<your-domain>/api/webhooks/stripe`
+
+#### Platform webhook (regular)
+
+Create under **Developers > Webhooks > Add endpoint**. Enable these events:
+
+| Event | Purpose |
+|-------|---------|
+| `checkout.session.completed` | Process completed store purchases |
+| `invoice.paid` | Grant monthly credits on subscription renewal |
+| `invoice.payment_failed` | Flag failed subscription payments |
+| `customer.subscription.updated` | Sync plan changes |
+| `customer.subscription.deleted` | Handle subscription cancellations |
+
+Copy the signing secret → `STRIPE_WEBHOOK_SECRET`
+
+#### Connect webhook
+
+Create under **Developers > Webhooks > Add endpoint**, then toggle **"Listen to events on Connected accounts"**. Enable these events:
+
+| Event | Purpose |
+|-------|---------|
+| `account.updated` | Track Connect onboarding completion |
+| `checkout.session.completed` | Process completed store purchases |
+| `invoice.paid` | Grant monthly credits on subscription renewal |
+| `invoice.payment_failed` | Flag failed subscription payments |
+| `customer.subscription.updated` | Sync plan changes |
+| `customer.subscription.deleted` | Handle subscription cancellations |
+
+Copy the signing secret → `STRIPE_CONNECT_WEBHOOK_SECRET`
+
+### 2. Webhook verification
+
+The webhook handler tries to verify the signature with `STRIPE_CONNECT_WEBHOOK_SECRET` first, then falls back to `STRIPE_WEBHOOK_SECRET`. Events from connected accounts (containing `event.account`) are routed as Connect events.
+
+### 3. Local development
+
+For local testing, use the Stripe CLI to forward events:
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+# Copy the webhook signing secret it prints
+```
 
 ## Key Concepts
 

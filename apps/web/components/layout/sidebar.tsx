@@ -9,9 +9,10 @@ interface SidebarProps {
   spaceName: string;
   logoUrl: string | null;
   logoDarkUrl?: string | null;
+  headerLogoMode?: "icon_and_name" | "logo_only";
 }
 
-export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl }: SidebarProps) {
+export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl, headerLogoMode = "icon_and_name" }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = spaceRole === "admin" || spaceRole === "owner";
 
@@ -22,44 +23,71 @@ export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl }: SidebarP
     <aside className="flex h-full w-60 flex-col border-r border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] backdrop-blur-xl">
       {/* Space branding */}
       <div className="flex h-14 items-center gap-2 border-b border-[var(--glass-border)] px-4">
-        {logoUrl ? (
+        {headerLogoMode === "logo_only" && logoUrl ? (
+          /* Logo-only mode: render full logo, no text */
           logoDarkUrl ? (
             <>
               <img
                 src={logoUrl}
                 alt={spaceName}
-                className="h-7 w-7 rounded-lg object-cover shadow-sm dark:hidden"
+                className="h-8 max-w-[160px] object-contain dark:hidden"
               />
               <img
                 src={logoDarkUrl}
                 alt={spaceName}
-                className="hidden h-7 w-7 rounded-lg object-cover shadow-sm dark:block"
+                className="hidden h-8 max-w-[160px] object-contain dark:block"
               />
             </>
           ) : (
             <img
               src={logoUrl}
               alt={spaceName}
-              className="h-7 w-7 rounded-lg object-cover shadow-sm"
+              className="h-8 max-w-[160px] object-contain"
             />
           )
         ) : (
+          /* Icon-and-name mode (default): small icon + space name */
           <>
-            <img
-              src="/ai-logo-light.svg"
-              alt={spaceName}
-              className="h-7 w-7 rounded-lg object-cover shadow-sm dark:hidden"
-            />
-            <img
-              src="/ai-logo-dark.svg"
-              alt={spaceName}
-              className="hidden h-7 w-7 rounded-lg object-cover shadow-sm dark:block"
-            />
+            {logoUrl ? (
+              logoDarkUrl ? (
+                <>
+                  <img
+                    src={logoUrl}
+                    alt={spaceName}
+                    className="h-7 w-7 rounded-lg object-cover shadow-sm dark:hidden"
+                  />
+                  <img
+                    src={logoDarkUrl}
+                    alt={spaceName}
+                    className="hidden h-7 w-7 rounded-lg object-cover shadow-sm dark:block"
+                  />
+                </>
+              ) : (
+                <img
+                  src={logoUrl}
+                  alt={spaceName}
+                  className="h-7 w-7 rounded-lg object-cover shadow-sm"
+                />
+              )
+            ) : (
+              <>
+                <img
+                  src="/ai-logo-light.svg"
+                  alt={spaceName}
+                  className="h-7 w-7 rounded-lg object-cover shadow-sm dark:hidden"
+                />
+                <img
+                  src="/ai-logo-dark.svg"
+                  alt={spaceName}
+                  className="hidden h-7 w-7 rounded-lg object-cover shadow-sm dark:block"
+                />
+              </>
+            )}
+            <span className="truncate font-display text-sm font-semibold text-foreground">
+              {spaceName}
+            </span>
           </>
         )}
-        <span className="truncate font-display text-sm font-semibold text-foreground">
-          {spaceName}
-        </span>
       </div>
 
       {/* Navigation */}
