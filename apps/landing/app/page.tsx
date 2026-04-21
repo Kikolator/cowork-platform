@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   ArrowRight,
   Building2,
@@ -17,9 +18,25 @@ export default function LandingPage() {
       {/* ── Nav ── */}
       <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/60">
         <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <span className="font-display text-lg font-bold tracking-tight">
-            <span className="text-[var(--rogue-accent)]">/</span>RogueOps
-          </span>
+          <a href="/" className="flex items-center gap-2">
+            <Image
+              src="/ai-logo-light.svg"
+              alt="RogueOps"
+              width={24}
+              height={24}
+              className="dark:hidden"
+            />
+            <Image
+              src="/ai-logo-dark.svg"
+              alt="RogueOps"
+              width={24}
+              height={24}
+              className="hidden dark:block"
+            />
+            <span className="font-display text-lg font-bold tracking-tight">
+              <span className="text-[var(--rogue-accent)]">/</span>RogueOps
+            </span>
+          </a>
           <a
             href="#action"
             className="btn-rogue inline-flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -388,13 +405,24 @@ export default function LandingPage() {
                   Join early access. Help shape the product. Lock in founder
                   pricing.
                 </p>
-                <a
-                  href="mailto:hello@rogueops.app"
-                  className="btn-rogue inline-flex items-center gap-2 bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 self-start"
-                >
-                  <Mail className="h-4 w-4" />
-                  Get in touch
-                </a>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="mailto:hello@rogueops.app"
+                    className="btn-rogue inline-flex items-center gap-2 bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Get in touch
+                  </a>
+                  <a
+                    href="https://start.rogueops.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-rogue-outline inline-flex items-center gap-2 border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                    Try the app
+                  </a>
+                </div>
               </div>
             </ScrollReveal>
 
@@ -417,7 +445,7 @@ export default function LandingPage() {
                   codebase. PRs are welcome.
                 </p>
                 <a
-                  href="https://github.com/rogueops"
+                  href="https://github.com/Kikolator/cowork-platform"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-rogue-outline inline-flex items-center gap-2 border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent self-start"
@@ -435,9 +463,25 @@ export default function LandingPage() {
       <footer className="relative border-t border-border/40 bg-background/60 backdrop-blur-sm">
         <div className="pointer-events-none absolute inset-0 bg-fine-grid opacity-20" aria-hidden="true" />
         <div className="relative mx-auto max-w-5xl px-6 py-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          <span className="font-display text-sm font-semibold">
-            <span className="text-[var(--rogue-accent)] opacity-60">/</span>RogueOps
-          </span>
+          <a href="/" className="flex items-center gap-1.5">
+            <Image
+              src="/ai-logo-light.svg"
+              alt="RogueOps"
+              width={16}
+              height={16}
+              className="dark:hidden"
+            />
+            <Image
+              src="/ai-logo-dark.svg"
+              alt="RogueOps"
+              width={16}
+              height={16}
+              className="hidden dark:block"
+            />
+            <span className="font-display text-sm font-semibold">
+              <span className="text-[var(--rogue-accent)] opacity-60">/</span>RogueOps
+            </span>
+          </a>
           <p className="text-xs text-muted-foreground font-mono">
             &copy; {new Date().getFullYear()} RogueOps. All rights reserved.
           </p>
