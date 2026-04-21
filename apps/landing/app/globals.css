@@ -54,7 +54,7 @@
   --border: oklch(0.70 0.01 270 / 20%);
   --input: oklch(0.70 0.01 270 / 25%);
   --ring: oklch(0.60 0.05 270);
-  --radius: 0.75rem;
+  --radius: 0;
 
   /* Glass design tokens */
   --glass-blur: 20px;
@@ -62,6 +62,15 @@
   --glass-bg-heavy: oklch(1 0 0 / 80%);
   --glass-border: oklch(1 0 0 / 30%);
   --glass-shadow: 0 8px 32px oklch(0 0 0 / 6%), 0 2px 8px oklch(0 0 0 / 4%);
+
+  /* Rogue accent — a warm signal color for highlights */
+  --rogue-accent: oklch(0.65 0.18 25);
+  --rogue-accent-dim: oklch(0.65 0.18 25 / 15%);
+
+  /* Grid tokens */
+  --grid-color: oklch(0.15 0.02 270 / 5%);
+  --grid-color-strong: oklch(0.15 0.02 270 / 8%);
+  --scanline-color: oklch(0.15 0.02 270 / 2.5%);
 }
 
 .dark {
@@ -90,6 +99,13 @@
   --glass-bg-heavy: oklch(0.18 0.015 270 / 70%);
   --glass-border: oklch(1 0 0 / 12%);
   --glass-shadow: 0 8px 32px oklch(0 0 0 / 20%), 0 2px 8px oklch(0 0 0 / 12%);
+
+  --rogue-accent: oklch(0.70 0.20 25);
+  --rogue-accent-dim: oklch(0.70 0.20 25 / 12%);
+
+  --grid-color: oklch(0.96 0.005 270 / 4%);
+  --grid-color-strong: oklch(0.96 0.005 270 / 7%);
+  --scanline-color: oklch(0.96 0.005 270 / 2%);
 }
 
 @layer base {
@@ -107,7 +123,10 @@
   }
 }
 
-/* Glass gradient backgrounds */
+/* ═══════════════════════════════════════════
+   Glass gradient backgrounds
+   ═══════════════════════════════════════════ */
+
 .glass-gradient-bg {
   background:
     radial-gradient(ellipse at 20% 50%, oklch(0.92 0.04 270 / 50%) 0%, transparent 50%),
@@ -125,32 +144,122 @@
     oklch(0.13 0.012 270);
 }
 
-/* Scroll reveal */
+/* ═══════════════════════════════════════════
+   Scroll reveal — base + variants
+   ═══════════════════════════════════════════ */
+
+/* Base: all variants share invisible starting state */
 .scroll-reveal {
   opacity: 0;
+}
+
+.scroll-reveal.revealed {
+  will-change: auto;
+}
+
+/* ── fade-up (default) ── */
+.scroll-reveal-fade-up {
   transform: translateY(24px);
   transition: opacity 0.7s ease-out, transform 0.7s ease-out;
 }
 
-.scroll-reveal.revealed {
+.scroll-reveal-fade-up.revealed {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* Geometric floating animation */
+/* ── fade-left — slides in from the left ── */
+.scroll-reveal-fade-left {
+  transform: translateX(-32px);
+  transition: opacity 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.scroll-reveal-fade-left.revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── fade-right — slides in from the right ── */
+.scroll-reveal-fade-right {
+  transform: translateX(32px);
+  transition: opacity 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.scroll-reveal-fade-right.revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── scale-in — grows into place, confident ── */
+.scroll-reveal-scale-in {
+  transform: scale(0.92);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal-scale-in.revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── slide-up-stiff — hard stop, nearly instant arrival ── */
+.scroll-reveal-slide-up-stiff {
+  transform: translateY(12px);
+  transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1),
+              transform 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.scroll-reveal-slide-up-stiff.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── hero-entrance — CSS-only staggered fade for above-fold content ── */
+.hero-entrance {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: hero-entrance 0.6s ease-out forwards;
+}
+
+.hero-entrance-1 { animation-delay: 0.1s; }
+.hero-entrance-2 { animation-delay: 0.3s; }
+.hero-entrance-3 { animation-delay: 0.5s; }
+
+@keyframes hero-entrance {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: subtler distances on small screens */
+@media (max-width: 640px) {
+  .scroll-reveal-fade-up { transform: translateY(16px); }
+  .scroll-reveal-fade-left { transform: translateX(-20px); }
+  .scroll-reveal-fade-right { transform: translateX(20px); }
+  .scroll-reveal-scale-in { transform: scale(0.95); }
+  .scroll-reveal-slide-up-stiff { transform: translateY(8px); }
+}
+
+/* ═══════════════════════════════════════════
+   Geometric floating animations
+   ═══════════════════════════════════════════ */
+
 @keyframes geo-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-12px) rotate(2deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
 }
 
 @keyframes geo-float-reverse {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(12px) rotate(-2deg); }
+  50% { transform: translateY(14px) rotate(-3deg); }
 }
 
 @keyframes geo-pulse {
   0%, 100% { opacity: var(--geo-opacity, 0.12); transform: scale(1); }
-  50% { opacity: calc(var(--geo-opacity, 0.12) * 1.5); transform: scale(1.04); }
+  50% { opacity: calc(var(--geo-opacity, 0.12) * 1.6); transform: scale(1.06); }
 }
 
 @keyframes geo-spin-slow {
@@ -158,6 +267,66 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes geo-drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(8px, -6px) rotate(1.5deg); }
+  50% { transform: translate(-4px, -14px) rotate(-1deg); }
+  75% { transform: translate(-10px, -4px) rotate(2deg); }
+}
+
+@keyframes geo-drift-diagonal {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(16px, -10px); }
+}
+
+@keyframes geo-glitch {
+  0%, 85%, 100% { transform: translate(0, 0); opacity: var(--geo-opacity, 0.1); }
+  87% { transform: translate(-7px, 2px); opacity: calc(var(--geo-opacity, 0.1) * 3); }
+  90% { transform: translate(5px, -2px); opacity: var(--geo-opacity, 0.1); }
+  93% { transform: translate(-3px, 4px); opacity: calc(var(--geo-opacity, 0.1) * 2.5); }
+  96% { transform: translate(2px, -1px); opacity: var(--geo-opacity, 0.1); }
+}
+
+@keyframes geo-scale-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* One-shot hero glitch — CRT malfunction on load */
+@keyframes hero-glitch {
+  0% { transform: translate(0); opacity: 1; }
+  15% { transform: translate(-4px, 1px); opacity: 0.7; }
+  30% { transform: translate(3px, -1px); opacity: 1; }
+  45% { transform: translate(-2px); opacity: 0.85; }
+  100% { transform: translate(0); opacity: 1; }
+}
+
+.hero-glitch {
+  animation: hero-glitch 0.15s ease-out 0.8s 1 both;
+}
+
+/* Monospace accent word in headings */
+.mono-accent {
+  font-family: var(--font-mono);
+  color: var(--rogue-accent);
+}
+
+@keyframes scanline-move {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes dash-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -20; }
+}
+
+/* Default geo animation speeds — medium energy */
 .geo-float {
   animation: geo-float 8s ease-in-out infinite;
 }
@@ -174,17 +343,403 @@
   animation: geo-spin-slow 40s linear infinite;
 }
 
-/* Reduce motion */
+.geo-drift {
+  animation: geo-drift 14s ease-in-out infinite;
+}
+
+.geo-drift-diagonal {
+  animation: geo-drift-diagonal 12s ease-in-out infinite;
+}
+
+.geo-glitch {
+  animation: geo-glitch 8s ease-in-out infinite;
+}
+
+.geo-scale-breathe {
+  animation: geo-scale-breathe 10s ease-in-out infinite;
+}
+
+.cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+/* ═══════════════════════════════════════════
+   Section-specific geo energy tiers
+   Shapes match the emotional arc of the narrative.
+   ═══════════════════════════════════════════ */
+
+/* Hero-specific keyframes — larger amplitude for visible energy */
+@keyframes geo-float-hero {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-22px) rotate(4deg); }
+}
+
+@keyframes geo-float-hero-reverse {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(22px) rotate(-4deg); }
+}
+
+@keyframes geo-drift-hero {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(14px, -10px) rotate(2.5deg); }
+  50% { transform: translate(-8px, -22px) rotate(-2deg); }
+  75% { transform: translate(-16px, -6px) rotate(3deg); }
+}
+
+/* Hero — fastest, most energetic (big amplitude + short durations) */
+.geo-tier-hero .geo-float        { animation: geo-float-hero 4s ease-in-out infinite; }
+.geo-tier-hero .geo-float-reverse { animation: geo-float-hero-reverse 5s ease-in-out infinite; }
+.geo-tier-hero .geo-drift        { animation: geo-drift-hero 7s ease-in-out infinite; }
+.geo-tier-hero .geo-drift-diagonal { animation-duration: 6s; }
+.geo-tier-hero .geo-pulse        { animation-duration: 3s; }
+.geo-tier-hero .geo-spin-slow    { animation-duration: 25s; }
+.geo-tier-hero .geo-glitch       { animation-duration: 4s; }
+
+/* Story — medium, tension building */
+.geo-tier-story .geo-float        { animation-duration: 9s; }
+.geo-tier-story .geo-float-reverse { animation-duration: 11s; }
+.geo-tier-story .geo-drift        { animation-duration: 16s; }
+.geo-tier-story .geo-drift-diagonal { animation-duration: 14s; }
+.geo-tier-story .geo-pulse        { animation-duration: 7s; }
+.geo-tier-story .geo-glitch       { animation-duration: 10s; }
+
+/* How — mechanical, precise (shorter movements, linear easing) */
+.geo-tier-how .geo-float        { animation-duration: 10s; animation-timing-function: linear; }
+.geo-tier-how .geo-float-reverse { animation-duration: 12s; animation-timing-function: linear; }
+.geo-tier-how .geo-drift        { animation-duration: 18s; animation-timing-function: linear; }
+.geo-tier-how .geo-drift-diagonal { animation-duration: 16s; animation-timing-function: linear; }
+.geo-tier-how .geo-pulse        { animation-duration: 8s; }
+.geo-tier-how .geo-spin-slow    { animation-duration: 50s; }
+.geo-tier-how .geo-glitch       { animation-duration: 12s; }
+
+/* What-specific keyframes — minimal amplitude, confident calm */
+@keyframes geo-float-what {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(1deg); }
+}
+
+@keyframes geo-float-what-reverse {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(5px) rotate(-1deg); }
+}
+
+/* What — slow, confident, barely moving */
+.geo-tier-what .geo-float        { animation: geo-float-what 14s ease-in-out infinite; }
+.geo-tier-what .geo-float-reverse { animation: geo-float-what-reverse 16s ease-in-out infinite; }
+.geo-tier-what .geo-drift        { animation-duration: 22s; }
+.geo-tier-what .geo-drift-diagonal { animation-duration: 20s; }
+.geo-tier-what .geo-pulse        { animation-duration: 10s; }
+.geo-tier-what .geo-spin-slow    { animation-duration: 60s; }
+
+/* Action — converging, resolved (shapes drift toward center) */
+@keyframes geo-converge-left {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(12px, -4px); }
+}
+
+@keyframes geo-converge-right {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-12px, -4px); }
+}
+
+.geo-tier-action .geo-drift       { animation: geo-converge-left 14s ease-in-out infinite; }
+.geo-tier-action .geo-drift-diagonal { animation: geo-converge-right 14s ease-in-out infinite; }
+.geo-tier-action .geo-float       { animation: geo-converge-left 10s ease-in-out infinite; }
+.geo-tier-action .geo-float-reverse { animation: geo-converge-right 12s ease-in-out infinite; }
+.geo-tier-action .geo-pulse       { animation-duration: 5s; }
+.geo-tier-action .geo-spin-slow   { animation-duration: 35s; }
+.geo-tier-action .geo-scale-breathe { animation-duration: 7s; }
+
+/* ═══════════════════════════════════════════
+   Ring closing animation
+   Stroke-dasharray transitions from gapped to complete.
+   Applied via .ring-close class on the Action section ring.
+   ═══════════════════════════════════════════ */
+
+@keyframes ring-close {
+  from {
+    stroke-dasharray: var(--ring-dash-open);
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dasharray: var(--ring-dash-closed);
+    stroke-dashoffset: 0;
+  }
+}
+
+.ring-close circle {
+  animation: ring-close 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards paused;
+}
+
+.ring-close.revealed circle {
+  animation-play-state: running;
+}
+
+/* ═══════════════════════════════════════════
+   Divider draw-in animation
+   The angled line draws across on scroll entry.
+   The divider sits inside a ScrollReveal wrapper,
+   so we target .revealed > .divider-*.
+   ═══════════════════════════════════════════ */
+
+.divider-angled-wrap .divider-angled::before,
+.divider-angled-wrap .divider-angled-reverse::before {
+  background-size: 0% 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.divider-angled-wrap.revealed .divider-angled::before,
+.divider-angled-wrap.revealed .divider-angled-reverse::before {
+  background-size: 100% 100%;
+}
+
+/* ═══════════════════════════════════════════
+   Grid background patterns
+   ═══════════════════════════════════════════ */
+
+/* Dot grid — graph paper / blueprint feel */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, var(--grid-color-strong) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Line grid — engineering schematic */
+.bg-line-grid {
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Fine crosshair grid */
+.bg-fine-grid {
+  background-image:
+    linear-gradient(var(--grid-color) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, var(--grid-color) 0.5px, transparent 0.5px);
+  background-size: 20px 20px;
+}
+
+/* Scanline overlay — CRT retro effect */
+.scanline-overlay {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--scanline-color) 2px,
+    var(--scanline-color) 4px
+  );
+}
+
+/* Diagonal hatch pattern */
+.bg-diagonal-hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    var(--grid-color) 8px,
+    var(--grid-color) 9px
+  );
+}
+
+/* ═══════════════════════════════════════════
+   Terminal / retro-tech styling
+   ═══════════════════════════════════════════ */
+
+/* Terminal window card style — brutalist hard-offset */
+.terminal-card {
+  border: 1px solid var(--border);
+  position: relative;
+  box-shadow: 3px 3px 0 0 var(--border);
+  transition: box-shadow 0.2s ease-out, transform 0.2s ease-out,
+              border-color 0.3s ease-out;
+}
+
+.terminal-card:hover {
+  box-shadow: 1px 1px 0 0 var(--border);
+  transform: translate(1px, 1px);
+  border-color: var(--rogue-accent-dim);
+}
+
+.terminal-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--rogue-accent) 0%,
+    var(--rogue-accent) 33%,
+    oklch(0.70 0.15 140) 33%,
+    oklch(0.70 0.15 140) 66%,
+    oklch(0.65 0.12 270) 66%,
+    oklch(0.65 0.12 270) 100%
+  );
+  transition: filter 0.3s ease-out;
+}
+
+.terminal-card:hover::before {
+  filter: brightness(1.3);
+}
+
+/* ═══════════════════════════════════════════
+   Button interaction states
+   ═══════════════════════════════════════════ */
+
+/* Primary filled buttons */
+.btn-rogue {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out,
+              background-color 0.15s ease-out;
+}
+
+.btn-rogue:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0 0 var(--border);
+}
+
+.btn-rogue:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 0 var(--border);
+}
+
+/* Outline / ghost buttons */
+.btn-rogue-outline {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out,
+              background-color 0.15s ease-out;
+}
+
+.btn-rogue-outline:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0 0 var(--border);
+}
+
+.btn-rogue-outline:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 0 var(--border);
+}
+
+/* Section label — monospace terminal prompt style */
+.section-label {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.section-label::before {
+  content: "// ";
+  opacity: 0.4;
+}
+
+/* ═══════════════════════════════════════════
+   Angled section dividers
+   ═══════════════════════════════════════════ */
+
+.divider-angled {
+  position: relative;
+  height: 48px;
+  overflow: hidden;
+}
+
+.divider-angled::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    -2deg,
+    transparent 48%,
+    var(--border) 48%,
+    var(--border) 50%,
+    transparent 50%
+  );
+}
+
+.divider-angled-reverse {
+  position: relative;
+  height: 48px;
+  overflow: hidden;
+}
+
+.divider-angled-reverse::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    2deg,
+    transparent 48%,
+    var(--border) 48%,
+    var(--border) 50%,
+    transparent 50%
+  );
+}
+
+/* ═══════════════════════════════════════════
+   Reduce motion — RESPECT USER PREFERENCE
+   ═══════════════════════════════════════════ */
+
 @media (prefers-reduced-motion: reduce) {
-  .scroll-reveal {
+  /* All scroll reveal variants — instant visible, no motion */
+  .scroll-reveal,
+  .scroll-reveal-fade-up,
+  .scroll-reveal-fade-left,
+  .scroll-reveal-fade-right,
+  .scroll-reveal-scale-in,
+  .scroll-reveal-slide-up-stiff {
     opacity: 1;
     transform: none;
     transition: none;
   }
+  /* Geometric animations — all tiers */
   .geo-float,
   .geo-float-reverse,
   .geo-pulse,
-  .geo-spin-slow {
+  .geo-spin-slow,
+  .geo-drift,
+  .geo-drift-diagonal,
+  .geo-glitch,
+  .geo-scale-breathe,
+  .cursor-blink,
+  .hero-glitch,
+  .hero-entrance {
     animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  /* Ring close */
+  .ring-close circle {
+    animation: none;
+  }
+  /* Dividers — instant draw */
+  .divider-angled-wrap .divider-angled::before,
+  .divider-angled-wrap .divider-angled-reverse::before {
+    background-size: 100% 100%;
+    transition: none;
+  }
+  /* Button hover transforms */
+  .btn-rogue,
+  .btn-rogue-outline {
+    transition: none;
+  }
+  .btn-rogue:hover,
+  .btn-rogue-outline:hover,
+  .btn-rogue:active,
+  .btn-rogue-outline:active {
+    transform: none;
+  }
+  /* Terminal card hover */
+  .terminal-card {
+    transition: none;
+  }
+  .terminal-card:hover {
+    transform: none;
+  }
+  .terminal-card::before {
+    transition: none;
+  }
+  .scanline-overlay {
+    background-image: none;
   }
 }

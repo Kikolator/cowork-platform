@@ -3,13 +3,29 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+const VARIANT_CLASSES = {
+  "fade-up": "scroll-reveal-fade-up",
+  "fade-left": "scroll-reveal-fade-left",
+  "fade-right": "scroll-reveal-fade-right",
+  "scale-in": "scroll-reveal-scale-in",
+  "slide-up-stiff": "scroll-reveal-slide-up-stiff",
+} as const;
+
+type RevealVariant = keyof typeof VARIANT_CLASSES;
+
 interface ScrollRevealProps {
   children: ReactNode;
   className?: string;
   delay?: number;
+  variant?: RevealVariant;
 }
 
-export function ScrollReveal({ children, className, delay = 0 }: ScrollRevealProps) {
+export function ScrollReveal({
+  children,
+  className,
+  delay = 0,
+  variant = "fade-up",
+}: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,7 +47,10 @@ export function ScrollReveal({ children, className, delay = 0 }: ScrollRevealPro
   }, [delay]);
 
   return (
-    <div ref={ref} className={cn("scroll-reveal", className)}>
+    <div
+      ref={ref}
+      className={cn("scroll-reveal", VARIANT_CLASSES[variant], className)}
+    >
       {children}
     </div>
   );
