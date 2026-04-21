@@ -39,6 +39,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=no_user", origin));
   }
 
+  // 2b. Track last login (before space resolution — runs for all login paths)
+  const adminEarly = createAdminClient();
+  const { error: loginTrackError } = await adminEarly
+    .from("shared_profiles")
+    .update({ last_login_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (loginTrackError) {
+    createLogger({ component: "auth/callback" }).error("Failed to update last_login_at", {
+      userId: user.id,
+      error: loginTrackError.message,
+      code: loginTrackError.code,
+    });
+  }
+
   // 3. Resolve space from hostname
   const hostname = request.headers.get("host") ?? "";
   const space = await resolveSpaceFromHostname(hostname);
@@ -110,12 +125,6 @@ export async function GET(request: NextRequest) {
       new URL("/login?error=claims_failed", origin)
     );
   }
-
-  // 5b. Track last login
-  await admin
-    .from("shared_profiles")
-    .update({ last_login_at: new Date().toISOString() })
-    .eq("id", user.id);
 
   // 6. Refresh session to pick up new claims
   await supabase.auth.refreshSession();
