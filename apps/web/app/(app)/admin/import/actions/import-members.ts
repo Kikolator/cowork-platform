@@ -128,10 +128,10 @@ export async function importMembers(
       }
     }
 
-    // Ensure space_users entry exists
+    // Ensure space_users entry exists (ignoreDuplicates preserves existing role)
     const { error: spaceUserError } = await admin.from("space_users").upsert(
       { user_id: userId, space_id: spaceId, role: "member" },
-      { onConflict: "user_id,space_id" },
+      { onConflict: "user_id,space_id", ignoreDuplicates: true },
     );
 
     if (spaceUserError) {
