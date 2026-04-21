@@ -1,0 +1,126 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(0.985 0.005 270);
+  --foreground: oklch(0.15 0.02 270);
+  --card: oklch(1 0 0 / 70%);
+  --card-foreground: oklch(0.15 0.02 270);
+  --popover: oklch(1 0 0 / 80%);
+  --popover-foreground: oklch(0.15 0.02 270);
+  --primary: oklch(0.25 0.035 270);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0.005 270);
+  --secondary-foreground: oklch(0.20 0.03 270);
+  --muted: oklch(0.96 0.005 270);
+  --muted-foreground: oklch(0.50 0.01 270);
+  --accent: oklch(0.96 0.012 270);
+  --accent-foreground: oklch(0.20 0.03 270);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.70 0.01 270 / 20%);
+  --input: oklch(0.70 0.01 270 / 25%);
+  --ring: oklch(0.60 0.05 270);
+  --radius: 0.75rem;
+
+  /* Glass design tokens */
+  --glass-blur: 20px;
+  --glass-bg: oklch(1 0 0 / 60%);
+  --glass-bg-heavy: oklch(1 0 0 / 80%);
+  --glass-border: oklch(1 0 0 / 30%);
+  --glass-shadow: 0 8px 32px oklch(0 0 0 / 6%), 0 2px 8px oklch(0 0 0 / 4%);
+}
+
+.dark {
+  --background: oklch(0.13 0.012 270);
+  --foreground: oklch(0.96 0.005 270);
+  --card: oklch(0.18 0.015 270 / 60%);
+  --card-foreground: oklch(0.96 0.005 270);
+  --popover: oklch(0.20 0.015 270 / 75%);
+  --popover-foreground: oklch(0.96 0.005 270);
+  --primary: oklch(0.90 0.02 270);
+  --primary-foreground: oklch(0.18 0.02 270);
+  --secondary: oklch(0.24 0.015 270);
+  --secondary-foreground: oklch(0.96 0.005 270);
+  --muted: oklch(0.24 0.015 270);
+  --muted-foreground: oklch(0.65 0.01 270);
+  --accent: oklch(0.28 0.025 270);
+  --accent-foreground: oklch(0.96 0.005 270);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.55 0.04 270);
+
+  /* Glass design tokens — dark */
+  --glass-blur: 20px;
+  --glass-bg: oklch(0.18 0.015 270 / 50%);
+  --glass-bg-heavy: oklch(0.18 0.015 270 / 70%);
+  --glass-border: oklch(1 0 0 / 12%);
+  --glass-shadow: 0 8px 32px oklch(0 0 0 / 20%), 0 2px 8px oklch(0 0 0 / 12%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+/* Glass gradient backgrounds */
+.glass-gradient-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, oklch(0.92 0.04 270 / 50%) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, oklch(0.92 0.03 300 / 40%) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, oklch(0.94 0.03 230 / 30%) 0%, transparent 50%),
+    oklch(0.97 0.005 270);
+}
+
+.dark .glass-gradient-bg,
+.glass-gradient-bg:is(.dark *) {
+  background:
+    radial-gradient(ellipse at 20% 50%, oklch(0.20 0.04 270 / 40%) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, oklch(0.18 0.03 300 / 30%) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, oklch(0.22 0.03 230 / 25%) 0%, transparent 50%),
+    oklch(0.13 0.012 270);
+}
