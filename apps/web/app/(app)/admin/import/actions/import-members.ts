@@ -33,7 +33,7 @@ export async function importMembers(
   const planBySlug = new Map(
     (plans ?? []).map((p) => [p.slug.toLowerCase(), p.id]),
   );
-  const defaultPlanId = plans?.[0]?.id;
+  // No default fallback — members with unmatched plans get plan_id = null
 
   for (let i = 0; i < rows.length; i++) {
     const parsed = importMemberSchema.safeParse(rows[i]);
@@ -138,19 +138,13 @@ export async function importMembers(
       result.errors.push({ row: i + 1, message: `Space user upsert failed: ${spaceUserError.message}` });
     }
 
-    // Resolve plan
+    // Resolve plan (null when no match — member will be set to churned)
     const planName = data.plan_name?.toLowerCase();
-    const planId =
-      (planName && (planByName.get(planName) ?? planBySlug.get(planName))) ||
-      defaultPlanId;
+    const planId: string | null =
+      (planName && (planByName.get(planName) ?? planBySlug.get(planName))) || null;
 
-    if (!planId) {
-      result.errors.push({
-        row: i + 1,
-        message: "No plan found. Import plans first.",
-      });
-      continue;
-    }
+    // No plan = churned regardless of CSV status
+    const effectiveStatus = planId ? data.status : "churned";
 
     // Check if member already exists in this space
     const { data: existingMember } = await admin
@@ -199,7 +193,7 @@ export async function importMembers(
       space_id: spaceId,
       user_id: userId,
       plan_id: planId,
-      status: data.status,
+      status: effectiveStatus,
       company: data.company ?? null,
       joined_at: data.joined_at ?? new Date().toISOString(),
       external_id: data.external_id ?? null,

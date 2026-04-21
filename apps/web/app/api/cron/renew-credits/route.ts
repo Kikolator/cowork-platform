@@ -82,6 +82,9 @@ export async function GET(request: Request) {
           userId: member.user_id,
         });
 
+        // Skip members with no plan (no credit config to grant)
+        if (!member.plan_id) continue;
+
         // Grant new credits valid until next anniversary
         const validUntil = getNextAnniversary(joinDate, today);
 
