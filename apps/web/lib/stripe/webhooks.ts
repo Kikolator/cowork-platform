@@ -597,6 +597,65 @@ async function handleGuestCheckout(
           .eq("id", pass.id);
       }
     }
+  } else if (type === "product") {
+    // Product-based guest pass checkout — create pass from Stripe metadata
+    const productId = metadata.product_id;
+    const passTypeStr = metadata.pass_type;
+    const startDate = metadata.start_date;
+    const endDate = metadata.end_date;
+    const communityRulesAccepted = metadata.community_rules_accepted === "true";
+
+    if (!productId || !passTypeStr || !startDate || !endDate) {
+      logger.error("Product guest checkout missing required metadata", { metadata });
+      return;
+    }
+
+    const amountTotal = session.amount_total ?? 0;
+    const passInsert = {
+      space_id: spaceId,
+      user_id: userId,
+      pass_type: passTypeStr as "day" | "week",
+      status: "active" as const,
+      start_date: startDate,
+      end_date: endDate,
+      stripe_session_id: session.id,
+      amount_cents: amountTotal,
+      is_guest: false,
+    };
+    // New columns not yet in generated types
+    Object.assign(passInsert, {
+      product_id: productId,
+      ...(communityRulesAccepted
+        ? { community_rules_accepted_at: new Date().toISOString() }
+        : {}),
+    });
+
+    const { data: pass, error: passError } = await admin
+      .from("passes")
+      .insert(passInsert)
+      .select("id, start_date, end_date")
+      .single();
+
+    if (passError) {
+      logger.error("Failed to create pass for product guest checkout", { error: passError.message });
+      return;
+    }
+
+    // Auto-assign desk
+    if (pass) {
+      const { data: deskId } = await admin.rpc("auto_assign_desk", {
+        p_space_id: spaceId,
+        p_start_date: pass.start_date,
+        p_end_date: pass.end_date,
+      });
+
+      if (deskId) {
+        await admin
+          .from("passes")
+          .update({ assigned_desk_id: deskId })
+          .eq("id", pass.id);
+      }
+    }
   } else if (type === "membership") {
     const planSlug = metadata.plan_slug;
     const planId = metadata.plan_id;

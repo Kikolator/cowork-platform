@@ -5,7 +5,7 @@ export const availabilityQuerySchema = z
     type: z.enum(["daypass", "product", "membership"]),
     plan_slug: z.string().optional(),
     product_slug: z.string().optional(),
-    date: z.string().optional(),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD").optional(),
   })
   .refine((d) => d.type !== "membership" || d.plan_slug, {
     message: "plan_slug is required for membership availability checks",
@@ -21,7 +21,7 @@ export const checkoutSessionSchema = z
     name: z.string().optional(),
     plan_slug: z.string().optional(),
     product_slug: z.string().optional(),
-    start_date: z.string().optional(),
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "start_date must be YYYY-MM-DD").optional(),
     community_rules_accepted: z.boolean().optional(),
   })
   .refine((d) => d.type !== "membership" || d.plan_slug, {

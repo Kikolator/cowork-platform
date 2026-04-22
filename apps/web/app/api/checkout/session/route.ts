@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
   const slugParam = spaceSlug ? `?space=${spaceSlug}` : "";
 
   if (type === "product") {
-    // Product-based pass checkout
+    // Product-based pass checkout — pass is created in the webhook after payment,
+    // matching the existing daypass guest flow (no pre-created pass record needed).
     const logger = createLogger({ component: "checkout/session", spaceId });
 
     const { data: product } = await admin
@@ -92,8 +93,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Product not configured" }, { status: 400 });
     }
 
-    // Calculate end date
+    // Validate start_date format
     const startDate = start_date!;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || isNaN(new Date(startDate + "T12:00:00Z").getTime())) {
+      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+    }
+
+    // Reject past dates
+    const today = new Date().toISOString().split("T")[0]!;
+    if (startDate < today) {
+      return NextResponse.json({ error: "Start date must not be in the past" }, { status: 400 });
+    }
+
+    // Calculate end date (skip weekends for multi-day consecutive passes)
     let endDate = startDate;
     if (durationDays > 1) {
       const cursor = new Date(startDate + "T12:00:00Z");
@@ -123,7 +135,7 @@ export async function POST(request: NextRequest) {
         .from("passes")
         .select("id", { count: "exact", head: true })
         .eq("space_id", spaceId)
-        .in("status", ["active", "pending_payment"])
+        .in("status", ["active"])
         .lte("start_date", endDate)
         .gte("end_date", startDate);
 
@@ -142,36 +154,6 @@ export async function POST(request: NextRequest) {
         connectedAccountId,
         spaceId,
       );
-
-      // Create pending pass record
-      const passInsert = {
-        space_id: spaceId,
-        user_id: "00000000-0000-0000-0000-000000000000", // placeholder — updated by webhook
-        pass_type: passType as "day" | "week",
-        status: "pending_payment" as const,
-        start_date: startDate,
-        end_date: endDate,
-        amount_cents: product.price_cents,
-        is_guest: false,
-      };
-      // New columns not yet in generated types
-      Object.assign(passInsert, {
-        product_id: product.id,
-        ...(community_rules_accepted
-          ? { community_rules_accepted_at: new Date().toISOString() }
-          : {}),
-      });
-
-      const { data: pass, error: passError } = await admin
-        .from("passes")
-        .insert(passInsert)
-        .select("id")
-        .single();
-
-      if (passError || !pass) {
-        logger.error("Failed to create pending pass", { error: passError?.message });
-        return NextResponse.json({ error: "Failed to create pass" }, { status: 500 });
-      }
 
       const session = await getStripe().checkout.sessions.create(
         {
@@ -192,19 +174,16 @@ export async function POST(request: NextRequest) {
             space_id: spaceId,
             product_id: product.id,
             product_category: "pass",
-            pass_id: pass.id,
+            pass_type: passType,
+            start_date: startDate,
+            end_date: endDate,
             email,
             ...(name ? { name } : {}),
+            ...(community_rules_accepted ? { community_rules_accepted: "true" } : {}),
           },
         },
         { stripeAccount: connectedAccountId },
       );
-
-      // Save stripe_session_id to pass for webhook matching
-      await admin
-        .from("passes")
-        .update({ stripe_session_id: session.id })
-        .eq("id", pass.id);
 
       return NextResponse.json({ url: session.url });
     } catch (err) {
