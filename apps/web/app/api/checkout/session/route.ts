@@ -345,6 +345,7 @@ export async function POST(request: NextRequest) {
           plan_id: plan.id,
           email,
           ...(name ? { name } : {}),
+          ...(community_rules_accepted ? { community_rules_accepted: "true" } : {}),
         },
       },
       { stripeAccount: connectedAccountId },

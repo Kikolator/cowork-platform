@@ -720,6 +720,7 @@ async function handleGuestCheckout(
   } else if (type === "membership") {
     const planSlug = metadata.plan_slug;
     const planId = metadata.plan_id;
+    const communityRulesAccepted = metadata.community_rules_accepted === "true";
     const customerId =
       typeof session.customer === "string" ? session.customer : null;
     const subscriptionId =
@@ -770,7 +771,7 @@ async function handleGuestCheckout(
         })
         .eq("id", existingMember.id);
     } else {
-      await admin.from("members").insert({
+      const memberInsert = {
         space_id: spaceId,
         user_id: userId,
         plan_id: resolvedPlanId,
@@ -778,7 +779,14 @@ async function handleGuestCheckout(
         stripe_subscription_id: subscriptionId,
         status: "active" as const,
         joined_at: new Date().toISOString(),
-      });
+      };
+      // community_rules_accepted_at not yet in generated types
+      if (communityRulesAccepted) {
+        Object.assign(memberInsert, {
+          community_rules_accepted_at: new Date().toISOString(),
+        });
+      }
+      await admin.from("members").insert(memberInsert);
     }
   }
 

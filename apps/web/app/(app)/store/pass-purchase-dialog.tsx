@@ -131,6 +131,7 @@ export function PassPurchaseDialog({
         isGuest,
         isGuest ? guestName.trim() : undefined,
         isGuest ? guestEmail.trim() : undefined,
+        rulesAccepted,
       );
 
       if (!result.success) {
