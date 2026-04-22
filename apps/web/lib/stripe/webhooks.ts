@@ -232,65 +232,66 @@ async function handlePassCheckout(
   // Auto-assign desk
   const { data: pass } = await admin
     .from("passes")
-    .select("start_date, end_date")
+    .select("start_date, end_date, pass_type")
     .eq("id", passId)
     .single();
 
-  if (pass) {
-    const { data: deskId, error: deskError } = await admin.rpc("auto_assign_desk", {
-      p_space_id: spaceId,
-      p_start_date: pass.start_date,
-      p_end_date: pass.end_date,
-    });
+  if (!pass) return;
 
-    if (deskError) {
-      logger.error("auto_assign_desk RPC failed", { passId, error: deskError.message });
-    } else if (deskId) {
-      await admin
-        .from("passes")
-        .update({ assigned_desk_id: deskId })
-        .eq("id", passId);
-    } else {
-      logger.warn("No desk available for pass — pass still active", { passId });
-    }
+  const { data: deskId, error: deskError } = await admin.rpc("auto_assign_desk", {
+    p_space_id: spaceId,
+    p_start_date: pass.start_date,
+    p_end_date: pass.end_date,
+  });
+
+  if (deskError) {
+    logger.error("auto_assign_desk RPC failed", { passId, error: deskError.message });
+  } else if (deskId) {
+    await admin
+      .from("passes")
+      .update({ assigned_desk_id: deskId })
+      .eq("id", passId);
+  } else {
+    logger.warn("No desk available for pass — pass still active", { passId });
+  }
+
+  // Persist community_rules_accepted_at on the pass if accepted
+  const communityRulesAccepted = session.metadata?.community_rules_accepted === "true";
+  if (communityRulesAccepted) {
+    await admin
+      .from("passes")
+      .update({ community_rules_accepted_at: new Date().toISOString() } as Record<string, unknown>)
+      .eq("id", passId);
   }
 
   // Send pass confirmation email (fire-and-forget)
-  if (pass) {
-    const { data: passDetails } = await admin
-      .from("passes")
-      .select("pass_type, assigned_desk_id")
-      .eq("id", passId)
+  const user = await admin
+    .from("shared_profiles")
+    .select("email, full_name")
+    .eq("id", userId)
+    .single();
+
+  let deskName: string | null = null;
+  if (deskId) {
+    const { data: desk } = await admin
+      .from("resources")
+      .select("name")
+      .eq("id", deskId as string)
       .single();
+    deskName = desk?.name ?? null;
+  }
 
-    const user = await admin
-      .from("shared_profiles")
-      .select("email, full_name")
-      .eq("id", userId)
-      .single();
-
-    let deskName: string | null = null;
-    if (passDetails?.assigned_desk_id) {
-      const { data: desk } = await admin
-        .from("resources")
-        .select("name")
-        .eq("id", passDetails.assigned_desk_id)
-        .single();
-      deskName = desk?.name ?? null;
-    }
-
-    if (user.data?.email) {
-      notifyPassConfirmation({
-        spaceId,
-        userId,
-        email: user.data.email,
-        name: user.data.full_name ?? undefined,
-        passType: passDetails?.pass_type ?? "day",
-        startDate: pass.start_date,
-        endDate: pass.end_date,
-        deskName,
-      });
-    }
+  if (user.data?.email) {
+    notifyPassConfirmation({
+      spaceId,
+      userId,
+      email: user.data.email,
+      name: user.data.full_name ?? undefined,
+      passType: pass.pass_type ?? "day",
+      startDate: pass.start_date,
+      endDate: pass.end_date,
+      deskName,
+    });
   }
 }
 
@@ -757,18 +758,24 @@ async function handleGuestCheckout(
       .maybeSingle();
 
     if (existingMember) {
+      const memberUpdate = {
+        plan_id: resolvedPlanId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        status: "active" as const,
+        joined_at: new Date().toISOString(),
+        cancelled_at: null,
+        cancel_requested_at: null,
+        updated_at: new Date().toISOString(),
+      };
+      if (communityRulesAccepted) {
+        Object.assign(memberUpdate, {
+          community_rules_accepted_at: new Date().toISOString(),
+        });
+      }
       await admin
         .from("members")
-        .update({
-          plan_id: resolvedPlanId,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-          status: "active" as const,
-          joined_at: new Date().toISOString(),
-          cancelled_at: null,
-          cancel_requested_at: null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(memberUpdate)
         .eq("id", existingMember.id);
     } else {
       const memberInsert = {

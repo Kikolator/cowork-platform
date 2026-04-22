@@ -152,14 +152,14 @@ export async function notifyPassConfirmation(params: {
     const wifiNetwork = (accessRow?.wifi_network as string | null) ?? null;
     const wifiPassword = (accessRow?.wifi_password as string | null) ?? null;
 
-    // Fetch community rules
+    // Fetch community rules (column not yet in generated types)
     const { data: space } = await admin
       .from("spaces")
-      .select("community_rules_text" as "id")
+      .select("*")
       .eq("id", params.spaceId)
       .single();
-    const communityRulesText = (space as Record<string, unknown> | null)
-      ?.community_rules_text as string | null ?? null;
+    const communityRulesText = ((space as Record<string, unknown> | null)
+      ?.community_rules_text as string | null) ?? null;
 
     // Truncate rules to ~500 chars for the email
     const communityRulesSummary = communityRulesText
