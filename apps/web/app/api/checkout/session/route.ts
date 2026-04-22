@@ -5,6 +5,8 @@ import { getStripe } from "@/lib/stripe/client";
 import { getEffectiveFeePercent, calculateApplicationFee } from "@/lib/stripe/fees";
 import { ensureStripePriceExists } from "@/lib/stripe/subscriptions";
 import { ensureOneTimePriceExists } from "@/lib/stripe/checkout";
+import { isSpaceClosedOnDate, calculatePassEndDate } from "@/lib/space/closures";
+import type { BusinessHours } from "@/lib/booking/format";
 import { checkoutSessionSchema } from "../schemas";
 import { getOrigin } from "@/lib/url";
 
@@ -105,30 +107,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Start date must not be in the past" }, { status: 400 });
     }
 
-    // Calculate end date (skip weekends for multi-day consecutive passes)
-    let endDate = startDate;
-    if (durationDays > 1) {
-      const cursor = new Date(startDate + "T12:00:00Z");
-      let daysAssigned = 1;
-      while (daysAssigned < durationDays) {
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-        const dayOfWeek = cursor.getUTCDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          daysAssigned++;
-        }
-      }
-      endDate = cursor.toISOString().split("T")[0]!;
-    }
-
-    // Check pass availability (max_pass_desks)
+    // Fetch space config for closure + business hours checks
     const { data: spaceConfig } = await admin
       .from("spaces")
-      .select("max_pass_desks")
+      .select("business_hours, timezone")
       .eq("id", spaceId)
       .single();
 
-    const maxPassDesks = (spaceConfig as Record<string, unknown> | null)
-      ?.max_pass_desks as number | null;
+    const spaceRow = spaceConfig as Record<string, unknown> | null;
+    const maxPassDesks = (spaceRow?.max_pass_desks as number | null) ?? null;
+    const businessHours = (spaceConfig?.business_hours ?? {}) as BusinessHours;
+    const timezone = spaceConfig?.timezone ?? "UTC";
+
+    // Block closed days (weekends + closures)
+    const closedCheck = await isSpaceClosedOnDate(admin, spaceId, startDate, businessHours, timezone);
+    if (closedCheck.closed) {
+      return NextResponse.json(
+        { error: closedCheck.reason ?? "Space is closed on this day" },
+        { status: 409 },
+      );
+    }
+
+    // Calculate end date skipping weekends AND closures
+    const endDate = await calculatePassEndDate(
+      admin, spaceId, startDate, durationDays, businessHours, timezone,
+    );
 
     if (maxPassDesks !== null) {
       const { count } = await admin

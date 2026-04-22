@@ -3,6 +3,7 @@ interface DateAvailabilityProps {
   availability: {
     available: boolean;
     spots_left: number | null;
+    reason?: string;
   } | null;
 }
 
@@ -21,7 +22,7 @@ export function DateAvailability({
   if (!availability.available) {
     return (
       <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-        No spots available on this date
+        {availability.reason ?? "No spots available on this date"}
       </p>
     );
   }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSpaceClosedOnDate, calculatePassEndDate } from "@/lib/space/closures";
+import type { BusinessHours } from "@/lib/booking/format";
 import { availabilityQuerySchema } from "../schemas";
 
 export async function GET(request: NextRequest) {
@@ -45,33 +47,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ available: false });
     }
 
-    // Calculate end date for multi-day passes
     const startDate = date!;
-    let endDate = startDate;
-    if (durationDays > 1) {
-      // For consecutive passes, walk forward skipping weekends
-      const start = new Date(startDate + "T12:00:00Z");
-      let daysAssigned = 1;
-      const cursor = new Date(start);
-      while (daysAssigned < durationDays) {
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-        const dayOfWeek = cursor.getUTCDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-          daysAssigned++;
-        }
-      }
-      endDate = cursor.toISOString().split("T")[0]!;
-    }
 
-    // Check max_pass_desks limit
+    // Fetch space config for closure/business hours checks
     const { data: space } = await admin
       .from("spaces")
-      .select("max_pass_desks")
+      .select("business_hours, timezone")
       .eq("id", spaceId)
       .single();
 
-    const maxPassDesks = (space as Record<string, unknown> | null)
-      ?.max_pass_desks as number | null;
+    const spaceRow = space as Record<string, unknown> | null;
+    const maxPassDesks = (spaceRow?.max_pass_desks as number | null) ?? null;
+    const businessHours = (space?.business_hours ?? {}) as BusinessHours;
+    const timezone = space?.timezone ?? "UTC";
+
+    // Check if start date is closed (weekend or closure)
+    const closedCheck = await isSpaceClosedOnDate(admin, spaceId, startDate, businessHours, timezone);
+    if (closedCheck.closed) {
+      return NextResponse.json({
+        available: false,
+        reason: closedCheck.reason,
+      });
+    }
+
+    // Calculate end date skipping weekends AND closures
+    const endDate = await calculatePassEndDate(
+      admin, spaceId, startDate, durationDays, businessHours, timezone,
+    );
 
     // Count active passes overlapping any day in the range
     const { count: activePassCount } = await admin
