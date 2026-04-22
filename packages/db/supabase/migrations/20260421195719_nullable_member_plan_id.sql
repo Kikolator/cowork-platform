@@ -1,17 +1,8 @@
--- Migration: nullable_member_plan_id
--- Allow members to exist without an assigned plan (e.g. imported members with
--- no matching plan). Members without a plan are set to status 'churned' and
--- excluded from capacity calculations and credit grants.
---
--- Rollback:
---   UPDATE members SET plan_id = (SELECT id FROM plans WHERE space_id = members.space_id LIMIT 1) WHERE plan_id IS NULL;
---   ALTER TABLE members ALTER COLUMN plan_id SET NOT NULL;
---   -- Then recreate get_space_capacity / check_space_capacity without the plan_id IS NOT NULL filter.
-
--- 1. Drop the NOT NULL constraint (metadata-only change, no table rewrite)
+-- Make plan_id nullable to support imported members without a matched plan
 ALTER TABLE members ALTER COLUMN plan_id DROP NOT NULL;
 
--- 2. Recreate get_space_capacity to explicitly exclude null plan_id members
+-- Update capacity functions to handle nullable plan_id
+
 CREATE OR REPLACE FUNCTION get_space_capacity(p_space_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER STABLE
@@ -21,7 +12,6 @@ DECLARE
   v_consumed numeric;
   v_remaining numeric;
 BEGIN
-  -- Count available desks in the space
   SELECT count(*) INTO v_total_desks
   FROM resources r
   JOIN resource_types rt ON rt.id = r.resource_type_id
@@ -29,7 +19,6 @@ BEGIN
     AND rt.slug = 'desk'
     AND r.status = 'available';
 
-  -- Sum consumed capacity from active members (null plan_id = 0 weight)
   SELECT COALESCE(SUM(p.desk_weight), 0) INTO v_consumed
   FROM members m
   JOIN plans p ON p.id = m.plan_id
@@ -47,7 +36,6 @@ BEGIN
 END;
 $$;
 
--- 3. Recreate check_space_capacity with same null guard
 CREATE OR REPLACE FUNCTION check_space_capacity(
   p_space_id uuid,
   p_plan_id uuid,
@@ -62,7 +50,6 @@ DECLARE
   v_plan_weight numeric;
   v_remaining numeric;
 BEGIN
-  -- Count available desks
   SELECT count(*) INTO v_total_desks
   FROM resources r
   JOIN resource_types rt ON rt.id = r.resource_type_id
@@ -70,7 +57,6 @@ BEGIN
     AND rt.slug = 'desk'
     AND r.status = 'available';
 
-  -- Get the plan's desk weight
   SELECT desk_weight INTO v_plan_weight
   FROM plans
   WHERE id = p_plan_id AND space_id = p_space_id;
@@ -79,7 +65,6 @@ BEGIN
     RETURN jsonb_build_object('error', 'Plan not found');
   END IF;
 
-  -- Plans with 0 weight always have capacity (virtual office, etc.)
   IF v_plan_weight = 0 THEN
     RETURN jsonb_build_object(
       'total_desks', v_total_desks,
@@ -90,7 +75,6 @@ BEGIN
     );
   END IF;
 
-  -- Sum consumed capacity from active members, excluding null plan_id
   SELECT COALESCE(SUM(p.desk_weight), 0) INTO v_consumed
   FROM members m
   JOIN plans p ON p.id = m.plan_id
@@ -110,3 +94,7 @@ BEGIN
   );
 END;
 $$;
+
+-- Rollback:
+-- ALTER TABLE members ALTER COLUMN plan_id SET NOT NULL;
+-- (restore previous function versions from migration 20260328115941)
