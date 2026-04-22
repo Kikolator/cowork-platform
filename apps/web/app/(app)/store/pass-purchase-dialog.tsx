@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import ReactMarkdown from "react-markdown";
 import {
   Dialog,
   DialogContent,
@@ -245,8 +246,8 @@ export function PassPurchaseDialog({
                 {rulesExpanded ? "Hide" : "View"} community rules
               </button>
               {rulesExpanded && (
-                <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
-                  {communityRulesText}
+                <div className="prose prose-sm dark:prose-invert max-h-48 max-w-none overflow-y-auto rounded-lg border border-border bg-muted/30 p-3">
+                  <ReactMarkdown>{communityRulesText!}</ReactMarkdown>
                 </div>
               )}
               <label className="flex cursor-pointer items-center gap-2">

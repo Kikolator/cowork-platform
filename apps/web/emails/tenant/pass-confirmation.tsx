@@ -1,4 +1,4 @@
-import { Button, Heading, Section, Text } from "@react-email/components";
+import { Button, Heading, Markdown, Section, Text } from "@react-email/components";
 import { TenantLayout } from "../components/tenant-layout";
 import { buttonStyle, detailBox, text } from "../components/styles";
 import type { TenantBranding } from "../components/tenant-layout";
@@ -104,9 +104,7 @@ export default function PassConfirmationEmail({
           <Text style={{ ...detailBox.label, marginBottom: "8px" }}>
             Community Rules
           </Text>
-          <Text style={{ ...text.small, whiteSpace: "pre-wrap" as const }}>
-            {communityRulesSummary}
-          </Text>
+          <Markdown>{communityRulesSummary}</Markdown>
         </Section>
       )}
 
