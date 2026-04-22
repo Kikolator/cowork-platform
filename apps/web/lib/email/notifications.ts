@@ -10,6 +10,7 @@ import {
 import BookingConfirmationEmail from "@/emails/tenant/booking-confirmation";
 import SpaceSignupEmail from "@/emails/tenant/space-signup";
 import PassConfirmationEmail from "@/emails/tenant/pass-confirmation";
+import NewPassPurchaseEmail from "@/emails/tenant/new-pass-purchase";
 import NewSpaceEmail from "@/emails/platform/new-space";
 
 const PLATFORM_DOMAIN =
@@ -206,6 +207,77 @@ export async function notifyPassConfirmation(params: {
     logger.error("Failed to send pass confirmation email", {
       spaceId: params.spaceId,
       userId: params.userId,
+      error: err instanceof Error ? err.message : "Unknown",
+    });
+  }
+}
+
+/* ── Admin notification: new pass purchase ────────────────────── */
+
+export async function notifyNewPassPurchase(params: {
+  spaceId: string;
+  visitorName: string | null;
+  visitorEmail: string;
+  passType: "day" | "week";
+  startDate: string;
+  endDate: string;
+  amountCents: number;
+  currency: string;
+}) {
+  try {
+    const branding = await getSpaceBranding(params.spaceId);
+    if (!branding) return;
+
+    const admin = createAdminClient();
+    const { data: spaceUser } = await admin
+      .from("space_users")
+      .select("user_id")
+      .eq("space_id", params.spaceId)
+      .eq("role", "owner")
+      .single();
+
+    if (!spaceUser) return;
+
+    const owner = await getUserProfile(spaceUser.user_id);
+    if (!owner?.email) return;
+
+    const fmt = (iso: string) =>
+      new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+    const amountFormatted = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: params.currency,
+    }).format(params.amountCents / 100);
+
+    const passLabel = params.passType === "week" ? "Week Pass" : "Day Pass";
+    const displayName = params.visitorName || params.visitorEmail;
+
+    await sendTenantEmail({
+      to: owner.email,
+      subject: `New pass purchase \u2014 ${displayName}`,
+      spaceName: branding.name,
+      spaceId: params.spaceId,
+      userId: spaceUser.user_id,
+      template: "new-pass-purchase",
+      react: NewPassPurchaseEmail({
+        tenant: branding,
+        visitorName: params.visitorName ?? "",
+        visitorEmail: params.visitorEmail,
+        passType: passLabel,
+        startDate: fmt(params.startDate),
+        endDate: fmt(params.endDate),
+        amountFormatted,
+        dashboardUrl: `${branding.spaceUrl}/admin/passes`,
+      }),
+    });
+  } catch (err) {
+    logger.error("Failed to send new pass purchase email", {
+      spaceId: params.spaceId,
       error: err instanceof Error ? err.message : "Unknown",
     });
   }

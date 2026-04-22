@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
 import { applyReferrerDiscountCoupon } from "@/lib/stripe/coupons";
-import { notifySpaceSignup, notifyPassConfirmation } from "@/lib/email/notifications";
+import { notifySpaceSignup, notifyPassConfirmation, notifyNewPassPurchase } from "@/lib/email/notifications";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -291,6 +291,18 @@ async function handlePassCheckout(
       startDate: pass.start_date,
       endDate: pass.end_date,
       deskName,
+    });
+
+    // Notify space owner
+    notifyNewPassPurchase({
+      spaceId,
+      visitorName: user.data.full_name ?? null,
+      visitorEmail: user.data.email,
+      passType: pass.pass_type ?? "day",
+      startDate: pass.start_date,
+      endDate: pass.end_date,
+      amountCents: session.amount_total ?? 0,
+      currency: session.currency ?? "eur",
     });
   }
 }
@@ -718,6 +730,18 @@ async function handleGuestCheckout(
         startDate,
         endDate,
         deskName,
+      });
+
+      // Notify space owner
+      notifyNewPassPurchase({
+        spaceId,
+        visitorName: name ?? null,
+        visitorEmail: email,
+        passType: passTypeStr as "day" | "week",
+        startDate,
+        endDate,
+        amountCents: amountTotal,
+        currency: session.currency ?? "eur",
       });
     }
   } else if (type === "membership") {
