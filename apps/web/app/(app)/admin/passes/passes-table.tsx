@@ -68,6 +68,7 @@ interface PassesTableProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
+  upcoming: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
   active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   pending_payment: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   used: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
@@ -76,6 +77,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  upcoming: "Upcoming",
   active: "Active",
   pending_payment: "Pending",
   used: "Used",
@@ -171,7 +173,7 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
           <Select
             value={statusFilter}
             onValueChange={(v) => v && setStatusFilter(v)}
-            items={[{ value: "all", label: "All Statuses" }, { value: "active", label: "Active" }, { value: "pending_payment", label: "Pending" }, { value: "used", label: "Used" }, { value: "cancelled", label: "Cancelled" }, { value: "expired", label: "Expired" }]}
+            items={[{ value: "all", label: "All Statuses" }, { value: "upcoming", label: "Upcoming" }, { value: "active", label: "Active" }, { value: "pending_payment", label: "Pending" }, { value: "used", label: "Used" }, { value: "cancelled", label: "Cancelled" }, { value: "expired", label: "Expired" }]}
           >
             <SelectTrigger className="w-40">
               <SelectValue />

@@ -650,11 +650,13 @@ async function handleGuestCheckout(
     }
 
     const amountTotal = session.amount_total ?? 0;
+    const today = new Date().toISOString().split("T")[0]!;
+    const passStatus = startDate > today ? "upcoming" : "active";
     const passInsert = {
       space_id: spaceId,
       user_id: userId,
       pass_type: passTypeStr as "day" | "week",
-      status: "active" as const,
+      status: passStatus as "active",  // upcoming not yet in generated types
       start_date: startDate,
       end_date: endDate,
       stripe_session_id: session.id,

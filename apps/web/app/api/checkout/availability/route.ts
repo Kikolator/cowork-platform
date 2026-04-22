@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       .from("passes")
       .select("id", { count: "exact", head: true })
       .eq("space_id", spaceId)
-      .in("status", ["active", "pending_payment"])
+      .in("status", ["active", "upcoming" as "active"]) // upcoming not yet in generated types
       .lte("start_date", endDate)
       .gte("end_date", startDate);
 

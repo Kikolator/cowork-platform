@@ -31,8 +31,9 @@ export async function cancelPass(
       .single();
 
     if (!pass) return { success: false, error: "Pass not found" };
-    if (pass.status !== "active") {
-      return { success: false, error: "Only active passes can be cancelled" };
+    // "upcoming" not yet in generated types
+    if (pass.status !== "active" && (pass.status as string) !== "upcoming") {
+      return { success: false, error: "Only active or upcoming passes can be cancelled" };
     }
 
     await admin
