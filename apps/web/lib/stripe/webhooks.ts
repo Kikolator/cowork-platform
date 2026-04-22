@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
 import { applyReferrerDiscountCoupon } from "@/lib/stripe/coupons";
-import { notifySpaceSignup } from "@/lib/email/notifications";
+import { notifySpaceSignup, notifyPassConfirmation } from "@/lib/email/notifications";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -252,6 +252,44 @@ async function handlePassCheckout(
         .eq("id", passId);
     } else {
       logger.warn("No desk available for pass — pass still active", { passId });
+    }
+  }
+
+  // Send pass confirmation email (fire-and-forget)
+  if (pass) {
+    const { data: passDetails } = await admin
+      .from("passes")
+      .select("pass_type, assigned_desk_id")
+      .eq("id", passId)
+      .single();
+
+    const user = await admin
+      .from("shared_profiles")
+      .select("email, full_name")
+      .eq("id", userId)
+      .single();
+
+    let deskName: string | null = null;
+    if (passDetails?.assigned_desk_id) {
+      const { data: desk } = await admin
+        .from("resources")
+        .select("name")
+        .eq("id", passDetails.assigned_desk_id)
+        .single();
+      deskName = desk?.name ?? null;
+    }
+
+    if (user.data?.email) {
+      notifyPassConfirmation({
+        spaceId,
+        userId,
+        email: user.data.email,
+        name: user.data.full_name ?? undefined,
+        passType: passDetails?.pass_type ?? "day",
+        startDate: pass.start_date,
+        endDate: pass.end_date,
+        deskName,
+      });
     }
   }
 }
@@ -655,6 +693,29 @@ async function handleGuestCheckout(
           .update({ assigned_desk_id: deskId })
           .eq("id", pass.id);
       }
+
+      // Fetch desk name for email
+      let deskName: string | null = null;
+      if (deskId) {
+        const { data: desk } = await admin
+          .from("resources")
+          .select("name")
+          .eq("id", deskId)
+          .single();
+        deskName = desk?.name ?? null;
+      }
+
+      // Send pass confirmation email (fire-and-forget)
+      notifyPassConfirmation({
+        spaceId,
+        userId,
+        email,
+        name: name ?? undefined,
+        passType: passTypeStr as "day" | "week",
+        startDate,
+        endDate,
+        deskName,
+      });
     }
   } else if (type === "membership") {
     const planSlug = metadata.plan_slug;
