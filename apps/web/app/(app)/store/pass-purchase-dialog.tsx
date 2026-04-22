@@ -26,6 +26,7 @@ interface PassPurchaseDialogProps {
     slug: string;
   } | null;
   guestPassesEnabled: boolean;
+  communityRulesText: string | null;
   onError: (msg: string) => void;
 }
 
@@ -45,6 +46,7 @@ export function PassPurchaseDialog({
   onOpenChange,
   product,
   guestPassesEnabled,
+  communityRulesText,
   onError,
 }: PassPurchaseDialogProps) {
   const [isPending, startTransition] = useTransition();
@@ -59,6 +61,9 @@ export function PassPurchaseDialog({
   } | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
+  const hasRules = !!communityRulesText?.trim();
 
   // Check availability when date changes
   useEffect(() => {
@@ -87,6 +92,8 @@ export function PassPurchaseDialog({
       setError(null);
       setAvailability(null);
       setCheckingAvailability(true);
+      setRulesAccepted(false);
+      setRulesExpanded(false);
     }
     onOpenChange(nextOpen);
   }
@@ -102,6 +109,10 @@ export function PassPurchaseDialog({
     }
     if (availability && !availability.available) {
       setError("No desks available on this date");
+      return;
+    }
+    if (hasRules && !rulesAccepted) {
+      setError("Please accept the community rules");
       return;
     }
     if (isGuest && !guestName.trim()) {
@@ -223,6 +234,32 @@ export function PassPurchaseDialog({
             </div>
           )}
 
+          {hasRules && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setRulesExpanded(!rulesExpanded)}
+                className="text-sm font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+              >
+                {rulesExpanded ? "Hide" : "View"} community rules
+              </button>
+              {rulesExpanded && (
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+                  {communityRulesText}
+                </div>
+              )}
+              <label className="flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={rulesAccepted}
+                  onCheckedChange={(checked) => setRulesAccepted(checked === true)}
+                />
+                <span className="text-sm">
+                  I accept the community rules and workspace etiquette
+                </span>
+              </label>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               type="button"
@@ -236,7 +273,8 @@ export function PassPurchaseDialog({
               disabled={
                 isPending ||
                 !availability?.available ||
-                checkingAvailability
+                checkingAvailability ||
+                (hasRules && !rulesAccepted)
               }
             >
               {isPending ? "Processing..." : "Proceed to Payment"}

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const checkoutFormSchema = z.object({
   email: z.string().email("A valid email is required"),
@@ -18,11 +19,15 @@ type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 interface CheckoutFormProps {
   type: "daypass" | "membership";
   planSlug?: string;
+  communityRulesText?: string | null;
 }
 
-export function CheckoutForm({ type, planSlug }: CheckoutFormProps) {
+export function CheckoutForm({ type, planSlug, communityRulesText }: CheckoutFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
+  const hasRules = !!communityRulesText?.trim();
 
   const {
     register,
@@ -34,6 +39,7 @@ export function CheckoutForm({ type, planSlug }: CheckoutFormProps) {
   });
 
   async function onSubmit(data: CheckoutFormValues) {
+    if (hasRules && !rulesAccepted) return;
     setIsSubmitting(true);
     setServerError(null);
 
@@ -48,6 +54,7 @@ export function CheckoutForm({ type, planSlug }: CheckoutFormProps) {
           email: data.email,
           name: data.name || undefined,
           plan_slug: planSlug,
+          community_rules_accepted: hasRules && rulesAccepted,
         }),
       });
 
@@ -107,7 +114,33 @@ export function CheckoutForm({ type, planSlug }: CheckoutFormProps) {
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      {hasRules && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setRulesExpanded(!rulesExpanded)}
+            className="text-sm font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+          >
+            {rulesExpanded ? "Hide" : "View"} community rules
+          </button>
+          {rulesExpanded && (
+            <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              {communityRulesText}
+            </div>
+          )}
+          <label className="flex cursor-pointer items-center gap-2">
+            <Checkbox
+              checked={rulesAccepted}
+              onCheckedChange={(checked) => setRulesAccepted(checked === true)}
+            />
+            <span className="text-sm">
+              I accept the community rules and workspace etiquette
+            </span>
+          </label>
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={isSubmitting || (hasRules && !rulesAccepted)}>
         {isSubmitting ? "Redirecting to payment..." : "Continue to payment"}
       </Button>
     </form>
