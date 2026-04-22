@@ -3,10 +3,11 @@
 -- Description: For spaces with legacy daypass_* columns populated, create
 --              corresponding products rows so the products table becomes
 --              the single source of truth for pass configuration.
--- Idempotent: uses NOT EXISTS guard to avoid duplicates on re-run.
+-- Idempotent: uses ON CONFLICT to avoid duplicates on re-run.
 -- ============================================================================
 
--- 1. Create a day-pass product for each space that has daypass enabled + priced
+-- 1. Create a day-pass product for each space that has daypass enabled + priced.
+--    Preserves existing stripe_price_id so we don't create duplicate Stripe prices.
 INSERT INTO products (
   space_id,
   name,
@@ -16,6 +17,7 @@ INSERT INTO products (
   purchase_flow,
   price_cents,
   currency,
+  stripe_price_id,
   pass_type,
   duration_days,
   consecutive_days,
@@ -32,6 +34,7 @@ SELECT
   'date_picker',
   s.daypass_price_cents,
   s.daypass_currency,
+  s.daypass_stripe_price_id,
   'day',
   1,
   true,
@@ -41,14 +44,12 @@ SELECT
 FROM spaces s
 WHERE s.daypass_enabled = true
   AND s.daypass_price_cents IS NOT NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM products p
-    WHERE p.space_id = s.id
-      AND p.category = 'pass'
-      AND p.pass_type = 'day'
-  );
+ON CONFLICT (space_id, slug) DO NOTHING;
 
--- 2. Copy daypass_daily_limit → max_pass_desks where not already set
+-- 2. Copy daypass_daily_limit → max_pass_desks where not already set.
+--    Note: daypass_daily_limit was a per-day issuance cap; max_pass_desks is a
+--    concurrent desk limit. They're being merged intentionally — going forward
+--    the single max_pass_desks limit controls both concepts.
 UPDATE spaces
 SET max_pass_desks = daypass_daily_limit
 WHERE daypass_daily_limit IS NOT NULL
@@ -62,4 +63,6 @@ WHERE daypass_daily_limit IS NOT NULL
 --     AND category = 'pass'
 --     AND pass_type = 'day'
 --     AND description = 'Full day access to the workspace';
--- UPDATE spaces SET max_pass_desks = NULL WHERE max_pass_desks IS NOT NULL;
+-- UPDATE spaces SET max_pass_desks = NULL
+--   WHERE daypass_daily_limit IS NOT NULL
+--     AND max_pass_desks = daypass_daily_limit;
