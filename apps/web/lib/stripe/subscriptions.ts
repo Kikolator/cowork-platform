@@ -296,7 +296,7 @@ export async function provisionSubscription(params: {
     { stripeAccount: stripeAccountId },
   );
 
-  await admin
+  const { error: updateError } = await admin
     .from("members")
     .update({
       stripe_customer_id: customerId,
@@ -304,4 +304,10 @@ export async function provisionSubscription(params: {
       billing_mode: "stripe",
     })
     .eq("id", params.memberId);
+
+  if (updateError) {
+    throw new Error(
+      `Member record update failed after Stripe subscription created (sub: ${subscription.id}): ${updateError.message}`,
+    );
+  }
 }

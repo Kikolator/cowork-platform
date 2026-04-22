@@ -52,6 +52,10 @@ export const sendInviteSchema = z.object({
   memberId: z.string().uuid(),
 });
 
+export const switchBillingSchema = z.object({
+  memberId: z.string().uuid(),
+});
+
 export const sendBulkInvitesSchema = z.object({
   memberIds: z.array(z.string().uuid()).min(1, "Select at least one member"),
 });

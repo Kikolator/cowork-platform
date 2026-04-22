@@ -93,6 +93,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
     handleSubmit,
     setValue,
     watch,
+    formState: { isDirty },
   } = useForm<UpdateMemberValues>({
     defaultValues: {
       planId: member.plan_id,
@@ -233,11 +234,11 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={isPending || !watchPlanId}
+                      disabled={isPending || !watchPlanId || isDirty}
                       onClick={() => {
                         startTransition(async () => {
                           setServerError(null);
-                          const result = await switchToStripeBilling(member.id);
+                          const result = await switchToStripeBilling({ memberId: member.id });
                           if (!result.success) {
                             setServerError(result.error);
                           } else {

@@ -15,6 +15,7 @@ import {
   addMemberSchema,
   sendInviteSchema,
   sendBulkInvitesSchema,
+  switchBillingSchema,
 } from "./schemas";
 
 type FiscalIdType = Database["public"]["Enums"]["fiscal_id_type"];
@@ -487,20 +488,29 @@ export async function sendBulkInvites(input: unknown) {
   return { success: true as const, sent, failed };
 }
 
-export async function switchToStripeBilling(memberId: string) {
+export async function switchToStripeBilling(input: unknown) {
+  const parsed = switchBillingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const { supabase, spaceId } = await getSpaceId();
   const admin = createAdminClient();
   const logger = createLogger({ component: "members/actions", spaceId });
 
   const { data: member } = await supabase
     .from("members")
-    .select("id, user_id, plan_id, status, stripe_subscription_id, custom_price_cents")
-    .eq("id", memberId)
+    .select("id, user_id, plan_id, status, billing_mode, stripe_subscription_id, custom_price_cents")
+    .eq("id", parsed.data.memberId)
     .eq("space_id", spaceId)
     .single();
 
   if (!member) {
     return { success: false as const, error: "Member not found" };
+  }
+
+  if ((member as Record<string, unknown>).billing_mode !== "manual") {
+    return { success: false as const, error: "Member is not on manual billing." };
   }
 
   if (!member.plan_id) {
