@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { getEffectiveFeePercent, calculateApplicationFee } from "@/lib/stripe/fees";
 import { ensureStripePriceExists } from "@/lib/stripe/subscriptions";
+import { ensureOneTimePriceExists } from "@/lib/stripe/checkout";
 import { checkoutSessionSchema } from "../schemas";
 import { getOrigin } from "@/lib/url";
 
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { type, email, name, plan_slug } = parsed.data;
+  const { type, email, name, plan_slug, product_slug, start_date, community_rules_accepted } = parsed.data;
   const admin = createAdminClient();
 
   // Resolve tenant + Stripe account
@@ -66,6 +67,153 @@ export async function POST(request: NextRequest) {
 
   const origin = getOrigin(request.headers);
   const slugParam = spaceSlug ? `?space=${spaceSlug}` : "";
+
+  if (type === "product") {
+    // Product-based pass checkout
+    const logger = createLogger({ component: "checkout/session", spaceId });
+
+    const { data: product } = await admin
+      .from("products")
+      .select("id, name, slug, price_cents, currency, category, stripe_price_id, stripe_product_id")
+      .eq("space_id", spaceId)
+      .eq("slug", product_slug!)
+      .eq("active", true)
+      .single();
+
+    if (!product || product.category !== "pass") {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const row = product as Record<string, unknown>;
+    const passType = row.pass_type as string | null;
+    const durationDays = (row.duration_days as number | null) ?? 1;
+
+    if (!passType) {
+      return NextResponse.json({ error: "Product not configured" }, { status: 400 });
+    }
+
+    // Calculate end date
+    const startDate = start_date!;
+    let endDate = startDate;
+    if (durationDays > 1) {
+      const cursor = new Date(startDate + "T12:00:00Z");
+      let daysAssigned = 1;
+      while (daysAssigned < durationDays) {
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+        const dayOfWeek = cursor.getUTCDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          daysAssigned++;
+        }
+      }
+      endDate = cursor.toISOString().split("T")[0]!;
+    }
+
+    // Check pass availability (max_pass_desks)
+    const { data: spaceConfig } = await admin
+      .from("spaces")
+      .select("max_pass_desks")
+      .eq("id", spaceId)
+      .single();
+
+    const maxPassDesks = (spaceConfig as Record<string, unknown> | null)
+      ?.max_pass_desks as number | null;
+
+    if (maxPassDesks !== null) {
+      const { count } = await admin
+        .from("passes")
+        .select("id", { count: "exact", head: true })
+        .eq("space_id", spaceId)
+        .in("status", ["active", "pending_payment"])
+        .lte("start_date", endDate)
+        .gte("end_date", startDate);
+
+      if ((count ?? 0) >= maxPassDesks) {
+        return NextResponse.json(
+          { error: "No spots available for this date" },
+          { status: 409 },
+        );
+      }
+    }
+
+    try {
+      // Ensure Stripe price exists
+      const priceId = await ensureOneTimePriceExists(
+        product,
+        connectedAccountId,
+        spaceId,
+      );
+
+      // Create pending pass record
+      const passInsert = {
+        space_id: spaceId,
+        user_id: "00000000-0000-0000-0000-000000000000", // placeholder — updated by webhook
+        pass_type: passType as "day" | "week",
+        status: "pending_payment" as const,
+        start_date: startDate,
+        end_date: endDate,
+        amount_cents: product.price_cents,
+        is_guest: false,
+      };
+      // New columns not yet in generated types
+      Object.assign(passInsert, {
+        product_id: product.id,
+        ...(community_rules_accepted
+          ? { community_rules_accepted_at: new Date().toISOString() }
+          : {}),
+      });
+
+      const { data: pass, error: passError } = await admin
+        .from("passes")
+        .insert(passInsert)
+        .select("id")
+        .single();
+
+      if (passError || !pass) {
+        logger.error("Failed to create pending pass", { error: passError?.message });
+        return NextResponse.json({ error: "Failed to create pass" }, { status: 500 });
+      }
+
+      const session = await getStripe().checkout.sessions.create(
+        {
+          mode: "payment",
+          customer_email: email,
+          line_items: [{ price: priceId, quantity: 1 }],
+          payment_intent_data: {
+            application_fee_amount: calculateApplicationFee(
+              product.price_cents,
+              feePercent,
+            ),
+          },
+          success_url: `${origin}/checkout/confirmation?session_id={CHECKOUT_SESSION_ID}${slugParam ? `&space=${spaceSlug}` : ""}`,
+          cancel_url: `${origin}/checkout/product?slug=${product.slug}${slugParam ? `&space=${spaceSlug}` : ""}`,
+          metadata: {
+            type: "product",
+            guest_checkout: "true",
+            space_id: spaceId,
+            product_id: product.id,
+            product_category: "pass",
+            pass_id: pass.id,
+            email,
+            ...(name ? { name } : {}),
+          },
+        },
+        { stripeAccount: connectedAccountId },
+      );
+
+      // Save stripe_session_id to pass for webhook matching
+      await admin
+        .from("passes")
+        .update({ stripe_session_id: session.id })
+        .eq("id", pass.id);
+
+      return NextResponse.json({ url: session.url });
+    } catch (err) {
+      logger.error("Product checkout failed", {
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
+    }
+  }
 
   if (type === "daypass") {
     // Re-validate availability

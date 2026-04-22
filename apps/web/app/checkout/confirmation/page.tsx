@@ -67,8 +67,8 @@ export default async function ConfirmationPage({
     email = session.customer_email ?? session.customer_details?.email ?? null;
     purchaseType = session.metadata?.type ?? null;
 
-    if (purchaseType === "daypass") {
-      purchaseSummary = "Day Pass";
+    if (purchaseType === "daypass" || purchaseType === "product") {
+      purchaseSummary = "Pass";
     } else if (purchaseType === "membership") {
       purchaseSummary = "Membership";
     } else {
@@ -118,7 +118,7 @@ export default async function ConfirmationPage({
         )}
         <p className="text-sm text-muted-foreground">
           Click the link in your email to access your account. Your{" "}
-          {purchaseType === "daypass" ? "day pass" : "membership"} is already
+          {purchaseType === "membership" ? "membership" : "pass"} is already
           active.
         </p>
       </div>
