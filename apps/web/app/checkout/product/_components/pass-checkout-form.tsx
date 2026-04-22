@@ -63,6 +63,7 @@ export function PassCheckoutForm({
   });
 
   const watchDate = watch("startDate");
+  const watchEmail = watch("email");
   const watchRulesAccepted = watch("communityRulesAccepted");
 
   // Check availability when date changes
@@ -80,12 +81,16 @@ export function PassCheckoutForm({
       date: watchDate,
     });
     if (spaceParam) params.set("space", spaceParam);
+    // Include email for duplicate pass check (only if valid)
+    if (watchEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(watchEmail)) {
+      params.set("email", watchEmail);
+    }
 
     fetch(`/api/checkout/availability?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) {
-          setAvailability(data as { available: boolean; spots_left: number | null });
+          setAvailability(data as { available: boolean; spots_left: number | null; has_existing_pass?: boolean });
           setCheckingAvailability(false);
         }
       })
@@ -99,7 +104,7 @@ export function PassCheckoutForm({
     return () => {
       cancelled = true;
     };
-  }, [watchDate, productSlug]);
+  }, [watchDate, watchEmail, productSlug]);
 
   async function onSubmit(data: PassCheckoutValues) {
     if (hasRules && !data.communityRulesAccepted) return;

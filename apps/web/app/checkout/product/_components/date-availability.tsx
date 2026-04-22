@@ -4,6 +4,7 @@ interface DateAvailabilityProps {
     available: boolean;
     spots_left: number | null;
     reason?: string;
+    has_existing_pass?: boolean;
   } | null;
 }
 
@@ -37,6 +38,13 @@ export function DateAvailability({
   }
 
   return (
-    <p className="text-center text-sm text-emerald-600">Available</p>
+    <div className="space-y-2">
+      <p className="text-center text-sm text-emerald-600">Available</p>
+      {availability.has_existing_pass && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          You already have a pass for overlapping dates. You can still proceed.
+        </p>
+      )}
+    </div>
   );
 }

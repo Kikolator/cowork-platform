@@ -6,6 +6,7 @@ export const availabilityQuerySchema = z
     plan_slug: z.string().optional(),
     product_slug: z.string().optional(),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD").optional(),
+    email: z.string().email().optional(),
   })
   .refine((d) => d.type !== "membership" || d.plan_slug, {
     message: "plan_slug is required for membership availability checks",

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { type, plan_slug, product_slug, date } = parsed.data;
+  const { type, plan_slug, product_slug, date, email } = parsed.data;
   const admin = createAdminClient();
 
   if (type === "product") {
@@ -75,6 +75,28 @@ export async function GET(request: NextRequest) {
       admin, spaceId, startDate, durationDays, businessHours, timezone,
     );
 
+    // Check for duplicate passes by email
+    let hasExistingPass = false;
+    if (email) {
+      const { data: existingPasses } = await admin
+        .from("passes")
+        .select("id, user:shared_profiles!user_id(email)")
+        .eq("space_id", spaceId)
+        .in("status", ["active", "upcoming" as "active"])
+        .lte("start_date", endDate)
+        .gte("end_date", startDate);
+
+      hasExistingPass = existingPasses?.some((p) => {
+        const u = p.user as unknown;
+        return (
+          u !== null &&
+          typeof u === "object" &&
+          "email" in (u as Record<string, unknown>) &&
+          (u as Record<string, unknown>).email === email
+        );
+      }) ?? false;
+    }
+
     // Count active passes overlapping any day in the range
     const { count: activePassCount } = await admin
       .from("passes")
@@ -91,12 +113,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         available: spotsLeft > 0,
         spots_left: spotsLeft,
+        has_existing_pass: hasExistingPass,
       });
     }
 
     // No pass desk limit — check general desk availability.
-    // get_desk_availability already accounts for active passes (Phase 6),
-    // so we use available_desks directly without subtracting activePasses.
     const { data: deskAvail } = await admin.rpc("get_desk_availability", {
       p_space_id: spaceId,
       p_date: startDate,
@@ -107,10 +128,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         available: available_desks > 0,
         spots_left: available_desks <= 10 ? available_desks : null,
+        has_existing_pass: hasExistingPass,
       });
     }
 
-    return NextResponse.json({ available: true, spots_left: null });
+    return NextResponse.json({ available: true, spots_left: null, has_existing_pass: hasExistingPass });
   }
 
   if (type === "daypass") {
