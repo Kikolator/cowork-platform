@@ -59,9 +59,9 @@ export default async function DashboardPage() {
     localHour < 12 ? "Good morning" : localHour < 18 ? "Good afternoon" : "Good evening";
 
   // Fetch member data, upcoming count, today's bookings, closures, profile, and recent resources
-  let memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult;
+  let memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult, passCountResult;
   try {
-  [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult] = await Promise.all([
+  [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult, passCountResult] = await Promise.all([
     spaceId
       ? supabase
           .from("members")
@@ -117,6 +117,14 @@ export default async function DashboardPage() {
           .order("start_time", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: null }),
+    spaceId
+      ? supabase
+          .from("passes")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("space_id", spaceId)
+          .in("status", ["active", "upcoming" as "active"]) // upcoming not yet in generated types
+      : Promise.resolve({ data: null, count: 0 }),
   ]);
   } catch (err) {
     createLogger({ component: "dashboard" }).error("Failed to load dashboard data", {
@@ -128,9 +136,11 @@ export default async function DashboardPage() {
     closuresResult = { data: null };
     profileResult = { data: null };
     recentBookingsResult = { data: null };
+    passCountResult = { data: null, count: 0 };
   }
 
   const member = memberResult.data;
+  const activePassCount = (passCountResult as { count?: number | null }).count ?? 0;
   const closures = closuresResult.data ?? [];
   const upcomingCount = upcomingResult.data?.length ?? 0;
   const firstName = profileResult.data?.full_name?.split(" ")[0] ?? null;
@@ -327,7 +337,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Member info */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <LinkCard title="Your plan" value={planDisplay} href="/plan" />
         <LinkCard
           title="Upcoming bookings"
@@ -335,12 +345,18 @@ export default async function DashboardPage() {
           href="/bookings"
         />
         <InfoCard title="Credits" value={creditsDisplay} />
+        <LinkCard
+          title="My Passes"
+          value={activePassCount > 0 ? `${activePassCount} active` : "No active passes"}
+          href="/passes"
+        />
       </div>
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-3">
         <QuickAction href="/book" icon={<CalendarPlus className="h-4 w-4" />} label="Book a space" />
         <QuickAction href="/bookings" icon={<CalendarDays className="h-4 w-4" />} label="My bookings" />
+        <QuickAction href="/passes" icon={<Ticket className="h-4 w-4" />} label="My passes" />
         <QuickAction href="/plan" icon={<CreditCard className="h-4 w-4" />} label="My plan" />
         <QuickAction href="/store" icon={<Store className="h-4 w-4" />} label="Store" />
       </div>
