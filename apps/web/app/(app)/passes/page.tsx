@@ -41,6 +41,16 @@ export default async function PassesPage() {
   const currentPasses = allPasses.filter((p) => activeStatuses.has(p.status));
   const pastPasses = allPasses.filter((p) => !activeStatuses.has(p.status));
 
+  // Compute cancellability outside JSX render (Date.now() is impure)
+  const now = Date.now();
+  const cancelMap = new Map(
+    currentPasses.map((p) => {
+      const hoursUntilStart =
+        (new Date(p.start_date + "T00:00:00Z").getTime() - now) / (1000 * 60 * 60);
+      return [p.id, (p.status as string) === "upcoming" && hoursUntilStart >= cancelBeforeHours];
+    }),
+  );
+
   return (
     <div className="mx-auto max-w-3xl">
       <div>
@@ -65,15 +75,14 @@ export default async function PassesPage() {
                 Upcoming &amp; Active
               </h2>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {currentPasses.map((pass) => {
-                  const hoursUntilStart =
-                    (new Date(pass.start_date + "T00:00:00Z").getTime() - Date.now()) / (1000 * 60 * 60);
-                  const canCancel =
-                    (pass.status as string) === "upcoming" && hoursUntilStart >= cancelBeforeHours;
-                  return (
-                    <PassCard key={pass.id} pass={pass} currency={currency} canCancel={canCancel} />
-                  );
-                })}
+                {currentPasses.map((pass) => (
+                  <PassCard
+                    key={pass.id}
+                    pass={pass}
+                    currency={currency}
+                    canCancel={cancelMap.get(pass.id) ?? false}
+                  />
+                ))}
               </div>
             </section>
           )}
