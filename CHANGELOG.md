@@ -7,6 +7,32 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-04-22
+
+### Added
+- Email design system with tenant branding and Supabase `send_email` hook (#180)
+- RogueOps landing page (#181)
+- Switch-to-Stripe billing action: admin can provision Stripe subscription for manual-billed members (#183)
+- Extracted `provisionSubscription()` into shared `lib/stripe/subscriptions.ts` (#183)
+
+### Fixed
+- Member import now preserves existing `space_users` role instead of overwriting admin/owner to member (#179)
+- `members.plan_id` is now nullable: unmatched imports get `plan_id = null` and `status = churned` instead of wrong default plan (#179)
+- Imported members default to `billing_mode = manual` to prevent silent billing gap (#183)
+- Capacity RPCs (`get_space_capacity`, `check_space_capacity`) exclude null plan_id members (#179)
+- Credits cron and Stripe webhook guard against null plan_id (#179)
+
+## [0.9.0] - 2026-04-21
+
+### Added
+- Favicon override and header display mode (#174, #175)
+- Plan sort order exposed in admin form (#152)
+- SSR email templates with space-direct redirects (#173)
+
+### Fixed
+- Invite auth callback redirect (#165, #166)
+- Stripe price invalidation on plan/product price change (#160)
+
 ## [0.8.1] - 2026-04-15
 
 ### Added
