@@ -7,6 +7,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-04-22
+
+### Fixed
+- Add missing migration `20260421195719` (nullable_member_plan_id) that was applied to prod but not committed, causing Deploy Prod to fail (#190)
+
 ## [0.10.0] - 2026-04-22
 
 ### Added
