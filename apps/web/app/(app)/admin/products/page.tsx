@@ -13,7 +13,7 @@ export default async function ProductsPage() {
     await Promise.all([
       supabase
         .from("products")
-        .select("*")
+        .select("id, name, slug, description, category, price_cents, currency, iva_rate, plan_id, credit_grant_config, visibility_rules, active, sort_order")
         .order("sort_order", { ascending: true }),
       supabase
         .from("resource_types")

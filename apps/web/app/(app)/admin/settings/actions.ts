@@ -153,8 +153,6 @@ export async function updateSpaceOperations(input: unknown) {
       business_hours: parsed.data.businessHours,
       min_booking_minutes: parsed.data.minBookingMinutes,
       max_pass_desks: typeof parsed.data.maxPassDesks === "number" ? parsed.data.maxPassDesks : null,
-      wifi_network: parsed.data.wifiNetwork || null,
-      wifi_password: parsed.data.wifiPassword || null,
       community_rules_text: parsed.data.communityRulesText || null,
     } as Record<string, unknown>)
     .eq("id", spaceId);

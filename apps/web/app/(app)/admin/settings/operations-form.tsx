@@ -77,8 +77,6 @@ interface OperationsFormProps {
     business_hours: unknown;
     min_booking_minutes: number;
     max_pass_desks: number | null;
-    wifi_network: string | null;
-    wifi_password: string | null;
     community_rules_text: string | null;
   };
 }
@@ -100,8 +98,6 @@ export function OperationsForm({ space }: OperationsFormProps) {
       businessHours: initialHours,
       minBookingMinutes: space.min_booking_minutes,
       maxPassDesks: space.max_pass_desks ?? "",
-      wifiNetwork: space.wifi_network ?? "",
-      wifiPassword: space.wifi_password ?? "",
       communityRulesText: space.community_rules_text ?? "",
     },
   });
@@ -288,34 +284,6 @@ export function OperationsForm({ space }: OperationsFormProps) {
           <p className="text-[11px] text-muted-foreground">
             Maximum desks allocatable to pass holders at any time. Leave empty for no limit.
           </p>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* ── WiFi ── */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">WiFi</Label>
-        <p className="text-[11px] text-muted-foreground">
-          Shown to pass holders and members in confirmation emails.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="wifiNetwork">Network name</Label>
-            <Input
-              id="wifiNetwork"
-              {...register("wifiNetwork")}
-              placeholder="MySpace-WiFi"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="wifiPassword">Password</Label>
-            <Input
-              id="wifiPassword"
-              {...register("wifiPassword")}
-              placeholder="wifi-password"
-            />
-          </div>
         </div>
       </div>
 

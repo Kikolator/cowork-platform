@@ -102,10 +102,8 @@ export default async function SettingsPage({
             space={{
               ...space,
               // New columns added by pass_product_config migration; not yet in generated types
-              max_pass_desks: (space as Record<string, unknown>).max_pass_desks as number | null ?? null,
-              wifi_network: (space as Record<string, unknown>).wifi_network as string | null ?? null,
-              wifi_password: (space as Record<string, unknown>).wifi_password as string | null ?? null,
-              community_rules_text: (space as Record<string, unknown>).community_rules_text as string | null ?? null,
+              max_pass_desks: (space as Record<string, unknown>).max_pass_desks as number | null,
+              community_rules_text: (space as Record<string, unknown>).community_rules_text as string | null,
             }}
           />
         </TabsContent>
@@ -119,7 +117,14 @@ export default async function SettingsPage({
         </TabsContent>
 
         <TabsContent value="access" className="mt-6">
-          <AccessForm config={accessConfig} />
+          <AccessForm
+            config={accessConfig ? {
+              ...accessConfig,
+              // WiFi columns from pass_product_config migration; not yet in generated types
+              wifi_network: (accessConfig as Record<string, unknown>).wifi_network as string | null ?? null,
+              wifi_password: (accessConfig as Record<string, unknown>).wifi_password as string | null ?? null,
+            } : null}
+          />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">

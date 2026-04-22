@@ -63,12 +63,14 @@ export async function createProduct(input: unknown) {
     active: rest.active,
     sort_order: sortOrder,
   };
-  // New columns — remove this cast once DB types are regenerated
-  Object.assign(insertData, {
-    pass_type: isPass ? passType ?? null : null,
-    duration_days: isPass ? durationDays ?? null : null,
-    consecutive_days: isPass ? consecutiveDays ?? true : true,
-  });
+  // New columns — remove Object.assign once DB types are regenerated
+  if (isPass) {
+    Object.assign(insertData, {
+      pass_type: passType ?? null,
+      duration_days: durationDays ?? null,
+      consecutive_days: consecutiveDays ?? true,
+    });
+  }
   const { error } = await supabase.from("products").insert(insertData);
 
   if (error) {
@@ -143,7 +145,7 @@ export async function updateProduct(productId: string, input: unknown) {
   Object.assign(updateData, {
     pass_type: isPass ? passType ?? null : null,
     duration_days: isPass ? durationDays ?? null : null,
-    consecutive_days: isPass ? consecutiveDays ?? true : true,
+    ...(isPass && { consecutive_days: consecutiveDays ?? true }),
   });
   const { error } = await supabase
     .from("products")
