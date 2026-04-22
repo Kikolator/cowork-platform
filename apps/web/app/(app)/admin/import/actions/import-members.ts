@@ -194,6 +194,7 @@ export async function importMembers(
       user_id: userId,
       plan_id: planId,
       status: effectiveStatus,
+      billing_mode: "manual",
       company: data.company ?? null,
       joined_at: data.joined_at ?? new Date().toISOString(),
       external_id: data.external_id ?? null,

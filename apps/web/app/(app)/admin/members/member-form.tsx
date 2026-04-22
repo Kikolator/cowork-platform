@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { UpdateMemberValues } from "./schemas";
-import { updateMember } from "./actions";
+import { updateMember, switchToStripeBilling } from "./actions";
 import type { Member } from "./members-table";
 
 const MEMBER_STATUSES = [
@@ -93,6 +93,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
     handleSubmit,
     setValue,
     watch,
+    formState: { isDirty },
   } = useForm<UpdateMemberValues>({
     defaultValues: {
       planId: member.plan_id,
@@ -224,8 +225,31 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Billing mode</Label>
-                <div className="flex h-9 items-center rounded-md border border-border bg-muted/50 px-3 text-sm capitalize">
-                  {member.billing_mode ?? "stripe"}
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 flex-1 items-center rounded-md border border-border bg-muted/50 px-3 text-sm capitalize">
+                    {member.billing_mode ?? "stripe"}
+                  </div>
+                  {(member.billing_mode === "manual") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isPending || !watchPlanId || isDirty}
+                      onClick={() => {
+                        startTransition(async () => {
+                          setServerError(null);
+                          const result = await switchToStripeBilling({ memberId: member.id });
+                          if (!result.success) {
+                            setServerError(result.error);
+                          } else {
+                            onOpenChange(false);
+                          }
+                        });
+                      }}
+                    >
+                      Switch to Stripe
+                    </Button>
+                  )}
                 </div>
               </div>
               <div className="space-y-1.5">
