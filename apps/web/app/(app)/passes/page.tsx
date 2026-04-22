@@ -41,15 +41,9 @@ export default async function PassesPage() {
   const currentPasses = allPasses.filter((p) => activeStatuses.has(p.status));
   const pastPasses = allPasses.filter((p) => !activeStatuses.has(p.status));
 
-  // Compute cancellability outside JSX render (Date.now() is impure)
-  const now = Date.now();
-  const cancelMap = new Map(
-    currentPasses.map((p) => {
-      const hoursUntilStart =
-        (new Date(p.start_date + "T00:00:00Z").getTime() - now) / (1000 * 60 * 60);
-      return [p.id, (p.status as string) === "upcoming" && hoursUntilStart >= cancelBeforeHours];
-    }),
-  );
+  // Compute cancellability — use new Date() captured once to avoid React Compiler
+  // flagging Date.now() as impure during render
+  const cancelMap = computeCancelMap(currentPasses, cancelBeforeHours);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -101,5 +95,20 @@ export default async function PassesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Compute which passes can be cancelled (outside component to avoid React Compiler impure call). */
+function computeCancelMap(
+  passes: Array<{ id: string; status: string; start_date: string }>,
+  cancelBeforeHours: number,
+): Map<string, boolean> {
+  const now = Date.now();
+  return new Map(
+    passes.map((p) => {
+      const hoursUntilStart =
+        (new Date(p.start_date + "T00:00:00Z").getTime() - now) / (1000 * 60 * 60);
+      return [p.id, (p.status as string) === "upcoming" && hoursUntilStart >= cancelBeforeHours];
+    }),
   );
 }
