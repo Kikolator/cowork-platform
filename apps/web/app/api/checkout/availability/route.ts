@@ -92,7 +92,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // No pass desk limit — check general desk availability
+    // No pass desk limit — check general desk availability.
+    // get_desk_availability already accounts for active passes (Phase 6),
+    // so we use available_desks directly without subtracting activePasses.
     const { data: deskAvail } = await admin.rpc("get_desk_availability", {
       p_space_id: spaceId,
       p_date: startDate,
@@ -100,10 +102,9 @@ export async function GET(request: NextRequest) {
 
     if (deskAvail && Array.isArray(deskAvail) && deskAvail.length > 0) {
       const { available_desks } = deskAvail[0] as { available_desks: number };
-      const spotsLeft = Math.max(available_desks - activePasses, 0);
       return NextResponse.json({
-        available: spotsLeft > 0,
-        spots_left: spotsLeft <= 10 ? spotsLeft : null,
+        available: available_desks > 0,
+        spots_left: available_desks <= 10 ? available_desks : null,
       });
     }
 

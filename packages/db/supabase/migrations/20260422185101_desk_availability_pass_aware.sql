@@ -63,22 +63,24 @@ BEGIN
     AND b.start_time < v_day_end
     AND b.end_time   > v_day_start;
 
-  -- Desks occupied by active passes overlapping this date.
-  -- Only count passes whose assigned desk is NOT already counted as booked
+  -- Distinct desks occupied by active passes overlapping this date.
+  -- Uses NOT EXISTS to exclude desks already counted as booked
   -- (avoids double-counting if a desk has both a booking and a pass).
-  SELECT count(*)::integer INTO v_pass_desks
+  -- count(DISTINCT) handles multiple passes on the same desk.
+  SELECT count(DISTINCT p.assigned_desk_id)::integer INTO v_pass_desks
   FROM passes p
   WHERE p.space_id = p_space_id
     AND p.status = 'active'
     AND p.start_date <= p_date
     AND p.end_date   >= p_date
     AND p.assigned_desk_id IS NOT NULL
-    AND p.assigned_desk_id NOT IN (
-      SELECT b.resource_id
+    AND NOT EXISTS (
+      SELECT 1
       FROM bookings b
       JOIN resources r ON b.resource_id = r.id
       JOIN resource_types rt ON r.resource_type_id = rt.id
-      WHERE b.space_id = p_space_id
+      WHERE b.resource_id = p.assigned_desk_id
+        AND b.space_id = p_space_id
         AND rt.slug = 'desk'
         AND b.status NOT IN ('cancelled')
         AND b.start_time < v_day_end
