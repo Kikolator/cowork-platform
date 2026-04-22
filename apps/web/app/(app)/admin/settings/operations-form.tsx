@@ -6,7 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -74,6 +76,10 @@ interface OperationsFormProps {
     default_locale: string;
     business_hours: unknown;
     min_booking_minutes: number;
+    max_pass_desks: number | null;
+    wifi_network: string | null;
+    wifi_password: string | null;
+    community_rules_text: string | null;
   };
 }
 
@@ -85,7 +91,7 @@ export function OperationsForm({ space }: OperationsFormProps) {
   const initialHours = (space.business_hours ?? {}) as BusinessHours;
   const [hours, setHours] = useState<BusinessHours>(initialHours);
 
-  const { setValue, watch, handleSubmit } = useForm<OperationsFormValues>({
+  const { register, setValue, watch, handleSubmit } = useForm<OperationsFormValues>({
     resolver: zodResolver(operationsSchema),
     defaultValues: {
       timezone: space.timezone,
@@ -93,6 +99,10 @@ export function OperationsForm({ space }: OperationsFormProps) {
       defaultLocale: space.default_locale as OperationsFormValues["defaultLocale"],
       businessHours: initialHours,
       minBookingMinutes: space.min_booking_minutes,
+      maxPassDesks: space.max_pass_desks ?? "",
+      wifiNetwork: space.wifi_network ?? "",
+      wifiPassword: space.wifi_password ?? "",
+      communityRulesText: space.community_rules_text ?? "",
     },
   });
 
@@ -254,6 +264,75 @@ export function OperationsForm({ space }: OperationsFormProps) {
             );
           })}
         </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Pass & Guest Settings ── */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Pass & Guest Settings</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="maxPassDesks">Max desks for pass holders</Label>
+          <Input
+            id="maxPassDesks"
+            type="number"
+            min={1}
+            className="w-48"
+            defaultValue={space.max_pass_desks ?? ""}
+            onChange={(e) => {
+              const val = parseInt(e.target.value);
+              setValue("maxPassDesks", isNaN(val) ? "" : val);
+            }}
+            placeholder="No limit"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Maximum desks allocatable to pass holders at any time. Leave empty for no limit.
+          </p>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── WiFi ── */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">WiFi</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Shown to pass holders and members in confirmation emails.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="wifiNetwork">Network name</Label>
+            <Input
+              id="wifiNetwork"
+              {...register("wifiNetwork")}
+              placeholder="MySpace-WiFi"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="wifiPassword">Password</Label>
+            <Input
+              id="wifiPassword"
+              {...register("wifiPassword")}
+              placeholder="wifi-password"
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Community Rules ── */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Community Rules</Label>
+        <p className="text-[11px] text-muted-foreground">
+          Shown during checkout. Visitors must accept before purchasing. Supports markdown.
+        </p>
+        <Textarea
+          {...register("communityRulesText")}
+          placeholder={"# House Rules\n\n- Be respectful of others\n- Keep noise levels down\n- Clean up after yourself"}
+          rows={8}
+          className="font-mono text-sm"
+        />
       </div>
 
       <div className="flex justify-end">

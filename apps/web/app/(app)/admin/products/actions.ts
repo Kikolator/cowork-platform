@@ -22,7 +22,7 @@ export async function createProduct(input: unknown) {
   }
 
   const { supabase, spaceId } = await getSpaceId();
-  const { priceCents, ivaRate, sortOrder, creditGrantConfig, visibilityRules, planId, ...rest } = parsed.data;
+  const { priceCents, ivaRate, sortOrder, creditGrantConfig, visibilityRules, planId, passType, durationDays, consecutiveDays, ...rest } = parsed.data;
 
   // Check slug uniqueness
   const { data: existing } = await supabase
@@ -36,7 +36,11 @@ export async function createProduct(input: unknown) {
     return { success: false as const, error: "A product with this slug already exists" };
   }
 
-  const { error } = await supabase.from("products").insert({
+  const isPass = rest.category === "pass";
+
+  // Includes new columns (pass_type, duration_days, consecutive_days) from
+  // pass_product_config migration — not yet in generated types.
+  const insertData = {
     space_id: spaceId,
     name: rest.name,
     slug: rest.slug,
@@ -58,7 +62,14 @@ export async function createProduct(input: unknown) {
     },
     active: rest.active,
     sort_order: sortOrder,
+  };
+  // New columns — remove this cast once DB types are regenerated
+  Object.assign(insertData, {
+    pass_type: isPass ? passType ?? null : null,
+    duration_days: isPass ? durationDays ?? null : null,
+    consecutive_days: isPass ? consecutiveDays ?? true : true,
   });
+  const { error } = await supabase.from("products").insert(insertData);
 
   if (error) {
     return { success: false as const, error: error.message };
@@ -75,7 +86,7 @@ export async function updateProduct(productId: string, input: unknown) {
   }
 
   const { supabase, spaceId } = await getSpaceId();
-  const { priceCents, ivaRate, sortOrder, creditGrantConfig, visibilityRules, planId, ...rest } = parsed.data;
+  const { priceCents, ivaRate, sortOrder, creditGrantConfig, visibilityRules, planId, passType, durationDays, consecutiveDays, ...rest } = parsed.data;
 
   // Check slug uniqueness (exclude self)
   const { data: existing } = await supabase
@@ -103,34 +114,40 @@ export async function updateProduct(productId: string, input: unknown) {
   }
 
   const priceChanged = current.price_cents !== priceCents || current.currency !== rest.currency;
+  const isPass = rest.category === "pass";
 
+  // New columns — remove cast once DB types are regenerated
+  const updateData = {
+    name: rest.name,
+    slug: rest.slug,
+    description: rest.description || null,
+    category: rest.category,
+    purchase_flow: purchaseFlowForCategory(rest.category),
+    price_cents: priceCents,
+    currency: rest.currency,
+    iva_rate: ivaRate,
+    plan_id: planId || null,
+    credit_grant_config: creditGrantConfig
+      ? { resource_type_id: creditGrantConfig.resourceTypeId, minutes: creditGrantConfig.minutes }
+      : null,
+    visibility_rules: {
+      require_membership: visibilityRules.requireMembership ?? false,
+      require_no_membership: visibilityRules.requireNoMembership ?? false,
+      require_plan_ids: visibilityRules.requirePlanIds ?? [],
+      exclude_unlimited: visibilityRules.excludeUnlimited ?? false,
+    },
+    active: rest.active,
+    sort_order: sortOrder,
+    ...(priceChanged && { stripe_price_id: null }),
+  };
+  Object.assign(updateData, {
+    pass_type: isPass ? passType ?? null : null,
+    duration_days: isPass ? durationDays ?? null : null,
+    consecutive_days: isPass ? consecutiveDays ?? true : true,
+  });
   const { error } = await supabase
     .from("products")
-    .update({
-      name: rest.name,
-      slug: rest.slug,
-      description: rest.description || null,
-      category: rest.category,
-      purchase_flow: purchaseFlowForCategory(rest.category),
-      price_cents: priceCents,
-      currency: rest.currency,
-      iva_rate: ivaRate,
-      plan_id: planId || null,
-      credit_grant_config: creditGrantConfig
-        ? { resource_type_id: creditGrantConfig.resourceTypeId, minutes: creditGrantConfig.minutes }
-        : null,
-      visibility_rules: {
-        require_membership: visibilityRules.requireMembership ?? false,
-        require_no_membership: visibilityRules.requireNoMembership ?? false,
-        require_plan_ids: visibilityRules.requirePlanIds ?? [],
-        exclude_unlimited: visibilityRules.excludeUnlimited ?? false,
-      },
-      active: rest.active,
-      sort_order: sortOrder,
-      // Invalidate Stripe price so lazy sync creates a fresh one on next checkout
-      // Keep stripe_product_id — ensureOneTimePriceExists reuses it
-      ...(priceChanged && { stripe_price_id: null }),
-    })
+    .update(updateData)
     .eq("id", productId)
     .eq("space_id", spaceId);
 

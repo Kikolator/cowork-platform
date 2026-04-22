@@ -50,6 +50,9 @@ interface Product {
   currency: string;
   iva_rate: number;
   plan_id: string | null;
+  pass_type: "day" | "week" | null;
+  duration_days: number | null;
+  consecutive_days: boolean;
   credit_grant_config: { resource_type_id: string; minutes: number } | null;
   visibility_rules: {
     require_membership?: boolean;
@@ -119,6 +122,15 @@ function ProductDetails({
   resourceTypes: ResourceType[];
   plans: Plan[];
 }) {
+  if (product.category === "pass" && product.pass_type) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        {product.pass_type === "day" ? "Day" : "Week"} — {product.duration_days ?? 1} {(product.duration_days ?? 1) === 1 ? "day" : "days"}
+      </span>
+    );
+  }
+
   if (product.category === "hour_bundle" && product.credit_grant_config) {
     const rt = resourceTypes.find(
       (r) => r.id === product.credit_grant_config!.resource_type_id

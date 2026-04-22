@@ -142,6 +142,8 @@ export async function updateSpaceOperations(input: unknown) {
 
   const { supabase, spaceId } = await getSpaceId();
 
+  // Includes new columns (max_pass_desks, wifi_*, community_rules_text) from
+  // pass_product_config migration — not yet in generated types, cast needed.
   const { error } = await supabase
     .from("spaces")
     .update({
@@ -150,7 +152,11 @@ export async function updateSpaceOperations(input: unknown) {
       default_locale: parsed.data.defaultLocale,
       business_hours: parsed.data.businessHours,
       min_booking_minutes: parsed.data.minBookingMinutes,
-    })
+      max_pass_desks: typeof parsed.data.maxPassDesks === "number" ? parsed.data.maxPassDesks : null,
+      wifi_network: parsed.data.wifiNetwork || null,
+      wifi_password: parsed.data.wifiPassword || null,
+      community_rules_text: parsed.data.communityRulesText || null,
+    } as Record<string, unknown>)
     .eq("id", spaceId);
 
   if (error) return { success: false as const, error: error.message };
