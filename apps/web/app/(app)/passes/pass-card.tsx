@@ -1,3 +1,9 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { cancelOwnPass } from "./actions";
+
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   upcoming: {
     label: "Upcoming",
@@ -43,9 +49,14 @@ interface PassCardProps {
     desk: { name: string } | null;
   };
   currency: string;
+  canCancel: boolean;
 }
 
-export function PassCard({ pass, currency }: PassCardProps) {
+export function PassCard({ pass, currency, canCancel }: PassCardProps) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
   const badge = STATUS_BADGE[pass.status] ?? {
     label: pass.status,
     className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400",
@@ -64,6 +75,19 @@ export function PassCard({ pass, currency }: PassCardProps) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(pass.amount_cents / 100);
+
+  function handleCancel() {
+    setError(null);
+    startTransition(async () => {
+      const result = await cancelOwnPass(pass.id);
+      if (!result.success) {
+        setError(result.error);
+        setConfirming(false);
+      } else {
+        setConfirming(false);
+      }
+    });
+  }
 
   return (
     <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-xl">
@@ -85,13 +109,50 @@ export function PassCard({ pass, currency }: PassCardProps) {
           <span className="truncate">Desk: {pass.desk.name}</span>
         )}
       </div>
+
+      {canCancel && pass.status === "upcoming" && (
+        <div className="mt-3 border-t border-border pt-3">
+          {error && (
+            <p className="mb-2 text-xs text-destructive">{error}</p>
+          )}
+          {confirming ? (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">Cancel and refund?</p>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleCancel}
+                disabled={isPending}
+              >
+                {isPending ? "Cancelling..." : "Yes, cancel"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirming(false)}
+                disabled={isPending}
+              >
+                No
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirming(true)}
+            >
+              Cancel pass
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
+  const date = new Date(year!, month! - 1, day);
   return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",

@@ -27,6 +27,8 @@ export default async function PassesPage() {
   ]);
 
   const currency = space?.currency ?? "EUR";
+  const cancelBeforeHours = ((space as Record<string, unknown> | null)
+    ?.pass_cancel_before_hours as number | null) ?? 24;
 
   // Cast nested desk relation
   const allPasses = (passes ?? []).map((p) => ({
@@ -63,9 +65,15 @@ export default async function PassesPage() {
                 Upcoming &amp; Active
               </h2>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {currentPasses.map((pass) => (
-                  <PassCard key={pass.id} pass={pass} currency={currency} />
-                ))}
+                {currentPasses.map((pass) => {
+                  const hoursUntilStart =
+                    (new Date(pass.start_date + "T00:00:00Z").getTime() - Date.now()) / (1000 * 60 * 60);
+                  const canCancel =
+                    (pass.status as string) === "upcoming" && hoursUntilStart >= cancelBeforeHours;
+                  return (
+                    <PassCard key={pass.id} pass={pass} currency={currency} canCancel={canCancel} />
+                  );
+                })}
               </div>
             </section>
           )}
@@ -76,7 +84,7 @@ export default async function PassesPage() {
               <h2 className="text-lg font-medium text-foreground">Past</h2>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {pastPasses.map((pass) => (
-                  <PassCard key={pass.id} pass={pass} currency={currency} />
+                  <PassCard key={pass.id} pass={pass} currency={currency} canCancel={false} />
                 ))}
               </div>
             </section>
