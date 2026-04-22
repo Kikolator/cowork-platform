@@ -45,7 +45,7 @@ export async function cancelOwnPass(
     // Check cancellation policy
     const { data: space } = await admin
       .from("spaces")
-      .select("tenant_id")
+      .select("*") // includes tenant_id, pass_cancel_before_hours (some not yet in generated types)
       .eq("id", spaceId)
       .single();
 
@@ -76,14 +76,16 @@ export async function cancelOwnPass(
         .eq("id", space.tenant_id)
         .single();
 
-      if (tenant?.stripe_account_id) {
-        const result = await refundPassPayment({
-          stripeSessionId: pass.stripe_session_id,
-          connectedAccountId: tenant.stripe_account_id,
-        });
-        refundId = result.refundId;
-        amountRefunded = result.amountRefunded;
+      if (!tenant?.stripe_account_id) {
+        return { success: false, error: "Refund cannot be processed. Please contact space support." };
       }
+
+      const result = await refundPassPayment({
+        stripeSessionId: pass.stripe_session_id,
+        connectedAccountId: tenant.stripe_account_id,
+      });
+      refundId = result.refundId;
+      amountRefunded = result.amountRefunded;
     }
 
     // Update pass

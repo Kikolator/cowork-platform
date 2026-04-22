@@ -70,8 +70,13 @@ export async function calculatePassEndDate(
 
   const cursor = new Date(startDate + "T12:00:00Z");
   let daysAssigned = 1; // start date counts as day 1
+  const maxIterations = durationDays * 10; // safety limit
+  let iterations = 0;
 
   while (daysAssigned < durationDays) {
+    if (++iterations > maxIterations) {
+      throw new Error("Could not find enough open days for pass duration");
+    }
     cursor.setUTCDate(cursor.getUTCDate() + 1);
     const dateStr = cursor.toISOString().split("T")[0]!;
 

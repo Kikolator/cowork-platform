@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // Fetch space config for closure/business hours checks
     const { data: space } = await admin
       .from("spaces")
-      .select("business_hours, timezone")
+      .select("*") // includes max_pass_desks, business_hours, timezone (some not yet in generated types)
       .eq("id", spaceId)
       .single();
 

@@ -44,18 +44,16 @@ export async function GET(request: Request) {
     if (!passes || passes.length === 0) break;
 
     for (const pass of passes) {
-      try {
-        await admin
-          .from("passes")
-          .update({ status: "active" as const, updated_at: new Date().toISOString() })
-          .eq("id", pass.id);
-        activated++;
-      } catch (err) {
+      const { error: updateError } = await admin
+        .from("passes")
+        .update({ status: "active" as const, updated_at: new Date().toISOString() })
+        .eq("id", pass.id);
+
+      if (updateError) {
         errors++;
-        logger.error("Failed to activate pass", {
-          passId: pass.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        logger.error("Failed to activate pass", { passId: pass.id, error: updateError.message });
+      } else {
+        activated++;
       }
     }
 
@@ -82,22 +80,20 @@ export async function GET(request: Request) {
     if (!passes || passes.length === 0) break;
 
     for (const pass of passes) {
-      try {
-        await admin
-          .from("passes")
-          .update({
-            status: "expired" as const,
-            assigned_desk_id: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", pass.id);
-        expired++;
-      } catch (err) {
+      const { error: updateError } = await admin
+        .from("passes")
+        .update({
+          status: "expired" as const,
+          assigned_desk_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", pass.id);
+
+      if (updateError) {
         errors++;
-        logger.error("Failed to expire pass", {
-          passId: pass.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        logger.error("Failed to expire pass", { passId: pass.id, error: updateError.message });
+      } else {
+        expired++;
       }
     }
 

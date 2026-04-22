@@ -23,7 +23,7 @@ export default async function PassesPage() {
       .eq("user_id", user.id)
       .eq("space_id", spaceId)
       .order("start_date", { ascending: false }),
-    supabase.from("spaces").select("currency").eq("id", spaceId).single(),
+    supabase.from("spaces").select("*").eq("id", spaceId).single(),
   ]);
 
   const currency = space?.currency ?? "EUR";

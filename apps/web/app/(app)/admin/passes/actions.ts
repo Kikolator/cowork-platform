@@ -14,6 +14,8 @@ async function getAdminContext() {
   if (!user) throw new Error("Not authenticated");
   const spaceId = user.app_metadata?.space_id as string | undefined;
   if (!spaceId) throw new Error("No space context");
+  const role = user.app_metadata?.space_role as string | undefined;
+  if (role !== "admin" && role !== "owner") throw new Error("Not authorized");
   return { user, spaceId };
 }
 
@@ -78,6 +80,10 @@ export async function refundPass(
     }
     if (!pass.stripe_session_id) {
       return { success: false, error: "No payment found for this pass (manual pass)" };
+    }
+    // Guard against double-refund
+    if ((pass as Record<string, unknown>).stripe_refund_id) {
+      return { success: false, error: "This pass has already been refunded" };
     }
 
     // Resolve connected account
@@ -150,14 +156,17 @@ export async function createManualPass(
       endDate = start.toISOString().split("T")[0]!;
     }
 
-    // Create pass
+    // Create pass — set upcoming if start date is in the future
+    const today = new Date().toISOString().split("T")[0]!;
+    const passStatus = startDate > today ? "upcoming" : "active";
+
     const { data: pass, error: insertError } = await admin
       .from("passes")
       .insert({
         space_id: spaceId,
         user_id: userId,
         pass_type: passType,
-        status: "active",
+        status: passStatus as "active", // upcoming not yet in generated types
         start_date: startDate,
         end_date: endDate,
         amount_cents: 0,

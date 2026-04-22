@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     // Fetch space config for closure + business hours checks
     const { data: spaceConfig } = await admin
       .from("spaces")
-      .select("business_hours, timezone")
+      .select("*") // includes max_pass_desks, business_hours, timezone (some not yet in generated types)
       .eq("id", spaceId)
       .single();
 
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         .from("passes")
         .select("id", { count: "exact", head: true })
         .eq("space_id", spaceId)
-        .in("status", ["active"])
+        .in("status", ["active", "upcoming" as "active"]) // upcoming not yet in generated types
         .lte("start_date", endDate)
         .gte("end_date", startDate);
 
