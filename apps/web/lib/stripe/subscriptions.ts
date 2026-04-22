@@ -2,6 +2,8 @@ import "server-only";
 import type Stripe from "stripe";
 import { getStripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyStripeReady } from "./connect";
+import { getEffectiveFeePercent } from "./fees";
 
 /**
  * Ensure a Stripe Product + Price exists for a plan on the connected account.
@@ -190,4 +192,116 @@ export async function resumeSubscriptionCancellation(
     { cancel_at_period_end: false },
     { stripeAccount: connectedAccountId },
   );
+}
+
+/**
+ * Provision a Stripe customer + subscription for a member.
+ * Used when adding a member with Stripe billing or switching from manual to Stripe.
+ * Creates the subscription with send_invoice collection (no card required upfront).
+ * Updates the member record with stripe_customer_id, stripe_subscription_id, and billing_mode.
+ */
+export async function provisionSubscription(params: {
+  memberId: string;
+  userId: string;
+  planId: string;
+  spaceId: string;
+  tenantId: string;
+  customPriceCents: number | null;
+}): Promise<void> {
+  const admin = createAdminClient();
+
+  const { stripeAccountId, platformPlan, platformFeePercent } =
+    await verifyStripeReady(params.tenantId);
+  const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
+
+  // Get member's profile for customer creation
+  const { data: profile } = await admin
+    .from("shared_profiles")
+    .select("email, full_name")
+    .eq("id", params.userId)
+    .single();
+
+  if (!profile?.email) throw new Error("Member profile not found");
+
+  // Get existing stripe_customer_id if any
+  const { data: member } = await admin
+    .from("members")
+    .select("stripe_customer_id")
+    .eq("id", params.memberId)
+    .single();
+
+  const customerId = await findOrCreateCustomer({
+    email: profile.email,
+    name: profile.full_name ?? null,
+    existingCustomerId: member?.stripe_customer_id ?? null,
+    connectedAccountId: stripeAccountId,
+    spaceId: params.spaceId,
+    userId: params.userId,
+  });
+
+  // Get plan for price creation
+  const { data: plan } = await admin
+    .from("plans")
+    .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id")
+    .eq("id", params.planId)
+    .single();
+
+  if (!plan) throw new Error("Plan not found");
+
+  const effectivePrice = params.customPriceCents ?? plan.price_cents;
+
+  let priceId: string;
+  if (params.customPriceCents != null && params.customPriceCents !== plan.price_cents) {
+    let productId = plan.stripe_product_id;
+    if (!productId) {
+      await ensureStripePriceExists(plan, stripeAccountId, params.spaceId);
+      const { data: refreshedPlan } = await admin
+        .from("plans")
+        .select("stripe_product_id")
+        .eq("id", plan.id)
+        .single();
+      productId = refreshedPlan?.stripe_product_id ?? null;
+    }
+
+    if (!productId) throw new Error("Could not resolve Stripe product");
+
+    const customPrice = await getStripe().prices.create(
+      {
+        product: productId,
+        unit_amount: effectivePrice,
+        currency: plan.currency,
+        recurring: { interval: "month" },
+        metadata: { space_id: params.spaceId, plan_id: plan.id, custom_for_member: params.memberId },
+      },
+      { stripeAccount: stripeAccountId },
+    );
+    priceId = customPrice.id;
+  } else {
+    priceId = await ensureStripePriceExists(plan, stripeAccountId, params.spaceId);
+  }
+
+  const subscription = await getStripe().subscriptions.create(
+    {
+      customer: customerId,
+      items: [{ price: priceId }],
+      collection_method: "send_invoice",
+      days_until_due: 7,
+      application_fee_percent: feePercent,
+      metadata: {
+        space_id: params.spaceId,
+        plan_id: params.planId,
+        user_id: params.userId,
+      },
+    },
+    { stripeAccount: stripeAccountId },
+  );
+
+  await admin
+    .from("members")
+    .update({
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+      billing_mode: "stripe",
+    })
+    .eq("id", params.memberId);
 }
