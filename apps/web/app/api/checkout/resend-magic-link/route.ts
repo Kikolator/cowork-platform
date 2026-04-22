@@ -85,10 +85,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Send magic link
+  // Resolve space origin for redirect
+  const { data: spaceData } = await admin
+    .from("spaces")
+    .select("slug, custom_domain")
+    .eq("id", spaceId)
+    .single();
+
+  const platformDomain =
+    process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
+  const proto = platformDomain.startsWith("localhost") ? "http" : "https";
+  const spaceOrigin = spaceData?.custom_domain
+    ? `${proto}://${spaceData.custom_domain}`
+    : `${proto}://${spaceData?.slug ?? "app"}.${platformDomain}`;
+
+  // Send magic link with correct space redirect
   const { error: linkError } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
+    options: { redirectTo: `${spaceOrigin}/auth/callback` },
   });
 
   if (linkError) {

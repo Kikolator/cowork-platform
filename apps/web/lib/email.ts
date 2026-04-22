@@ -1,9 +1,9 @@
 import "server-only";
-import { resend } from "./resend";
+import { getResend } from "./resend";
 import { createAdminClient } from "./supabase/admin";
 import type { TenantBranding } from "../emails/components/tenant-layout";
 
-const PLATFORM_FROM = "Cowork Platform <noreply@rogueops.app>";
+const PLATFORM_FROM = "RogueOps <noreply@rogueops.app>";
 
 interface SendEmailOptions {
   to: string;
@@ -19,28 +19,36 @@ interface SendEmailOptions {
   idempotencyKey?: string;
 }
 
-/** Send a platform-branded email (from the platform, not a tenant). */
+/** Send a platform-branded email (from RogueOps, not a tenant). */
 export async function sendPlatformEmail(options: SendEmailOptions) {
   return sendEmail({ ...options, from: PLATFORM_FROM });
 }
 
 /** Send a tenant-branded email (from a specific space). */
 export async function sendTenantEmail(
-  options: SendEmailOptions & { spaceName: string }
+  options: SendEmailOptions & { spaceName: string },
 ) {
   const from = `${options.spaceName} <noreply@rogueops.app>`;
   return sendEmail({ ...options, from });
 }
 
 async function sendEmail(options: SendEmailOptions & { from: string }) {
-  const { to, subject, react, from, spaceId, userId, template, idempotencyKey } =
-    options;
+  const {
+    to,
+    subject,
+    react,
+    from,
+    spaceId,
+    userId,
+    template,
+    idempotencyKey,
+  } = options;
 
-  const { data, error } = await resend.emails.send(
+  const { data, error } = await getResend().emails.send(
     { from, to, subject, react },
     idempotencyKey
       ? { headers: { "Idempotency-Key": idempotencyKey } }
-      : undefined
+      : undefined,
   );
 
   // Log to notifications_log if space context provided
@@ -65,18 +73,19 @@ async function sendEmail(options: SendEmailOptions & { from: string }) {
   return data;
 }
 
-/** Build TenantBranding from a space record. */
+/** Build TenantBranding from a space record for email templates. */
 export function buildTenantBranding(
   space: {
     name: string;
     logo_url: string | null;
     primary_color: string | null;
+    accent_color: string | null;
     address: string | null;
     city: string | null;
     slug: string;
     custom_domain: string | null;
   },
-  platformDomain: string
+  platformDomain: string,
 ): TenantBranding {
   const spaceUrl = space.custom_domain
     ? `https://${space.custom_domain}`
@@ -86,6 +95,7 @@ export function buildTenantBranding(
     name: space.name,
     logoUrl: space.logo_url,
     primaryColor: space.primary_color ?? "#000000",
+    accentColor: space.accent_color ?? "#3b82f6",
     address: space.address,
     city: space.city,
     spaceUrl,

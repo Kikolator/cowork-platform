@@ -8,7 +8,7 @@ const NOTE_CATEGORIES = ["general", "billing", "access", "incident", "support"] 
 
 // Client-side schema (used by react-hook-form) — lenient, no transforms
 export const updateMemberSchema = z.object({
-  planId: z.string().uuid(),
+  planId: z.string().uuid().nullable(),
   status: z.enum(MEMBER_STATUSES),
   customPriceCents: z.number().int().min(0).nullable(),
   fixedDeskId: z.string().nullable(),
@@ -49,6 +49,10 @@ export const addMemberSchema = z.object({
 });
 
 export const sendInviteSchema = z.object({
+  memberId: z.string().uuid(),
+});
+
+export const switchBillingSchema = z.object({
   memberId: z.string().uuid(),
 });
 

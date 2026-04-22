@@ -6,10 +6,7 @@ import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrigin } from "@/lib/url";
-import { verifyStripeReady } from "@/lib/stripe/connect";
-import { getEffectiveFeePercent } from "@/lib/stripe/fees";
-import { findOrCreateCustomer, ensureStripePriceExists } from "@/lib/stripe/subscriptions";
-import { getStripe } from "@/lib/stripe/client";
+import { provisionSubscription } from "@/lib/stripe/subscriptions";
 import { grantMonthlyCredits } from "@/lib/credits/grant";
 import type { Database } from "@cowork/db/types/database";
 import {
@@ -18,6 +15,7 @@ import {
   addMemberSchema,
   sendInviteSchema,
   sendBulkInvitesSchema,
+  switchBillingSchema,
 } from "./schemas";
 
 type FiscalIdType = Database["public"]["Enums"]["fiscal_id_type"];
@@ -287,7 +285,6 @@ export async function addMember(input: unknown) {
 
   // 6. Handle billing mode
   if (d.billingMode === "stripe") {
-    // Create Stripe subscription with send_invoice collection method
     try {
       const { data: space } = await admin
         .from("spaces")
@@ -297,100 +294,19 @@ export async function addMember(input: unknown) {
 
       if (!space?.tenant_id) throw new Error("Space has no tenant");
 
-      const { stripeAccountId, platformPlan, platformFeePercent } =
-        await verifyStripeReady(space.tenant_id);
-      const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
-
-      // Get member's email for customer creation
-      const { data: profile } = await admin
-        .from("shared_profiles")
-        .select("email, full_name")
-        .eq("id", userId)
-        .single();
-
-      const customerId = await findOrCreateCustomer({
-        email: profile?.email ?? d.email,
-        name: profile?.full_name ?? d.fullName ?? null,
-        existingCustomerId: null,
-        connectedAccountId: stripeAccountId,
-        spaceId,
+      await provisionSubscription({
+        memberId: newMember.id,
         userId,
+        planId: d.planId,
+        spaceId,
+        tenantId: space.tenant_id,
+        customPriceCents: d.customPriceCents,
       });
-
-      // Get plan for price creation
-      const { data: plan } = await admin
-        .from("plans")
-        .select("id, name, price_cents, currency, stripe_price_id, stripe_product_id")
-        .eq("id", d.planId)
-        .single();
-
-      if (!plan) throw new Error("Plan not found");
-
-      // Use custom price or plan price
-      const effectivePrice = d.customPriceCents ?? plan.price_cents;
-
-      let priceId: string;
-      if (d.customPriceCents != null && d.customPriceCents !== plan.price_cents) {
-        // Ensure Stripe product exists, then resolve the product ID
-        let productId = plan.stripe_product_id;
-        if (!productId) {
-          await ensureStripePriceExists(plan, stripeAccountId, spaceId);
-          const { data: refreshedPlan } = await admin
-            .from("plans")
-            .select("stripe_product_id")
-            .eq("id", plan.id)
-            .single();
-          productId = refreshedPlan?.stripe_product_id ?? null;
-        }
-
-        if (!productId) throw new Error("Could not resolve Stripe product");
-
-        const customPrice = await getStripe().prices.create(
-          {
-            product: productId,
-            unit_amount: effectivePrice,
-            currency: plan.currency,
-            recurring: { interval: "month" },
-            metadata: { space_id: spaceId, plan_id: plan.id, custom_for_member: newMember.id },
-          },
-          { stripeAccount: stripeAccountId },
-        );
-        priceId = customPrice.id;
-      } else {
-        priceId = await ensureStripePriceExists(plan, stripeAccountId, spaceId);
-      }
-
-      // Create subscription with send_invoice (no immediate payment required)
-      const subscription = await getStripe().subscriptions.create(
-        {
-          customer: customerId,
-          items: [{ price: priceId }],
-          collection_method: "send_invoice",
-          days_until_due: 7,
-          application_fee_percent: feePercent,
-          metadata: {
-            space_id: spaceId,
-            plan_id: d.planId,
-            user_id: userId,
-          },
-        },
-        { stripeAccount: stripeAccountId },
-      );
-
-      // Update member with Stripe fields
-      await admin
-        .from("members")
-        .update({
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscription.id,
-        })
-        .eq("id", newMember.id);
     } catch (err) {
       logger.error("Failed to create Stripe subscription for admin-added member", {
         memberId: newMember.id,
         error: err instanceof Error ? err.message : String(err),
       });
-      // Member is created but without Stripe — admin can retry or switch to manual
       return {
         success: true as const,
         warning: `Member added but Stripe subscription failed: ${err instanceof Error ? err.message : "Unknown error"}. You can switch to manual billing or retry.`,
@@ -570,4 +486,71 @@ export async function sendBulkInvites(input: unknown) {
 
   revalidatePath("/admin/members");
   return { success: true as const, sent, failed };
+}
+
+export async function switchToStripeBilling(input: unknown) {
+  const parsed = switchBillingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { supabase, spaceId } = await getSpaceId();
+  const admin = createAdminClient();
+  const logger = createLogger({ component: "members/actions", spaceId });
+
+  const { data: member } = await supabase
+    .from("members")
+    .select("id, user_id, plan_id, status, billing_mode, stripe_subscription_id, custom_price_cents")
+    .eq("id", parsed.data.memberId)
+    .eq("space_id", spaceId)
+    .single();
+
+  if (!member) {
+    return { success: false as const, error: "Member not found" };
+  }
+
+  if ((member as Record<string, unknown>).billing_mode !== "manual") {
+    return { success: false as const, error: "Member is not on manual billing." };
+  }
+
+  if (!member.plan_id) {
+    return { success: false as const, error: "Assign a plan before switching to Stripe billing." };
+  }
+
+  if (member.stripe_subscription_id) {
+    return { success: false as const, error: "Member already has a Stripe subscription." };
+  }
+
+  const { data: space } = await admin
+    .from("spaces")
+    .select("tenant_id")
+    .eq("id", spaceId)
+    .single();
+
+  if (!space?.tenant_id) {
+    return { success: false as const, error: "Space has no tenant" };
+  }
+
+  try {
+    await provisionSubscription({
+      memberId: member.id,
+      userId: member.user_id,
+      planId: member.plan_id,
+      spaceId,
+      tenantId: space.tenant_id,
+      customPriceCents: member.custom_price_cents ?? null,
+    });
+  } catch (err) {
+    logger.error("Failed to provision Stripe subscription", {
+      memberId: member.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      success: false as const,
+      error: `Stripe provisioning failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+    };
+  }
+
+  revalidatePath("/admin/members");
+  return { success: true as const };
 }

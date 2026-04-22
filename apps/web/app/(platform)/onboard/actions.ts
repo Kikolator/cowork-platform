@@ -5,6 +5,7 @@ import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isReservedSlug } from "@/lib/reserved-slugs";
+import { notifyNewSpace } from "@/lib/email/notifications";
 
 const DEFAULT_RATE_CENTS: Record<string, number> = {
   meeting_room: 490,
@@ -265,6 +266,14 @@ export async function createTenantAndSpace(input: OnboardInput): Promise<{
     }
 
     await supabase.auth.refreshSession();
+
+    // Fire-and-forget new space email to owner
+    notifyNewSpace({
+      spaceName: data.businessName,
+      ownerEmail: user.email ?? "",
+      ownerName: user.user_metadata?.name ?? "there",
+      spaceSlug: data.slug,
+    });
 
     return { success: true, spaceSlug: data.slug };
   } catch (err) {

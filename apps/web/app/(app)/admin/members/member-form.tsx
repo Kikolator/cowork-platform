@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { UpdateMemberValues } from "./schemas";
-import { updateMember } from "./actions";
+import { updateMember, switchToStripeBilling } from "./actions";
 import type { Member } from "./members-table";
 
 const MEMBER_STATUSES = [
@@ -93,6 +93,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
     handleSubmit,
     setValue,
     watch,
+    formState: { isDirty },
   } = useForm<UpdateMemberValues>({
     defaultValues: {
       planId: member.plan_id,
@@ -129,7 +130,7 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
   const watchFiscalIdType = watch("fiscalIdType");
   const watchBillingCompanyTaxIdType = watch("billingCompanyTaxIdType");
 
-  const planLabel = plans.find((p) => p.id === watchPlanId)?.name ?? "Select plan";
+  const planLabel = plans.find((p) => p.id === watchPlanId)?.name ?? "No plan";
   const deskLabel = watchFixedDeskId
     ? desks.find((d) => d.id === watchFixedDeskId)?.name ?? "Unknown"
     : "None";
@@ -183,14 +184,18 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
               <div className="space-y-1.5">
                 <Label>Plan</Label>
                 <Select
-                  value={watchPlanId}
-                  onValueChange={(v) => { if (v) setValue("planId", v); }}
-                  items={plans.map((p) => ({ value: p.id, label: p.name }))}
+                  value={watchPlanId ?? "__none__"}
+                  onValueChange={(v) => setValue("planId", v === "__none__" ? null : v)}
+                  items={[
+                    { value: "__none__", label: "No plan" },
+                    ...plans.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
                 >
                   <SelectTrigger>
                     <SelectValue>{planLabel}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">No plan</SelectItem>
                     {plans.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
@@ -220,8 +225,31 @@ export function MemberForm({ open, onOpenChange, member, plans, desks, deskAssig
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Billing mode</Label>
-                <div className="flex h-9 items-center rounded-md border border-border bg-muted/50 px-3 text-sm capitalize">
-                  {member.billing_mode ?? "stripe"}
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 flex-1 items-center rounded-md border border-border bg-muted/50 px-3 text-sm capitalize">
+                    {member.billing_mode ?? "stripe"}
+                  </div>
+                  {(member.billing_mode === "manual") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isPending || !watchPlanId || isDirty}
+                      onClick={() => {
+                        startTransition(async () => {
+                          setServerError(null);
+                          const result = await switchToStripeBilling({ memberId: member.id });
+                          if (!result.success) {
+                            setServerError(result.error);
+                          } else {
+                            onOpenChange(false);
+                          }
+                        });
+                      }}
+                    >
+                      Switch to Stripe
+                    </Button>
+                  )}
                 </div>
               </div>
               <div className="space-y-1.5">

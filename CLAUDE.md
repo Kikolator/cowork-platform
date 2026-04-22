@@ -63,8 +63,9 @@ When `dev` is ready to ship:
    - `major` — breaking changes (e.g., 0.9.0 → 1.0.0)
 4. **PR to `main`** — include combined test plan from all PRs in the release. Verify on staging first.
 5. **Merge** (regular merge, not squash) — preserves commit history.
-6. **Push tag**: `git push origin vX.Y.Z`
-7. **Smoke test** production after deploy.
+6. **Back-merge to `dev`**: `git checkout dev && git merge main && git push origin dev` — keeps version and changelog in sync.
+7. **Push tag**: `git push origin vX.Y.Z`
+8. **Smoke test** production after deploy.
 
 ## Commands
 
