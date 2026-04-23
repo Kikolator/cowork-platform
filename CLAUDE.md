@@ -46,6 +46,7 @@ packages/shared   → Shared logic: Zod schemas, validation, constants, types (u
 - **Feature branches → `dev` via squash merge.** One commit per PR on `dev`.
 - **`dev` → `main` via regular merge** (preserves history). Only when releasing.
 - **Never bypass hooks** (`--no-verify`) or force-push to `main`/`dev`.
+- **Before pushing to a PR branch**, verify the PR is still open: `gh pr view <number> --json state -q '.state'`. If merged, create a new branch from `origin/dev` instead.
 
 ### PR Test Plans
 
