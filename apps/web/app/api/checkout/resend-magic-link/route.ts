@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
+import { sendTenantEmail, buildTenantBranding } from "@/lib/email";
+import MagicLinkEmail from "@/emails/tenant/magic-link";
 import { resendMagicLinkSchema } from "../schemas";
 
 // Simple in-memory rate limit: email → last sent timestamp
@@ -85,30 +87,59 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Resolve space origin for redirect
+  // Resolve space branding + origin for redirect
   const { data: spaceData } = await admin
     .from("spaces")
-    .select("slug, custom_domain")
+    .select(
+      "name, logo_url, primary_color, accent_color, address, city, slug, custom_domain",
+    )
     .eq("id", spaceId)
     .single();
+
+  if (!spaceData) {
+    return NextResponse.json({ error: "Space not found" }, { status: 404 });
+  }
 
   const platformDomain =
     process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
   const proto = platformDomain.startsWith("localhost") ? "http" : "https";
-  const spaceOrigin = spaceData?.custom_domain
+  const spaceOrigin = spaceData.custom_domain
     ? `${proto}://${spaceData.custom_domain}`
-    : `${proto}://${spaceData?.slug ?? "app"}.${platformDomain}`;
+    : `${proto}://${spaceData.slug ?? "app"}.${platformDomain}`;
 
-  // Send magic link with correct space redirect
-  const { error: linkError } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-    options: { redirectTo: `${spaceOrigin}/auth/callback` },
-  });
+  // Generate magic link (returns the URL — does NOT send email)
+  const { data: linkData, error: linkError } =
+    await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo: `${spaceOrigin}/auth/callback` },
+    });
 
-  if (linkError) {
+  if (linkError || !linkData?.properties?.action_link) {
     return NextResponse.json(
-      { error: "Failed to send magic link" },
+      { error: "Failed to generate magic link" },
+      { status: 500 },
+    );
+  }
+
+  // Send branded magic link email via Resend
+  const branding = buildTenantBranding(spaceData, platformDomain);
+
+  try {
+    await sendTenantEmail({
+      to: email,
+      subject: `Sign in to ${branding.name}`,
+      spaceName: branding.name,
+      spaceId,
+      template: "magic-link",
+      react: MagicLinkEmail({
+        tenant: branding,
+        actionUrl: linkData.properties.action_link,
+      }),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to send magic link email" },
       { status: 500 },
     );
   }

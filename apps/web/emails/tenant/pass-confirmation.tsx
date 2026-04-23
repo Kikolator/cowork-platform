@@ -15,6 +15,8 @@ interface PassConfirmationEmailProps {
   wifiPassword: string | null;
   communityRulesSummary: string | null;
   dashboardUrl: string;
+  /** When provided, the CTA becomes a magic link that signs the user in. */
+  magicLinkUrl?: string;
 }
 
 const previewTenant: TenantBranding = {
@@ -39,6 +41,7 @@ export default function PassConfirmationEmail({
   wifiPassword = "cowork2026",
   communityRulesSummary = null,
   dashboardUrl = "https://urbanhive.rogueops.app/dashboard",
+  magicLinkUrl,
 }: PassConfirmationEmailProps) {
   const isSingleDay = startDate === endDate;
   const dateDisplay = isSingleDay ? startDate : `${startDate} \u2013 ${endDate}`;
@@ -108,8 +111,8 @@ export default function PassConfirmationEmail({
         </Section>
       )}
 
-      <Button href={dashboardUrl} style={buttonStyle(tenant.primaryColor)}>
-        Go to Dashboard
+      <Button href={magicLinkUrl ?? dashboardUrl} style={buttonStyle(tenant.primaryColor)}>
+        {magicLinkUrl ? "Sign In & View Pass" : "Go to Dashboard"}
       </Button>
     </TenantLayout>
   );

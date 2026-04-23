@@ -608,6 +608,16 @@ async function handleGuestCheckout(
     userId = newUser.user.id;
   }
 
+  // Track pass details for consolidated email sent after magic link generation
+  let passEmail: {
+    passType: "day" | "week";
+    startDate: string;
+    endDate: string;
+    deskName: string | null;
+    amountCents: number;
+    currency: string;
+  } | null = null;
+
   if (type === "daypass") {
     const today = new Date().toISOString().split("T")[0]!;
     const amountTotal = session.amount_total ?? 0;
@@ -634,6 +644,7 @@ async function handleGuestCheckout(
     }
 
     // Auto-assign desk
+    let deskName: string | null = null;
     if (pass) {
       const { data: deskId } = await admin.rpc("auto_assign_desk", {
         p_space_id: spaceId,
@@ -646,8 +657,24 @@ async function handleGuestCheckout(
           .from("passes")
           .update({ assigned_desk_id: deskId })
           .eq("id", pass.id);
+
+        const { data: desk } = await admin
+          .from("resources")
+          .select("name")
+          .eq("id", deskId)
+          .single();
+        deskName = desk?.name ?? null;
       }
     }
+
+    passEmail = {
+      passType: "day",
+      startDate: today,
+      endDate: today,
+      deskName,
+      amountCents: amountTotal,
+      currency: session.currency ?? "eur",
+    };
   } else if (type === "product") {
     // Product-based guest pass checkout — create pass from Stripe metadata
     const productId = metadata.product_id;
@@ -720,29 +747,14 @@ async function handleGuestCheckout(
         deskName = desk?.name ?? null;
       }
 
-      // Send pass confirmation email (fire-and-forget)
-      notifyPassConfirmation({
-        spaceId,
-        userId,
-        email,
-        name: name ?? undefined,
+      passEmail = {
         passType: passTypeStr as "day" | "week",
         startDate,
         endDate,
         deskName,
-      });
-
-      // Notify space owner
-      notifyNewPassPurchase({
-        spaceId,
-        visitorName: name ?? null,
-        visitorEmail: email,
-        passType: passTypeStr as "day" | "week",
-        startDate,
-        endDate,
         amountCents: amountTotal,
         currency: session.currency ?? "eur",
-      });
+      };
     }
   } else if (type === "membership") {
     const planSlug = metadata.plan_slug;
@@ -848,22 +860,52 @@ async function handleGuestCheckout(
     : `${proto}://${spaceData?.slug ?? "app"}.${platformDomain}`;
   const redirectTo = `${spaceOrigin}/auth/callback`;
 
-  // Send magic link email with correct space redirect
-  const { error: linkError } = await admin.auth.admin.generateLink({
+  // Generate magic link (does NOT send email — we send it ourselves below)
+  let magicLinkUrl: string | undefined;
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
     options: { redirectTo },
   });
 
   if (linkError) {
-    logger.error("Failed to send magic link after guest checkout", {
+    logger.error("Failed to generate magic link after guest checkout", {
       email,
       error: linkError.message,
     });
+  } else if (linkData?.properties?.action_link) {
+    magicLinkUrl = linkData.properties.action_link;
   }
 
-  // Fire-and-forget welcome email
-  notifySpaceSignup({ spaceId, userId, email, name: name ?? undefined });
+  if (passEmail) {
+    // Consolidated email: pass confirmation + magic link (replaces separate welcome + magic link emails)
+    notifyPassConfirmation({
+      spaceId,
+      userId,
+      email,
+      name: name ?? undefined,
+      passType: passEmail.passType,
+      startDate: passEmail.startDate,
+      endDate: passEmail.endDate,
+      deskName: passEmail.deskName,
+      magicLinkUrl,
+    });
+
+    // Notify space owner of new purchase
+    notifyNewPassPurchase({
+      spaceId,
+      visitorName: name ?? null,
+      visitorEmail: email,
+      passType: passEmail.passType,
+      startDate: passEmail.startDate,
+      endDate: passEmail.endDate,
+      amountCents: passEmail.amountCents,
+      currency: passEmail.currency,
+    });
+  } else if (type === "membership") {
+    // Membership gets a welcome email (no pass confirmation)
+    notifySpaceSignup({ spaceId, userId, email, name: name ?? undefined });
+  }
 }
 
 async function handleReferralCompletion(
