@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { grantMonthlyCredits, expireRenewableCredits, expirePurchasedCredits } from "@/lib/credits/grant";
 import { deleteNukiCodeForMember } from "@/lib/nuki/sync";
 import { applyReferrerDiscountCoupon } from "@/lib/stripe/coupons";
-import { notifySpaceSignup } from "@/lib/email/notifications";
+import { notifySpaceSignup, notifyPassConfirmation, notifyNewPassPurchase } from "@/lib/email/notifications";
 
 export async function routeWebhookEvent(
   event: Stripe.Event,
@@ -232,27 +232,78 @@ async function handlePassCheckout(
   // Auto-assign desk
   const { data: pass } = await admin
     .from("passes")
-    .select("start_date, end_date")
+    .select("start_date, end_date, pass_type")
     .eq("id", passId)
     .single();
 
-  if (pass) {
-    const { data: deskId, error: deskError } = await admin.rpc("auto_assign_desk", {
-      p_space_id: spaceId,
-      p_start_date: pass.start_date,
-      p_end_date: pass.end_date,
+  if (!pass) return;
+
+  const { data: deskId, error: deskError } = await admin.rpc("auto_assign_desk", {
+    p_space_id: spaceId,
+    p_start_date: pass.start_date,
+    p_end_date: pass.end_date,
+  });
+
+  if (deskError) {
+    logger.error("auto_assign_desk RPC failed", { passId, error: deskError.message });
+  } else if (deskId) {
+    await admin
+      .from("passes")
+      .update({ assigned_desk_id: deskId })
+      .eq("id", passId);
+  } else {
+    logger.warn("No desk available for pass — pass still active", { passId });
+  }
+
+  // Persist community_rules_accepted_at on the pass if accepted
+  const communityRulesAccepted = session.metadata?.community_rules_accepted === "true";
+  if (communityRulesAccepted) {
+    await admin
+      .from("passes")
+      .update({ community_rules_accepted_at: new Date().toISOString() } as Record<string, unknown>)
+      .eq("id", passId);
+  }
+
+  // Send pass confirmation email (fire-and-forget)
+  const user = await admin
+    .from("shared_profiles")
+    .select("email, full_name")
+    .eq("id", userId)
+    .single();
+
+  let deskName: string | null = null;
+  if (deskId) {
+    const { data: desk } = await admin
+      .from("resources")
+      .select("name")
+      .eq("id", deskId as string)
+      .single();
+    deskName = desk?.name ?? null;
+  }
+
+  if (user.data?.email) {
+    notifyPassConfirmation({
+      spaceId,
+      userId,
+      email: user.data.email,
+      name: user.data.full_name ?? undefined,
+      passType: pass.pass_type ?? "day",
+      startDate: pass.start_date,
+      endDate: pass.end_date,
+      deskName,
     });
 
-    if (deskError) {
-      logger.error("auto_assign_desk RPC failed", { passId, error: deskError.message });
-    } else if (deskId) {
-      await admin
-        .from("passes")
-        .update({ assigned_desk_id: deskId })
-        .eq("id", passId);
-    } else {
-      logger.warn("No desk available for pass — pass still active", { passId });
-    }
+    // Notify space owner
+    notifyNewPassPurchase({
+      spaceId,
+      visitorName: user.data.full_name ?? null,
+      visitorEmail: user.data.email,
+      passType: pass.pass_type ?? "day",
+      startDate: pass.start_date,
+      endDate: pass.end_date,
+      amountCents: session.amount_total ?? 0,
+      currency: session.currency ?? "eur",
+    });
   }
 }
 
@@ -597,9 +648,106 @@ async function handleGuestCheckout(
           .eq("id", pass.id);
       }
     }
+  } else if (type === "product") {
+    // Product-based guest pass checkout — create pass from Stripe metadata
+    const productId = metadata.product_id;
+    const passTypeStr = metadata.pass_type;
+    const startDate = metadata.start_date;
+    const endDate = metadata.end_date;
+    const communityRulesAccepted = metadata.community_rules_accepted === "true";
+
+    if (!productId || !passTypeStr || !startDate || !endDate) {
+      logger.error("Product guest checkout missing required metadata", { metadata });
+      return;
+    }
+
+    const amountTotal = session.amount_total ?? 0;
+    const today = new Date().toISOString().split("T")[0]!;
+    const passStatus = startDate > today ? "upcoming" : "active";
+    const passInsert = {
+      space_id: spaceId,
+      user_id: userId,
+      pass_type: passTypeStr as "day" | "week",
+      status: passStatus as "active",  // upcoming not yet in generated types
+      start_date: startDate,
+      end_date: endDate,
+      stripe_session_id: session.id,
+      amount_cents: amountTotal,
+      is_guest: false,
+    };
+    // New columns not yet in generated types
+    Object.assign(passInsert, {
+      product_id: productId,
+      ...(communityRulesAccepted
+        ? { community_rules_accepted_at: new Date().toISOString() }
+        : {}),
+    });
+
+    const { data: pass, error: passError } = await admin
+      .from("passes")
+      .insert(passInsert)
+      .select("id, start_date, end_date")
+      .single();
+
+    if (passError) {
+      logger.error("Failed to create pass for product guest checkout", { error: passError.message });
+      return;
+    }
+
+    // Auto-assign desk
+    if (pass) {
+      const { data: deskId } = await admin.rpc("auto_assign_desk", {
+        p_space_id: spaceId,
+        p_start_date: pass.start_date,
+        p_end_date: pass.end_date,
+      });
+
+      if (deskId) {
+        await admin
+          .from("passes")
+          .update({ assigned_desk_id: deskId })
+          .eq("id", pass.id);
+      }
+
+      // Fetch desk name for email
+      let deskName: string | null = null;
+      if (deskId) {
+        const { data: desk } = await admin
+          .from("resources")
+          .select("name")
+          .eq("id", deskId)
+          .single();
+        deskName = desk?.name ?? null;
+      }
+
+      // Send pass confirmation email (fire-and-forget)
+      notifyPassConfirmation({
+        spaceId,
+        userId,
+        email,
+        name: name ?? undefined,
+        passType: passTypeStr as "day" | "week",
+        startDate,
+        endDate,
+        deskName,
+      });
+
+      // Notify space owner
+      notifyNewPassPurchase({
+        spaceId,
+        visitorName: name ?? null,
+        visitorEmail: email,
+        passType: passTypeStr as "day" | "week",
+        startDate,
+        endDate,
+        amountCents: amountTotal,
+        currency: session.currency ?? "eur",
+      });
+    }
   } else if (type === "membership") {
     const planSlug = metadata.plan_slug;
     const planId = metadata.plan_id;
+    const communityRulesAccepted = metadata.community_rules_accepted === "true";
     const customerId =
       typeof session.customer === "string" ? session.customer : null;
     const subscriptionId =
@@ -636,21 +784,27 @@ async function handleGuestCheckout(
       .maybeSingle();
 
     if (existingMember) {
+      const memberUpdate = {
+        plan_id: resolvedPlanId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        status: "active" as const,
+        joined_at: new Date().toISOString(),
+        cancelled_at: null,
+        cancel_requested_at: null,
+        updated_at: new Date().toISOString(),
+      };
+      if (communityRulesAccepted) {
+        Object.assign(memberUpdate, {
+          community_rules_accepted_at: new Date().toISOString(),
+        });
+      }
       await admin
         .from("members")
-        .update({
-          plan_id: resolvedPlanId,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-          status: "active" as const,
-          joined_at: new Date().toISOString(),
-          cancelled_at: null,
-          cancel_requested_at: null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(memberUpdate)
         .eq("id", existingMember.id);
     } else {
-      await admin.from("members").insert({
+      const memberInsert = {
         space_id: spaceId,
         user_id: userId,
         plan_id: resolvedPlanId,
@@ -658,7 +812,14 @@ async function handleGuestCheckout(
         stripe_subscription_id: subscriptionId,
         status: "active" as const,
         joined_at: new Date().toISOString(),
-      });
+      };
+      // community_rules_accepted_at not yet in generated types
+      if (communityRulesAccepted) {
+        Object.assign(memberInsert, {
+          community_rules_accepted_at: new Date().toISOString(),
+        });
+      }
+      await admin.from("members").insert(memberInsert);
     }
   }
 

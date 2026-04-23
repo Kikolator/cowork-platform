@@ -31,6 +31,7 @@ export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Book", href: "/book", icon: CalendarPlus },
   { label: "My Bookings", href: "/bookings", icon: CalendarDays },
+  { label: "My Passes", href: "/passes", icon: Ticket },
   { label: "Store", href: "/store", icon: ShoppingBag },
   { label: "My Plan", href: "/plan", icon: CreditCard },
   { label: "Invoices", href: "/invoices", icon: FileText },

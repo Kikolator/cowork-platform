@@ -31,6 +31,16 @@ export default async function MembershipCheckoutPage({
   }
 
   const admin = createAdminClient();
+
+  // Fetch community rules
+  const { data: space } = await admin
+    .from("spaces")
+    .select("community_rules_text")
+    .eq("id", spaceId)
+    .single();
+  const communityRulesText = (space as Record<string, unknown> | null)
+    ?.community_rules_text as string | null ?? null;
+
   const { data: plan } = await admin
     .from("plans")
     .select("id, name, description, price_cents, currency, capacity")
@@ -88,7 +98,11 @@ export default async function MembershipCheckoutPage({
         spotsLeft={spotsLeft}
         unavailableMessage="This plan is currently full."
       >
-        <CheckoutForm type="membership" planSlug={planSlug} />
+        <CheckoutForm
+          type="membership"
+          planSlug={planSlug}
+          communityRulesText={communityRulesText}
+        />
       </AvailabilityGate>
     </div>
   );

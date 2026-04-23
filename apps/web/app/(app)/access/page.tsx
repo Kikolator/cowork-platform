@@ -28,6 +28,82 @@ export default async function AccessPage() {
     .maybeSingle();
 
   if (!member) {
+    // Check if user has an active or upcoming pass
+    const { data: activePass } = await supabase
+      .from("passes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("space_id", spaceId)
+      // "upcoming" status added by pass-lifecycle migration; safe to remove cast after types regenerated
+      .in("status", ["active", "upcoming"] as unknown as ("active")[])
+      .limit(1)
+      .maybeSingle();
+
+    if (activePass) {
+      // Pass holders get business-hours access code
+      const { data: accessConfigs } = await supabase.rpc(
+        "get_member_access_config",
+        { p_space_id: spaceId },
+      );
+      const passAccessConfig = accessConfigs?.[0] ?? null;
+
+      const passCode =
+        passAccessConfig?.enabled && passAccessConfig.mode === "manual"
+          ? passAccessConfig.code_business_hours
+          : null;
+
+      return (
+        <div className="mx-auto max-w-lg space-y-6 py-8">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Access</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your door access information for this space.
+            </p>
+          </div>
+
+          {/* Access level card */}
+          <div className="rounded-xl border border-border p-5">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              Access Level
+            </div>
+            <p className="mt-2 text-lg font-medium">Business Hours (Pass)</p>
+          </div>
+
+          {/* Door code card */}
+          {!passAccessConfig?.enabled ? (
+            <div className="rounded-xl border border-border bg-muted/30 p-5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Info className="h-4 w-4 shrink-0" />
+                Access codes are not configured for this space. Contact your
+                space administrator for access information.
+              </div>
+            </div>
+          ) : passCode ? (
+            <div className="rounded-xl border border-border p-5">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <KeyRound className="h-3.5 w-3.5" />
+                Door Code
+              </div>
+              <p className="mt-3 text-center font-mono text-4xl font-bold tracking-[0.3em]">
+                {passCode}
+              </p>
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                Business Hours code
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-muted/30 p-5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <KeyRound className="h-4 w-4 shrink-0" />
+                No access code assigned. Contact your space administrator.
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto max-w-lg space-y-6 py-8">
         <h1 className="text-2xl font-semibold tracking-tight">Access</h1>

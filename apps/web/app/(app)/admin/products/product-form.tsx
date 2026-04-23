@@ -48,6 +48,9 @@ interface Product {
   currency: string;
   iva_rate: number;
   plan_id: string | null;
+  pass_type: "day" | "week" | null;
+  duration_days: number | null;
+  consecutive_days: boolean;
   credit_grant_config: { resource_type_id: string; minutes: number } | null;
   visibility_rules: {
     require_membership?: boolean;
@@ -132,6 +135,9 @@ export function ProductForm({
       priceCents: product?.price_cents ?? 0,
       currency: product?.currency ?? defaultCurrency,
       ivaRate: product?.iva_rate ?? 21,
+      passType: (product?.pass_type as "day" | "week" | undefined) ?? undefined,
+      durationDays: product?.duration_days ?? undefined,
+      consecutiveDays: product?.consecutive_days ?? true,
       planId: product?.plan_id ?? "",
       creditGrantConfig: product?.credit_grant_config
         ? {
@@ -280,6 +286,70 @@ export function ProductForm({
               </p>
             </div>
           </FormSection>
+
+          {/* ── Pass Configuration ── */}
+          {watchCategory === "pass" && (
+            <>
+              <Separator />
+              <FormSection title="Pass Configuration">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="passType">Pass type</Label>
+                    <Select
+                      value={watch("passType") ?? ""}
+                      onValueChange={(v) => {
+                        if (v === "day" || v === "week") {
+                          setValue("passType", v);
+                          if (v === "day") setValue("durationDays", 1);
+                          if (v === "week") setValue("durationDays", 5);
+                        }
+                      }}
+                      items={[
+                        { value: "day", label: "Day Pass" },
+                        { value: "week", label: "Week Pass" },
+                      ]}
+                    >
+                      <SelectTrigger id="passType">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">Day Pass</SelectItem>
+                        <SelectItem value="week">Week Pass</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.passType && (
+                      <p className="text-xs text-destructive">
+                        {errors.passType.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="durationDays">Duration (days)</Label>
+                    <Input
+                      id="durationDays"
+                      type="number"
+                      min={1}
+                      max={30}
+                      {...register("durationDays", { valueAsNumber: true })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Business days (weekends skipped)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-5">
+                    <Switch
+                      checked={watch("consecutiveDays") ?? true}
+                      onCheckedChange={(checked) =>
+                        setValue("consecutiveDays", checked)
+                      }
+                      size="sm"
+                    />
+                    <Label className="text-sm">Consecutive days</Label>
+                  </div>
+                </div>
+              </FormSection>
+            </>
+          )}
 
           <Separator />
 
