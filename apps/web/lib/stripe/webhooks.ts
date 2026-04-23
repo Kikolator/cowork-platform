@@ -722,6 +722,7 @@ async function handleGuestCheckout(
     }
 
     // Auto-assign desk
+    let deskName: string | null = null;
     if (pass) {
       const { data: deskId } = await admin.rpc("auto_assign_desk", {
         p_space_id: spaceId,
@@ -734,11 +735,7 @@ async function handleGuestCheckout(
           .from("passes")
           .update({ assigned_desk_id: deskId })
           .eq("id", pass.id);
-      }
 
-      // Fetch desk name for email
-      let deskName: string | null = null;
-      if (deskId) {
         const { data: desk } = await admin
           .from("resources")
           .select("name")
@@ -746,16 +743,16 @@ async function handleGuestCheckout(
           .single();
         deskName = desk?.name ?? null;
       }
-
-      passEmail = {
-        passType: passTypeStr as "day" | "week",
-        startDate,
-        endDate,
-        deskName,
-        amountCents: amountTotal,
-        currency: session.currency ?? "eur",
-      };
     }
+
+    passEmail = {
+      passType: passTypeStr as "day" | "week",
+      startDate,
+      endDate,
+      deskName,
+      amountCents: amountTotal,
+      currency: session.currency ?? "eur",
+    };
   } else if (type === "membership") {
     const planSlug = metadata.plan_slug;
     const planId = metadata.plan_id;
