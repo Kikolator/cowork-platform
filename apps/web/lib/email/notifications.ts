@@ -133,6 +133,8 @@ export async function notifyPassConfirmation(params: {
   startDate: string;
   endDate: string;
   deskName: string | null;
+  /** Magic link URL for guest checkout — signs user in on click. */
+  magicLinkUrl?: string;
 }) {
   try {
     const admin = createAdminClient();
@@ -184,7 +186,9 @@ export async function notifyPassConfirmation(params: {
 
     await sendTenantEmail({
       to: params.email,
-      subject: `${passLabel} confirmed \u2014 ${formatDate(params.startDate)}`,
+      subject: params.magicLinkUrl
+        ? `Welcome to ${branding.name} \u2014 ${passLabel} confirmed`
+        : `${passLabel} confirmed \u2014 ${formatDate(params.startDate)}`,
       spaceName: branding.name,
       spaceId: params.spaceId,
       userId: params.userId,
@@ -201,6 +205,7 @@ export async function notifyPassConfirmation(params: {
         wifiPassword,
         communityRulesSummary,
         dashboardUrl: `${branding.spaceUrl}/dashboard`,
+        magicLinkUrl: params.magicLinkUrl,
       }),
     });
   } catch (err) {
