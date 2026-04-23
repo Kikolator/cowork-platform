@@ -2,8 +2,6 @@ import { z } from "zod";
 
 const CATEGORIES = ["pass", "hour_bundle", "addon", "deposit", "event"] as const;
 
-const PASS_TYPES = ["day", "week"] as const;
-
 const PURCHASE_FLOW_MAP: Record<string, string> = {
   pass: "date_picker",
   addon: "subscription_addon",
@@ -33,11 +31,6 @@ export const productSchema = z.object({
   slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and hyphens only"),
   description: z.string().max(500).optional().or(z.literal("")),
   category: z.enum(CATEGORIES),
-  // Pass configuration (required when category is "pass")
-  passType: z.enum(PASS_TYPES).optional(),
-  durationDays: z.number().int().min(1).max(30).optional(),
-  consecutiveDays: z.boolean().optional(),
-  // Pricing
   priceCents: z.number().int().min(0),
   currency: z.string().length(3),
   ivaRate: z.number().min(0).max(100),
@@ -46,9 +39,6 @@ export const productSchema = z.object({
   visibilityRules: visibilityRulesSchema,
   sortOrder: z.number().int(),
   active: z.boolean(),
-}).refine(
-  (data) => data.category !== "pass" || (data.passType && data.durationDays),
-  { message: "Pass type and duration are required for pass products", path: ["passType"] },
-);
+});
 
 export type ProductFormValues = z.infer<typeof productSchema>;

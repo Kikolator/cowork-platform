@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { isProductVisible } from "@/lib/products/visibility";
 import { ProductGrid } from "./product-grid";
@@ -45,19 +44,6 @@ export default async function StorePage() {
   const products = productsResult.data ?? [];
   const member = memberResult.data;
   const features = (spaceResult.data?.features ?? {}) as Record<string, boolean>;
-
-  // Fetch community_rules_text via admin client (column not yet in generated types)
-  let communityRulesText: string | null = null;
-  {
-    const admin = createAdminClient();
-    const { data: spaceData } = await admin
-      .from("spaces")
-      .select("community_rules_text" as "id")
-      .eq("id", spaceId)
-      .single();
-    communityRulesText = (spaceData as Record<string, unknown> | null)
-      ?.community_rules_text as string | null ?? null;
-  }
 
   // Build member context for visibility filtering
   const planCreditConfigs = (
@@ -117,7 +103,6 @@ export default async function StorePage() {
         }))}
         hasActiveMembership={hasActiveMembership ?? false}
         guestPassesEnabled={features.guest_passes !== false}
-        communityRulesText={communityRulesText}
       />
     </div>
   );

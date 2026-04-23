@@ -25,8 +25,6 @@ export const operationsSchema = z.object({
     ])
   ),
   minBookingMinutes: z.number().int().min(15).max(480),
-  maxPassDesks: z.number().int().min(1).optional().or(z.literal("")),
-  communityRulesText: z.string().max(10000).optional().or(z.literal("")),
 });
 
 export type OperationsFormValues = z.infer<typeof operationsSchema>;

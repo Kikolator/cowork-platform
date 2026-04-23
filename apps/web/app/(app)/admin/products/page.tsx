@@ -30,32 +30,16 @@ export default async function ProductsPage() {
 
   return (
     <ProductsTable
-      products={(products ?? []).map((p) => {
-        const row = p as Record<string, unknown>;
-        return {
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          description: p.description,
-          category: p.category,
-          price_cents: p.price_cents,
-          currency: p.currency,
-          iva_rate: p.iva_rate,
-          plan_id: p.plan_id,
-          pass_type: (row.pass_type ?? null) as "day" | "week" | null,
-          duration_days: (row.duration_days ?? null) as number | null,
-          consecutive_days: (row.consecutive_days ?? true) as boolean,
-          credit_grant_config: p.credit_grant_config as { resource_type_id: string; minutes: number } | null,
-          visibility_rules: (p.visibility_rules ?? {}) as {
-            require_membership?: boolean;
-            require_no_membership?: boolean;
-            require_plan_ids?: string[];
-            exclude_unlimited?: boolean;
-          },
-          active: p.active,
-          sort_order: p.sort_order,
-        };
-      })}
+      products={(products ?? []).map((p) => ({
+        ...p,
+        credit_grant_config: p.credit_grant_config as { resource_type_id: string; minutes: number } | null,
+        visibility_rules: (p.visibility_rules ?? {}) as {
+          require_membership?: boolean;
+          require_no_membership?: boolean;
+          require_plan_ids?: string[];
+          exclude_unlimited?: boolean;
+        },
+      }))}
       resourceTypes={resourceTypes ?? []}
       plans={plans ?? []}
       defaultCurrency={space?.currency ?? "eur"}

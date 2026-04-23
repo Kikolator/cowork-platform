@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { formatCredits, toUTC } from "@/lib/booking/format";
-import { CalendarPlus, CalendarDays, CreditCard, Store, Ticket } from "lucide-react";
+import { CalendarPlus, CalendarDays, CreditCard, Store } from "lucide-react";
 import { TodaySchedule } from "./today-schedule";
 import { UpcomingClosures } from "./upcoming-closures";
 
@@ -59,9 +59,9 @@ export default async function DashboardPage() {
     localHour < 12 ? "Good morning" : localHour < 18 ? "Good afternoon" : "Good evening";
 
   // Fetch member data, upcoming count, today's bookings, closures, profile, and recent resources
-  let memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult, passCountResult;
+  let memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult;
   try {
-  [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult, passCountResult] = await Promise.all([
+  [memberResult, upcomingResult, todayResult, closuresResult, profileResult, recentBookingsResult] = await Promise.all([
     spaceId
       ? supabase
           .from("members")
@@ -117,14 +117,6 @@ export default async function DashboardPage() {
           .order("start_time", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: null }),
-    spaceId
-      ? supabase
-          .from("passes")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("space_id", spaceId)
-          .in("status", ["active", "upcoming" as "active"]) // upcoming not yet in generated types
-      : Promise.resolve({ data: null, count: 0 }),
   ]);
   } catch (err) {
     createLogger({ component: "dashboard" }).error("Failed to load dashboard data", {
@@ -136,11 +128,9 @@ export default async function DashboardPage() {
     closuresResult = { data: null };
     profileResult = { data: null };
     recentBookingsResult = { data: null };
-    passCountResult = { data: null, count: 0 };
   }
 
   const member = memberResult.data;
-  const activePassCount = (passCountResult as { count?: number | null }).count ?? 0;
   const closures = closuresResult.data ?? [];
   const upcomingCount = upcomingResult.data?.length ?? 0;
   const firstName = profileResult.data?.full_name?.split(" ")[0] ?? null;
@@ -238,19 +228,10 @@ export default async function DashboardPage() {
   let resourceCount = 0;
   let planCount = 0;
   let hasStripe = false;
-  let passesTodayCount = 0;
-  let passesTodayBreakdown = "";
 
   if (isAdmin && spaceId) {
-    const passesTodayDate = new Date().toISOString().split("T")[0]!;
-    const passesTodayStart = passesTodayDate + "T00:00:00Z";
-    const passesTomorrowDate = new Date(
-      new Date(passesTodayDate + "T12:00:00Z").getTime() + 86400000,
-    ).toISOString().slice(0, 10);
-    const passesTodayEnd = passesTomorrowDate + "T00:00:00Z";
-
     try {
-      const [members, resources, plans, tenant, passesToday] = await Promise.all([
+      const [members, resources, plans, tenant] = await Promise.all([
         supabase
           .from("members")
           .select("id", { count: "exact", head: true })
@@ -268,29 +249,12 @@ export default async function DashboardPage() {
           .select("stripe_account_id")
           .eq("id", user.app_metadata?.tenant_id)
           .single(),
-        supabase
-          .from("passes")
-          .select("id, pass_type", { count: "exact", head: false })
-          .eq("space_id", spaceId)
-          .gte("created_at", passesTodayStart)
-          .lt("created_at", passesTodayEnd)
-          .not("status", "eq", "cancelled"),
       ]);
 
       memberCount = members.count ?? 0;
       resourceCount = resources.count ?? 0;
       planCount = plans.count ?? 0;
       hasStripe = !!tenant.data?.stripe_account_id;
-
-      passesTodayCount = passesToday.count ?? passesToday.data?.length ?? 0;
-      if (passesToday.data && passesToday.data.length > 0) {
-        const dayCt = passesToday.data.filter((p) => p.pass_type === "day").length;
-        const weekCt = passesToday.data.filter((p) => p.pass_type === "week").length;
-        const parts: string[] = [];
-        if (dayCt > 0) parts.push(`${dayCt} day`);
-        if (weekCt > 0) parts.push(`${weekCt} week`);
-        passesTodayBreakdown = parts.join(", ");
-      }
     } catch (err) {
       createLogger({ component: "dashboard" }).error("Failed to load admin stats", {
         error: err instanceof Error ? err.message : "Unknown error",
@@ -337,7 +301,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Member info */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <LinkCard title="Your plan" value={planDisplay} href="/plan" />
         <LinkCard
           title="Upcoming bookings"
@@ -345,18 +309,12 @@ export default async function DashboardPage() {
           href="/bookings"
         />
         <InfoCard title="Credits" value={creditsDisplay} />
-        <LinkCard
-          title="My Passes"
-          value={activePassCount > 0 ? `${activePassCount} active` : "No active passes"}
-          href="/passes"
-        />
       </div>
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-3">
         <QuickAction href="/book" icon={<CalendarPlus className="h-4 w-4" />} label="Book a space" />
         <QuickAction href="/bookings" icon={<CalendarDays className="h-4 w-4" />} label="My bookings" />
-        <QuickAction href="/passes" icon={<Ticket className="h-4 w-4" />} label="My passes" />
         <QuickAction href="/plan" icon={<CreditCard className="h-4 w-4" />} label="My plan" />
         <QuickAction href="/store" icon={<Store className="h-4 w-4" />} label="Store" />
       </div>
@@ -406,16 +364,10 @@ export default async function DashboardPage() {
             <h3 className="text-lg font-medium text-foreground">
               Quick Stats
             </h3>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
               <StatCard label="Members" value={memberCount} />
               <StatCard label="Resources" value={resourceCount} />
               <StatCard label="Plans configured" value={planCount} />
-              <StatCard
-                label="Passes today"
-                value={passesTodayCount}
-                subtitle={passesTodayBreakdown}
-                icon={<Ticket className="h-4 w-4 text-muted-foreground" />}
-              />
             </div>
           </div>
 
@@ -526,27 +478,13 @@ function QuickAction({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  subtitle,
-  icon,
-}: {
-  label: string;
-  value: number;
-  subtitle?: string;
-  icon?: React.ReactNode;
-}) {
+function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <p className="text-2xl font-semibold text-foreground">{value}</p>
-        {icon}
-      </div>
+      <p className="text-2xl font-semibold text-foreground">
+        {value}
+      </p>
       <p className="mt-1 text-xs text-muted-foreground">{label}</p>
-      {subtitle && (
-        <p className="text-[11px] text-muted-foreground">{subtitle}</p>
-      )}
     </div>
   );
 }

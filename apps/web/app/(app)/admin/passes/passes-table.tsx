@@ -37,8 +37,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { X, Plus, CreditCard } from "lucide-react";
-import { cancelPass, refundPass, createManualPass } from "./actions";
+import { X, Plus } from "lucide-react";
+import { cancelPass, createManualPass } from "./actions";
 
 interface Pass {
   id: string;
@@ -49,7 +49,6 @@ interface Pass {
   amount_cents: number;
   is_guest: boolean;
   purchased_by: string | null;
-  stripe_session_id?: string | null;
   assigned_desk_id: string | null;
   created_at: string | null;
   user: { full_name: string | null; email: string } | null;
@@ -69,7 +68,6 @@ interface PassesTableProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  upcoming: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
   active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   pending_payment: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   used: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
@@ -78,7 +76,6 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  upcoming: "Upcoming",
   active: "Active",
   pending_payment: "Pending",
   used: "Used",
@@ -108,9 +105,6 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
   const [search, setSearch] = useState("");
   const [cancelTarget, setCancelTarget] = useState<Pass | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [refundTarget, setRefundTarget] = useState<Pass | null>(null);
-  const [refundError, setRefundError] = useState<string | null>(null);
-  const [refundReason, setRefundReason] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [createUserId, setCreateUserId] = useState("");
   const [createPassType, setCreatePassType] = useState<"day" | "week">("day");
@@ -138,20 +132,6 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
         setCancelError(result.error);
       } else {
         setCancelTarget(null);
-      }
-    });
-  }
-
-  function handleRefund() {
-    if (!refundTarget) return;
-    setRefundError(null);
-    startTransition(async () => {
-      const result = await refundPass(refundTarget.id, refundReason || undefined);
-      if (!result.success) {
-        setRefundError(result.error);
-      } else {
-        setRefundTarget(null);
-        setRefundReason("");
       }
     });
   }
@@ -191,7 +171,7 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
           <Select
             value={statusFilter}
             onValueChange={(v) => v && setStatusFilter(v)}
-            items={[{ value: "all", label: "All Statuses" }, { value: "upcoming", label: "Upcoming" }, { value: "active", label: "Active" }, { value: "pending_payment", label: "Pending" }, { value: "used", label: "Used" }, { value: "cancelled", label: "Cancelled" }, { value: "expired", label: "Expired" }]}
+            items={[{ value: "all", label: "All Statuses" }, { value: "active", label: "Active" }, { value: "pending_payment", label: "Pending" }, { value: "used", label: "Used" }, { value: "cancelled", label: "Cancelled" }, { value: "expired", label: "Expired" }]}
           >
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -282,28 +262,15 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
                     {formatPrice(pass.amount_cents)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      {(pass.status === "active" || (pass.status as string) === "upcoming") && pass.stripe_session_id && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          title="Refund"
-                          onClick={() => setRefundTarget(pass)}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {(pass.status === "active" || (pass.status as string) === "upcoming") && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          title="Cancel"
-                          onClick={() => setCancelTarget(pass)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+                    {pass.status === "active" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => setCancelTarget(pass)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -432,53 +399,6 @@ export function PassesTable({ passes, spaceUsers }: PassesTableProps) {
               variant="destructive"
             >
               {isPending ? "Cancelling..." : "Cancel Pass"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Refund confirmation */}
-      <AlertDialog
-        open={!!refundTarget}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRefundTarget(null);
-            setRefundError(null);
-            setRefundReason("");
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Refund this pass?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will issue a full refund of{" "}
-              {refundTarget ? formatPrice(refundTarget.amount_cents) : ""} via
-              Stripe and cancel the pass. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="refund-reason">Reason (optional)</Label>
-            <Input
-              id="refund-reason"
-              value={refundReason}
-              onChange={(e) => setRefundReason(e.target.value)}
-              placeholder="e.g. Customer request"
-            />
-          </div>
-          {refundError && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-              {refundError}
-            </p>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep Pass</AlertDialogCancel>
-            <Button
-              onClick={handleRefund}
-              disabled={isPending}
-              variant="destructive"
-            >
-              {isPending ? "Refunding..." : "Refund & Cancel"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

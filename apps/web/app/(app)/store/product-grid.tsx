@@ -20,7 +20,6 @@ interface ProductGridProps {
   products: Product[];
   hasActiveMembership: boolean;
   guestPassesEnabled: boolean;
-  communityRulesText: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -37,7 +36,6 @@ export function ProductGrid({
   products,
   hasActiveMembership,
   guestPassesEnabled,
-  communityRulesText,
 }: ProductGridProps) {
   const [error, setError] = useState<string | null>(null);
   const [passProductId, setPassProductId] = useState<string | null>(null);
@@ -96,7 +94,6 @@ export function ProductGrid({
         }}
         product={passProduct}
         guestPassesEnabled={guestPassesEnabled}
-        communityRulesText={communityRulesText}
         onError={setError}
       />
     </div>

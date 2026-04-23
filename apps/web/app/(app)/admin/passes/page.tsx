@@ -18,7 +18,7 @@ export default async function AdminPassesPage() {
   const { data: passes } = await supabase
     .from("passes")
     .select(
-      "id, user_id, pass_type, status, start_date, end_date, amount_cents, is_guest, purchased_by, stripe_session_id, assigned_desk_id, created_at, desk:resources!passes_assigned_desk_id_fkey(name)",
+      "id, user_id, pass_type, status, start_date, end_date, amount_cents, is_guest, purchased_by, assigned_desk_id, created_at, desk:resources!passes_assigned_desk_id_fkey(name)",
     )
     .eq("space_id", spaceId)
     .order("created_at", { ascending: false });

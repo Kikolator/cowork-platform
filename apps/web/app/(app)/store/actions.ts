@@ -70,7 +70,6 @@ export async function purchasePass(
   isGuest: boolean,
   guestName?: string,
   guestEmail?: string,
-  communityRulesAccepted?: boolean,
 ): Promise<{ success: true; url: string } | { success: false; error: string }> {
   try {
     const { user, spaceId, tenantId } = await getSpaceContext();
@@ -218,7 +217,6 @@ export async function purchasePass(
         pass_id: passRecord.id,
         ...(isGuest && guestName ? { guest_name: guestName } : {}),
         ...(isGuest && guestEmail ? { guest_email: guestEmail } : {}),
-        ...(communityRulesAccepted ? { community_rules_accepted: "true" } : {}),
       },
     });
 

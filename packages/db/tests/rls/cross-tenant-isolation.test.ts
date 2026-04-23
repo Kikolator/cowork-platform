@@ -164,9 +164,7 @@ describe('cross-tenant write isolation', () => {
       slug: 'hacked-product',
       category: 'pass',
       price_cents: 5000,
-      purchase_flow: 'date_picker',
-      pass_type: 'day',
-      duration_days: 1,
+      purchase_flow: 'checkout',
     });
     expect(error).not.toBeNull();
   });

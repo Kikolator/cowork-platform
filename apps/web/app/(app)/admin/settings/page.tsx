@@ -98,14 +98,7 @@ export default async function SettingsPage({
         </TabsContent>
 
         <TabsContent value="operations" className="mt-6">
-          <OperationsForm
-            space={{
-              ...space,
-              // New columns added by pass_product_config migration; not yet in generated types
-              max_pass_desks: (space as Record<string, unknown>).max_pass_desks as number | null,
-              community_rules_text: (space as Record<string, unknown>).community_rules_text as string | null,
-            }}
-          />
+          <OperationsForm space={space} />
         </TabsContent>
 
         <TabsContent value="fiscal" className="mt-6">
@@ -117,14 +110,7 @@ export default async function SettingsPage({
         </TabsContent>
 
         <TabsContent value="access" className="mt-6">
-          <AccessForm
-            config={accessConfig ? {
-              ...accessConfig,
-              // WiFi columns from pass_product_config migration; not yet in generated types
-              wifi_network: (accessConfig as Record<string, unknown>).wifi_network as string | null ?? null,
-              wifi_password: (accessConfig as Record<string, unknown>).wifi_password as string | null ?? null,
-            } : null}
-          />
+          <AccessForm config={accessConfig} />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">

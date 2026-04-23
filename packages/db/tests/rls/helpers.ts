@@ -298,10 +298,10 @@ export function seedTestData(): void {
     -- =====================================================================
     -- Products
     -- =====================================================================
-    INSERT INTO products (id, space_id, name, slug, category, price_cents, purchase_flow, pass_type, duration_days)
+    INSERT INTO products (id, space_id, name, slug, category, price_cents, purchase_flow)
     VALUES
-      ('a0000007-0000-0000-0000-000000000001', '${SPACE_A_ID}', 'Day Pass A', 'day-pass', 'pass', 2500, 'date_picker', 'day', 1),
-      ('b0000007-0000-0000-0000-000000000001', '${SPACE_B_ID}', 'Day Pass B', 'day-pass', 'pass', 2000, 'date_picker', 'day', 1)
+      ('a0000007-0000-0000-0000-000000000001', '${SPACE_A_ID}', 'Day Pass A', 'day-pass', 'pass', 2500, 'date_picker'),
+      ('b0000007-0000-0000-0000-000000000001', '${SPACE_B_ID}', 'Day Pass B', 'day-pass', 'pass', 2000, 'date_picker')
     ON CONFLICT (space_id, slug) DO NOTHING;
 
     -- =====================================================================

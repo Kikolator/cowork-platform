@@ -12,10 +12,6 @@
     {
       "path": "/api/cron/renew-credits",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/pass-lifecycle",
-      "schedule": "5 0 * * *"
     }
   ]
 }
