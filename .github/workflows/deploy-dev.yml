@@ -1,0 +1,144 @@
+# Deploy to staging — pushes migrations and regenerates types on every push to dev
+name: Deploy Dev
+
+on:
+  push:
+    branches: [dev]
+
+# Never cancel in-flight migrations — wait for previous run to finish
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Push Migrations
+    # Skip if triggered by the auto-generated types commit to prevent infinite loops
+    if: "!startsWith(github.event.head_commit.message, 'chore(db): regenerate database types')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to staging project
+        run: supabase link --project-ref "$STAGING_REF"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+
+      - name: Push migrations
+        run: supabase db push
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Migrate ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  schema-drift:
+    name: Schema Drift Detection
+    needs: [migrate]
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to staging project
+        run: supabase link --project-ref "$STAGING_REF"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+
+      - name: Check for schema drift
+        run: |
+          OUTPUT=$(supabase db diff --linked 2>&1) || true
+          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
+            echo "::warning::Schema drift detected against staging project"
+            echo "### Schema Drift Detected" >> "$GITHUB_STEP_SUMMARY"
+            echo '```sql' >> "$GITHUB_STEP_SUMMARY"
+            echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Schema Drift — None" >> "$GITHUB_STEP_SUMMARY"
+          fi
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+
+  generate-types:
+    name: Generate Types
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.TYPES_PUSH_TOKEN }}
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to staging project
+        run: supabase link --project-ref "$STAGING_REF"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+
+      - name: Generate TypeScript types
+        run: supabase gen types typescript --linked > types/database.ts
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+
+      - name: Push types if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/db/types/database.ts
+          if git diff --staged --quiet; then
+            echo "No type changes detected"
+            echo "TYPES_CHANGED=false" >> "$GITHUB_ENV"
+          else
+            git commit -m "chore(db): regenerate database types"
+            git push
+            echo "TYPES_CHANGED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Summary
+        run: |
+          if [ "$TYPES_CHANGED" = "true" ]; then
+            echo "### Types — pushed to dev" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Types — No changes" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  summary:
+    name: Summary
+    needs: [migrate, schema-drift, generate-types]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy dev summary
+        run: |
+          echo "## Deploy Dev Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Job | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Migrations | ${{ needs.migrate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Schema Drift | ${{ needs.schema-drift.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Generate Types | ${{ needs.generate-types.result }} |" >> "$GITHUB_STEP_SUMMARY"
