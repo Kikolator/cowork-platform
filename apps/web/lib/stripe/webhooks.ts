@@ -870,8 +870,9 @@ async function handleGuestCheckout(
       email,
       error: linkError.message,
     });
-  } else if (linkData?.properties?.action_link) {
-    magicLinkUrl = linkData.properties.action_link;
+  } else if (linkData?.properties?.hashed_token) {
+    // Build URL pointing directly to our auth callback (not Supabase's /auth/v1/verify)
+    magicLinkUrl = `${redirectTo}?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=magiclink`;
   }
 
   if (passEmail) {
