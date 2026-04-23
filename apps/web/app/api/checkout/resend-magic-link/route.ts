@@ -115,12 +115,16 @@ export async function POST(request: NextRequest) {
       options: { redirectTo: `${spaceOrigin}/auth/callback` },
     });
 
-  if (linkError || !linkData?.properties?.action_link) {
+  if (linkError || !linkData?.properties?.hashed_token) {
     return NextResponse.json(
       { error: "Failed to generate magic link" },
       { status: 500 },
     );
   }
+
+  // Build URL pointing directly to our auth callback (not Supabase's /auth/v1/verify)
+  const callbackUrl = `${spaceOrigin}/auth/callback`;
+  const magicLinkUrl = `${callbackUrl}?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=magiclink`;
 
   // Send branded magic link email via Resend
   const branding = buildTenantBranding(spaceData, platformDomain);
@@ -134,7 +138,7 @@ export async function POST(request: NextRequest) {
       template: "magic-link",
       react: MagicLinkEmail({
         tenant: branding,
-        actionUrl: linkData.properties.action_link,
+        actionUrl: magicLinkUrl,
       }),
     });
   } catch {
