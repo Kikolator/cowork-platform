@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     const { data: product } = await admin
       .from("products")
-      .select("id, name, slug, price_cents, currency, category, stripe_price_id, stripe_product_id")
+      .select("id, name, slug, price_cents, currency, category, stripe_price_id, stripe_product_id, pass_type, duration_days")
       .eq("space_id", spaceId)
       .eq("slug", product_slug!)
       .eq("active", true)

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Product-based pass availability
     const { data: product } = await admin
       .from("products")
-      .select("id, category")
+      .select("id, category, pass_type, duration_days")
       .eq("space_id", spaceId)
       .eq("slug", product_slug!)
       .eq("active", true)
