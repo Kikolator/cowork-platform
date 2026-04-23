@@ -128,9 +128,37 @@ jobs:
             echo "### Types — No changes" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  deploy-functions:
+    name: Deploy Edge Functions
+    needs: [migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to staging project
+        run: supabase link --project-ref "$STAGING_REF"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+
+      - name: Deploy all edge functions
+        run: supabase functions deploy
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Edge Functions ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
   summary:
     name: Summary
-    needs: [migrate, schema-drift, generate-types]
+    needs: [migrate, schema-drift, generate-types, deploy-functions]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -143,3 +171,4 @@ jobs:
           echo "| Migrations | ${{ needs.migrate.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Schema Drift | ${{ needs.schema-drift.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Generate Types | ${{ needs.generate-types.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Edge Functions | ${{ needs.deploy-functions.result }} |" >> "$GITHUB_STEP_SUMMARY"

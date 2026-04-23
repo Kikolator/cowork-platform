@@ -202,10 +202,40 @@ jobs:
           echo "### Smoke Test — Failed ❌ (status: $STATUS)" >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
+  # ─── Deploy edge functions ─────────────────────────────────────
+  deploy-functions:
+    name: Deploy Edge Functions
+    needs: [preflight, migrate]
+    # Run after migrate succeeds, or if migrate was skipped (no new migrations)
+    if: always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to prod project
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROD_PROJECT_REF }}"
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy all edge functions
+        run: supabase functions deploy
+        working-directory: packages/db
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: echo "### Edge Functions ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
   # ─── Summary ──────────────────────────────────────────────────
   summary:
     name: Summary
-    needs: [preflight, migrate, generate-types, smoke-test]
+    needs: [preflight, migrate, generate-types, smoke-test, deploy-functions]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -219,6 +249,7 @@ jobs:
           | Preflight | ${{ needs.preflight.result }} |
           | Migrations | ${{ needs.migrate.result }} |
           | Generate Types | ${{ needs.generate-types.result }} |
+          | Edge Functions | ${{ needs.deploy-functions.result }} |
           | Smoke Test | ${{ needs.smoke-test.result }} |
 
           **New migrations:** ${{ needs.preflight.outputs.has_new_migrations }}
