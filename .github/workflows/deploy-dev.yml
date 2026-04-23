@@ -4,6 +4,7 @@ name: Deploy Dev
 on:
   push:
     branches: [dev]
+  workflow_dispatch:
 
 # Never cancel in-flight migrations — wait for previous run to finish
 concurrency:
