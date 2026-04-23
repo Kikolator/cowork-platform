@@ -34,7 +34,7 @@ export default async function ProductCheckoutPage({
   // Fetch the product by slug + space
   const { data: product } = await admin
     .from("products")
-    .select("id, name, slug, description, price_cents, currency, category, active")
+    .select("id, name, slug, description, price_cents, currency, category, active, pass_type, duration_days")
     .eq("space_id", spaceId)
     .eq("slug", slug)
     .eq("active", true)
