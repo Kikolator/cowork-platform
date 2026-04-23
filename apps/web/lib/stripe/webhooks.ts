@@ -282,28 +282,28 @@ async function handlePassCheckout(
   }
 
   if (user.data?.email) {
-    notifyPassConfirmation({
-      spaceId,
-      userId,
-      email: user.data.email,
-      name: user.data.full_name ?? undefined,
-      passType: pass.pass_type ?? "day",
-      startDate: pass.start_date,
-      endDate: pass.end_date,
-      deskName,
-    });
-
-    // Notify space owner
-    notifyNewPassPurchase({
-      spaceId,
-      visitorName: user.data.full_name ?? null,
-      visitorEmail: user.data.email,
-      passType: pass.pass_type ?? "day",
-      startDate: pass.start_date,
-      endDate: pass.end_date,
-      amountCents: session.amount_total ?? 0,
-      currency: session.currency ?? "eur",
-    });
+    await Promise.all([
+      notifyPassConfirmation({
+        spaceId,
+        userId,
+        email: user.data.email,
+        name: user.data.full_name ?? undefined,
+        passType: pass.pass_type ?? "day",
+        startDate: pass.start_date,
+        endDate: pass.end_date,
+        deskName,
+      }),
+      notifyNewPassPurchase({
+        spaceId,
+        visitorName: user.data.full_name ?? null,
+        visitorEmail: user.data.email,
+        passType: pass.pass_type ?? "day",
+        startDate: pass.start_date,
+        endDate: pass.end_date,
+        amountCents: session.amount_total ?? 0,
+        currency: session.currency ?? "eur",
+      }),
+    ]);
   }
 }
 
@@ -879,32 +879,32 @@ async function handleGuestCheckout(
 
   if (passEmail) {
     // Consolidated email: pass confirmation + magic link (replaces separate welcome + magic link emails)
-    notifyPassConfirmation({
-      spaceId,
-      userId,
-      email,
-      name: name ?? undefined,
-      passType: passEmail.passType,
-      startDate: passEmail.startDate,
-      endDate: passEmail.endDate,
-      deskName: passEmail.deskName,
-      magicLinkUrl,
-    });
-
-    // Notify space owner of new purchase
-    notifyNewPassPurchase({
-      spaceId,
-      visitorName: name ?? null,
-      visitorEmail: email,
-      passType: passEmail.passType,
-      startDate: passEmail.startDate,
-      endDate: passEmail.endDate,
-      amountCents: passEmail.amountCents,
-      currency: passEmail.currency,
-    });
+    await Promise.all([
+      notifyPassConfirmation({
+        spaceId,
+        userId,
+        email,
+        name: name ?? undefined,
+        passType: passEmail.passType,
+        startDate: passEmail.startDate,
+        endDate: passEmail.endDate,
+        deskName: passEmail.deskName,
+        magicLinkUrl,
+      }),
+      notifyNewPassPurchase({
+        spaceId,
+        visitorName: name ?? null,
+        visitorEmail: email,
+        passType: passEmail.passType,
+        startDate: passEmail.startDate,
+        endDate: passEmail.endDate,
+        amountCents: passEmail.amountCents,
+        currency: passEmail.currency,
+      }),
+    ]);
   } else if (type === "membership") {
     // Membership gets a welcome email (no pass confirmation)
-    notifySpaceSignup({ spaceId, userId, email, name: name ?? undefined });
+    await notifySpaceSignup({ spaceId, userId, email, name: name ?? undefined });
   }
 }
 
