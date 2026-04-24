@@ -35,6 +35,46 @@ async function buildSpaceUrl(slug: string, path: string): Promise<string> {
   return buildSpaceUrlFromHeaders(slug, path, h);
 }
 
+/** Fetch closure dates and closed weekdays for calendar disabling. */
+export async function getClosedDates(): Promise<{
+  closureDates: string[];
+  closedWeekdays: number[];
+}> {
+  const { supabase, spaceId } = await getSpaceContext();
+
+  // Fetch closure dates (upcoming only)
+  const today = new Date().toISOString().split("T")[0]!;
+  const { data: closures } = await supabase
+    .from("space_closures")
+    .select("date")
+    .eq("space_id", spaceId)
+    .gte("date", today)
+    .order("date");
+
+  // Fetch business hours to determine closed weekdays
+  const { data: space } = await supabase
+    .from("spaces")
+    .select("business_hours")
+    .eq("id", spaceId)
+    .single();
+
+  const bh = (space?.business_hours ?? {}) as Record<string, unknown>;
+  const dayMap: Record<string, number> = {
+    sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+  };
+  const closedWeekdays: number[] = [];
+  for (const [key, num] of Object.entries(dayMap)) {
+    if (bh[key] === null || bh[key] === undefined) {
+      closedWeekdays.push(num);
+    }
+  }
+
+  return {
+    closureDates: closures?.map((c) => c.date) ?? [],
+    closedWeekdays,
+  };
+}
+
 export async function getDateAvailability(date: string): Promise<{
   available: boolean;
   reason?: string;
