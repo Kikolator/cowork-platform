@@ -6,6 +6,7 @@ import { getEffectiveFeePercent, calculateApplicationFee } from "@/lib/stripe/fe
 import { ensureStripePriceExists } from "@/lib/stripe/subscriptions";
 import { ensureOneTimePriceExists } from "@/lib/stripe/checkout";
 import { isSpaceClosedOnDate, calculatePassEndDate } from "@/lib/space/closures";
+import { ensureStripeTaxRateExists } from "@/lib/stripe/tax-rates";
 import type { BusinessHours } from "@/lib/booking/format";
 import { checkoutSessionSchema } from "../schemas";
 import { getOrigin } from "@/lib/url";
@@ -36,13 +37,17 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
 
   // Resolve tenant + Stripe account
-  const { data: space } = await admin
+  const { data: spaceRaw } = await admin
     .from("spaces")
     .select(
-      "tenant_id, daypass_enabled, daypass_daily_limit, daypass_price_cents, daypass_currency, daypass_stripe_price_id, slug",
+      "tenant_id, daypass_enabled, daypass_daily_limit, daypass_price_cents, daypass_currency, daypass_stripe_price_id, slug, default_iva_rate, tax_inclusive" as "tenant_id",
     )
     .eq("id", spaceId)
     .single();
+  const space = spaceRaw as typeof spaceRaw & {
+    default_iva_rate?: number;
+    tax_inclusive?: boolean;
+  };
 
   if (!space) {
     return NextResponse.json({ error: "Space not found" }, { status: 404 });
@@ -66,6 +71,16 @@ export async function POST(request: NextRequest) {
     tenant.platform_plan ?? "free",
     tenant.platform_fee_percent,
   );
+
+  // Resolve tax rate for this space
+  const defaultIvaRate = (space as Record<string, unknown>).default_iva_rate as number ?? 21;
+  const taxInclusive = (space as Record<string, unknown>).tax_inclusive as boolean ?? true;
+  const taxRateId = await ensureStripeTaxRateExists({
+    spaceId,
+    connectedAccountId,
+    ivaRate: defaultIvaRate,
+    inclusive: taxInclusive,
+  });
 
   const origin = getOrigin(request.headers);
   const slugParam = spaceSlug ? `?space=${spaceSlug}` : "";
@@ -162,7 +177,13 @@ export async function POST(request: NextRequest) {
         {
           mode: "payment",
           customer_email: email,
-          line_items: [{ price: priceId, quantity: 1 }],
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+              ...(taxRateId && { tax_rates: [taxRateId] }),
+            },
+          ],
           invoice_creation: { enabled: true },
           payment_intent_data: {
             application_fee_amount: calculateApplicationFee(
@@ -258,7 +279,13 @@ export async function POST(request: NextRequest) {
         {
           mode: "payment",
           customer_email: email,
-          line_items: [{ price: priceId, quantity: 1 }],
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+              ...(taxRateId && { tax_rates: [taxRateId] }),
+            },
+          ],
           invoice_creation: { enabled: true },
           payment_intent_data: {
             application_fee_amount: calculateApplicationFee(
@@ -332,9 +359,16 @@ export async function POST(request: NextRequest) {
       {
         mode: "subscription",
         customer_email: email,
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+            ...(taxRateId && { tax_rates: [taxRateId] }),
+          },
+        ],
         subscription_data: {
           application_fee_percent: feePercent,
+          ...(taxRateId && { default_tax_rates: [taxRateId] }),
           metadata: {
             space_id: spaceId,
             plan_id: plan.id,

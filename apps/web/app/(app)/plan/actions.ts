@@ -17,6 +17,7 @@ import {
 } from "@/lib/stripe/subscriptions";
 import { validateReferralCode } from "@/lib/referrals/validate";
 import { createReferralCoupon } from "@/lib/stripe/coupons";
+import { ensureStripeTaxRateExists } from "@/lib/stripe/tax-rates";
 
 async function getSpaceContext() {
   const supabase = await createClient();
@@ -91,12 +92,22 @@ export async function subscribeToPlan(
       }
     }
 
-    // Check fiscal ID requirement
+    // Check fiscal ID requirement + tax config
     const { data: space } = await admin
       .from("spaces")
       .select("require_fiscal_id")
       .eq("id", spaceId)
       .single();
+
+    // Fetch tax config (new columns not yet in generated types)
+    const { data: taxConfig } = await admin
+      .from("spaces")
+      .select("default_iva_rate, tax_inclusive" as "id")
+      .eq("id", spaceId)
+      .single();
+    const spaceRow = taxConfig as Record<string, unknown> | null;
+    const defaultIvaRate = (spaceRow?.default_iva_rate as number) ?? 21;
+    const taxInclusive = (spaceRow?.tax_inclusive as boolean) ?? true;
 
     if (space?.require_fiscal_id) {
       const hasFiscalId = existingMember?.fiscal_id || fiscalData?.fiscalId;
@@ -214,6 +225,14 @@ export async function subscribeToPlan(
       }
     }
 
+    // Resolve Stripe tax rate
+    const taxRateId = await ensureStripeTaxRateExists({
+      spaceId,
+      connectedAccountId: stripeAccountId,
+      ivaRate: defaultIvaRate,
+      inclusive: taxInclusive,
+    }) ?? undefined;
+
     // Build URLs
     const h = await headers();
     const { data: spaceData } = await admin
@@ -238,6 +257,7 @@ export async function subscribeToPlan(
       cancelUrl,
       couponId,
       referralId,
+      taxRateId,
     });
 
     if (!session.url) {

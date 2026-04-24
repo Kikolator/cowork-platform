@@ -15,6 +15,7 @@ import {
   createOneTimeCheckoutSession,
 } from "@/lib/stripe/checkout";
 import { getStripe } from "@/lib/stripe/client";
+import { ensureStripeTaxRateExists } from "@/lib/stripe/tax-rates";
 import { isProductVisible } from "@/lib/products/visibility";
 
 async function getSpaceContext() {
@@ -186,6 +187,20 @@ export async function purchasePass(
       await verifyStripeReady(tenantId);
     const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
+    // Resolve tax rate
+    const { data: taxRow } = await admin
+      .from("spaces")
+      .select("default_iva_rate, tax_inclusive" as "id")
+      .eq("id", spaceId)
+      .single();
+    const taxData = taxRow as Record<string, unknown> | null;
+    const taxRateId = await ensureStripeTaxRateExists({
+      spaceId,
+      connectedAccountId: stripeAccountId,
+      ivaRate: (taxData?.default_iva_rate as number) ?? 21,
+      inclusive: (taxData?.tax_inclusive as boolean) ?? true,
+    }) ?? undefined;
+
     // Get or create customer (reuse member from visibility check above)
     const customerId = await findOrCreateCustomer({
       email: user.email ?? "",
@@ -214,6 +229,7 @@ export async function purchasePass(
       userId: user.id,
       successUrl,
       cancelUrl,
+      taxRateId,
       extraMetadata: {
         pass_id: passRecord.id,
         ...(isGuest && guestName ? { guest_name: guestName } : {}),
@@ -318,6 +334,20 @@ export async function purchaseProduct(
       await verifyStripeReady(tenantId);
     const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
+    // Resolve tax rate
+    const { data: taxRow2 } = await admin
+      .from("spaces")
+      .select("default_iva_rate, tax_inclusive" as "id")
+      .eq("id", spaceId)
+      .single();
+    const taxData2 = taxRow2 as Record<string, unknown> | null;
+    const taxRateId = await ensureStripeTaxRateExists({
+      spaceId,
+      connectedAccountId: stripeAccountId,
+      ivaRate: (taxData2?.default_iva_rate as number) ?? 21,
+      inclusive: (taxData2?.tax_inclusive as boolean) ?? true,
+    }) ?? undefined;
+
     const customerId = await findOrCreateCustomer({
       email: user.email ?? "",
       name: user.user_metadata?.full_name ?? null,
@@ -345,6 +375,7 @@ export async function purchaseProduct(
       userId: user.id,
       successUrl,
       cancelUrl,
+      taxRateId,
     });
 
     if (!session.url) {
