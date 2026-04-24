@@ -33,6 +33,8 @@ export function InvoiceTable({
   invoices: InvoiceRow[];
   showMemberColumn?: boolean;
 }) {
+  const hasTax = invoices.some((inv) => inv.taxAmount > 0);
+
   return (
     <div className="overflow-hidden rounded-xl border border-border">
       <table className="w-full text-sm">
@@ -49,8 +51,18 @@ export function InvoiceTable({
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
               Date
             </th>
+            {hasTax && (
+              <>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  Subtotal
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  Tax
+                </th>
+              </>
+            )}
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-              Amount
+              {hasTax ? "Total" : "Amount"}
             </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">
               Status
@@ -74,6 +86,16 @@ export function InvoiceTable({
               <td className="px-4 py-3 text-xs text-muted-foreground">
                 {new Date(inv.date * 1000).toLocaleDateString()}
               </td>
+              {hasTax && (
+                <>
+                  <td className="px-4 py-3 text-right font-mono text-xs">
+                    {formatCurrency(inv.subtotal, inv.currency)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground">
+                    {inv.taxAmount > 0 ? formatCurrency(inv.taxAmount, inv.currency) : "—"}
+                  </td>
+                </>
+              )}
               <td className="px-4 py-3 text-right font-mono text-xs">
                 {formatCurrency(inv.amountDue, inv.currency)}
               </td>
@@ -113,7 +135,7 @@ export function InvoiceTable({
           {invoices.length === 0 && (
             <tr>
               <td
-                colSpan={showMemberColumn ? 6 : 5}
+                colSpan={(showMemberColumn ? 6 : 5) + (hasTax ? 2 : 0)}
                 className="px-4 py-8 text-center text-muted-foreground"
               >
                 No invoices yet
