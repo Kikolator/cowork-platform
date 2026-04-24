@@ -74,7 +74,8 @@ export function AdminEventList({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function handleFilterChange(value: string) {
+  function handleFilterChange(value: string | null) {
+    if (!value) return;
     const params = new URLSearchParams(searchParams.toString());
     if (value === "all") {
       params.delete("type");
