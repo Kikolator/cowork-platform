@@ -50,6 +50,18 @@ export default async function PlanPage({
     .eq("space_id", spaceId)
     .maybeSingle();
 
+  // Get space tax config
+  const { data: spaceConfig } = await supabase
+    .from("spaces")
+    .select("default_iva_rate, tax_inclusive" as "id")
+    .eq("id", spaceId)
+    .single();
+  const spaceRow = spaceConfig as Record<string, unknown> | null;
+  const taxConfig = {
+    ivaRate: (spaceRow?.default_iva_rate as number) ?? 21,
+    taxInclusive: (spaceRow?.tax_inclusive as boolean) ?? true,
+  };
+
   // Get all active plans with credit config and space capacity
   const [{ data: plans }, { data: capacityData }] = await Promise.all([
     supabase
@@ -176,6 +188,7 @@ export default async function PlanPage({
         memberStatus={member?.status ?? null}
         capacity={capacity}
         referralCode={referralCode}
+        taxConfig={taxConfig}
       />
     </div>
   );

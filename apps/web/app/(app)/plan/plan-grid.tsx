@@ -31,15 +31,21 @@ interface SpaceCapacity {
   remaining: number;
 }
 
+interface TaxConfig {
+  ivaRate: number;
+  taxInclusive: boolean;
+}
+
 interface PlanGridProps {
   plans: Plan[];
   currentPlanId: string | null;
   memberStatus: string | null;
   capacity: SpaceCapacity | null;
   referralCode?: string | null;
+  taxConfig?: TaxConfig;
 }
 
-export function PlanGrid({ plans, currentPlanId, memberStatus, capacity, referralCode }: PlanGridProps) {
+export function PlanGrid({ plans, currentPlanId, memberStatus, capacity, referralCode, taxConfig }: PlanGridProps) {
   const [error, setError] = useState<string | null>(null);
   const [fiscalIdPlanId, setFiscalIdPlanId] = useState<string | null>(null);
 
@@ -74,6 +80,7 @@ export function PlanGrid({ plans, currentPlanId, memberStatus, capacity, referra
             onError={setError}
             onFiscalIdRequired={(planId) => setFiscalIdPlanId(planId)}
             referralCode={referralCode}
+            taxConfig={taxConfig}
           />
         ))}
       </div>

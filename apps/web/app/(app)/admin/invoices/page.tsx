@@ -24,6 +24,21 @@ export default async function AdminInvoicesPage() {
     // Stripe not configured — show empty state
   }
 
+  // Revenue summary from paid invoices
+  const paidInvoices = invoices.filter((inv) => inv.status === "paid");
+  const totalRevenue = paidInvoices.reduce((sum, inv) => sum + inv.amountDue, 0);
+  const totalTax = paidInvoices.reduce((sum, inv) => sum + inv.taxAmount, 0);
+  const netRevenue = totalRevenue - totalTax;
+  const currency = paidInvoices[0]?.currency ?? "eur";
+
+  function fmt(cents: number) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(cents / 100);
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,6 +49,27 @@ export default async function AdminInvoicesPage() {
           All member invoices for this space.
         </p>
       </div>
+
+      {paidInvoices.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-border p-4">
+            <p className="text-xs font-medium text-muted-foreground">Total Revenue</p>
+            <p className="mt-1 text-xl font-bold">{fmt(totalRevenue)}</p>
+          </div>
+          {totalTax > 0 && (
+            <>
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-xs font-medium text-muted-foreground">Tax Collected</p>
+                <p className="mt-1 text-xl font-bold">{fmt(totalTax)}</p>
+              </div>
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-xs font-medium text-muted-foreground">Net Revenue</p>
+                <p className="mt-1 text-xl font-bold">{fmt(netRevenue)}</p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <InvoiceTable invoices={invoices} showMemberColumn />
     </div>
