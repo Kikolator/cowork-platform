@@ -23,7 +23,7 @@ function mapInvoice(inv: Stripe.Invoice): InvoiceRow {
     number: inv.number ?? null,
     date: inv.created,
     subtotal: inv.subtotal,
-    taxAmount: inv.tax ?? 0,
+    taxAmount: inv.total_taxes?.reduce((sum, t) => sum + t.amount, 0) ?? 0,
     amountDue: inv.amount_due,
     currency: inv.currency,
     status: inv.status ?? null,

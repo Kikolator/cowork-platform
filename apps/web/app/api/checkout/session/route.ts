@@ -37,17 +37,21 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
 
   // Resolve tenant + Stripe account
-  const { data: spaceRaw } = await admin
+  const { data: space } = await admin
     .from("spaces")
     .select(
-      "tenant_id, daypass_enabled, daypass_daily_limit, daypass_price_cents, daypass_currency, daypass_stripe_price_id, slug, default_iva_rate, tax_inclusive" as "tenant_id",
+      "tenant_id, daypass_enabled, daypass_daily_limit, daypass_price_cents, daypass_currency, daypass_stripe_price_id, slug",
     )
     .eq("id", spaceId)
     .single();
-  const space = spaceRaw as typeof spaceRaw & {
-    default_iva_rate?: number;
-    tax_inclusive?: boolean;
-  };
+
+  // Fetch tax config (new columns not yet in generated types)
+  const { data: taxCfg } = await admin
+    .from("spaces")
+    .select("default_iva_rate, tax_inclusive" as "id")
+    .eq("id", spaceId)
+    .single();
+  const taxRow = taxCfg as Record<string, unknown> | null;
 
   if (!space) {
     return NextResponse.json({ error: "Space not found" }, { status: 404 });
@@ -73,8 +77,8 @@ export async function POST(request: NextRequest) {
   );
 
   // Resolve tax rate for this space
-  const defaultIvaRate = (space as Record<string, unknown>).default_iva_rate as number ?? 21;
-  const taxInclusive = (space as Record<string, unknown>).tax_inclusive as boolean ?? true;
+  const defaultIvaRate = (taxRow?.default_iva_rate as number) ?? 21;
+  const taxInclusive = (taxRow?.tax_inclusive as boolean) ?? true;
   const taxRateId = await ensureStripeTaxRateExists({
     spaceId,
     connectedAccountId,
