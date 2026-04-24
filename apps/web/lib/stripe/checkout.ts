@@ -132,6 +132,7 @@ export async function createOneTimeCheckoutSession(params: {
       mode: "payment",
       customer: params.customerId,
       line_items: [{ price: params.priceId, quantity: 1 }],
+      invoice_creation: { enabled: true },
       payment_intent_data: {
         application_fee_amount: calculateApplicationFee(
           params.amountCents,

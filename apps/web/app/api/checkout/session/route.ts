@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
           mode: "payment",
           customer_email: email,
           line_items: [{ price: priceId, quantity: 1 }],
+          invoice_creation: { enabled: true },
           payment_intent_data: {
             application_fee_amount: calculateApplicationFee(
               product.price_cents,
@@ -258,6 +259,7 @@ export async function POST(request: NextRequest) {
           mode: "payment",
           customer_email: email,
           line_items: [{ price: priceId, quantity: 1 }],
+          invoice_creation: { enabled: true },
           payment_intent_data: {
             application_fee_amount: calculateApplicationFee(
               space.daypass_price_cents,
