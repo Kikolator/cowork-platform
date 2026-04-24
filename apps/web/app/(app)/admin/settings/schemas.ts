@@ -34,6 +34,8 @@ export type OperationsFormValues = z.infer<typeof operationsSchema>;
 export const fiscalSchema = z.object({
   requireFiscalId: z.boolean(),
   supportedFiscalIdTypes: z.array(z.string()).min(1, "Select at least one fiscal ID type"),
+  defaultIvaRate: z.number().min(0).max(100),
+  taxInclusive: z.boolean(),
 });
 
 export type FiscalFormValues = z.infer<typeof fiscalSchema>;

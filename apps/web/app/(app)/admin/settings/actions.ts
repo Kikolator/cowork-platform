@@ -171,12 +171,26 @@ export async function updateSpaceFiscal(input: unknown) {
 
   const { supabase, spaceId } = await getSpaceId();
 
+  // Check if tax config changed — invalidate cached Stripe TaxRate if so
+  const { data: current } = await supabase
+    .from("spaces")
+    .select("default_iva_rate, tax_inclusive" as "id")
+    .eq("id", spaceId)
+    .single();
+  const currentRow = current as Record<string, unknown> | null;
+  const rateChanged =
+    (currentRow?.default_iva_rate as number) !== parsed.data.defaultIvaRate ||
+    (currentRow?.tax_inclusive as boolean) !== parsed.data.taxInclusive;
+
   const { error } = await supabase
     .from("spaces")
     .update({
       require_fiscal_id: parsed.data.requireFiscalId,
       supported_fiscal_id_types: parsed.data.supportedFiscalIdTypes,
-    })
+      default_iva_rate: parsed.data.defaultIvaRate,
+      tax_inclusive: parsed.data.taxInclusive,
+      ...(rateChanged && { stripe_tax_rate_id: null }),
+    } as Record<string, unknown>)
     .eq("id", spaceId);
 
   if (error) return { success: false as const, error: error.message };

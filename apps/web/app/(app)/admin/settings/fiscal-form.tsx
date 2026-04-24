@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +22,8 @@ interface FiscalFormProps {
   space: {
     require_fiscal_id: boolean | null;
     supported_fiscal_id_types: unknown;
+    default_iva_rate?: number;
+    tax_inclusive?: boolean;
   };
 }
 
@@ -29,6 +32,12 @@ export function FiscalForm({ space }: FiscalFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [requireFiscalId, setRequireFiscalId] = useState(space.require_fiscal_id ?? false);
+  const [defaultIvaRate, setDefaultIvaRate] = useState(
+    (space as Record<string, unknown>).default_iva_rate as number ?? 21,
+  );
+  const [taxInclusive, setTaxInclusive] = useState(
+    (space as Record<string, unknown>).tax_inclusive as boolean ?? true,
+  );
 
   const initialTypes = Array.isArray(space.supported_fiscal_id_types)
     ? (space.supported_fiscal_id_types as string[])
@@ -49,6 +58,8 @@ export function FiscalForm({ space }: FiscalFormProps) {
       const result = await updateSpaceFiscal({
         requireFiscalId,
         supportedFiscalIdTypes: selectedTypes,
+        defaultIvaRate,
+        taxInclusive,
       });
       if (!result.success) {
         setServerError(result.error);
@@ -70,6 +81,48 @@ export function FiscalForm({ space }: FiscalFormProps) {
           Fiscal settings updated.
         </p>
       )}
+
+      <div className="space-y-4 rounded-xl border border-border p-4">
+        <div>
+          <Label className="text-sm font-medium">Tax / VAT Settings</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Configure the tax rate applied to invoices. Changes apply to new checkouts only.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="iva-rate" className="text-sm">Default VAT/IVA rate (%)</Label>
+            <Input
+              id="iva-rate"
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              value={defaultIvaRate}
+              onChange={(e) => setDefaultIvaRate(Number(e.target.value))}
+              className="max-w-32"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-6">
+            <Switch
+              id="tax-inclusive"
+              checked={taxInclusive}
+              onCheckedChange={setTaxInclusive}
+            />
+            <Label htmlFor="tax-inclusive" className="text-sm">
+              Prices include tax
+            </Label>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {taxInclusive
+            ? "Tax is included in the displayed price. Invoices will show the tax breakdown extracted from the total."
+            : "Tax is added on top of the displayed price. Customers pay the listed price plus the tax rate."}
+        </p>
+      </div>
 
       <div className="flex items-center justify-between rounded-xl border border-border p-4">
         <div>
