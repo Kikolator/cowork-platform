@@ -74,17 +74,27 @@ export async function createCheckoutSession(params: {
   cancelUrl: string;
   couponId?: string;
   referralId?: string;
+  taxRateId?: string;
 }): Promise<Stripe.Checkout.Session> {
   return getStripe().checkout.sessions.create(
     {
       mode: "subscription",
       customer: params.customerId,
-      line_items: [{ price: params.priceId, quantity: 1 }],
+      line_items: [
+        {
+          price: params.priceId,
+          quantity: 1,
+          ...(params.taxRateId && { tax_rates: [params.taxRateId] }),
+        },
+      ],
       ...(params.couponId && {
         discounts: [{ coupon: params.couponId }],
       }),
       subscription_data: {
         application_fee_percent: params.feePercent,
+        ...(params.taxRateId && {
+          default_tax_rates: [params.taxRateId],
+        }),
         metadata: {
           space_id: params.spaceId,
           plan_id: params.planId,
@@ -207,6 +217,7 @@ export async function provisionSubscription(params: {
   spaceId: string;
   tenantId: string;
   customPriceCents: number | null;
+  taxRateId?: string;
 }): Promise<void> {
   const admin = createAdminClient();
 
@@ -287,6 +298,9 @@ export async function provisionSubscription(params: {
       collection_method: "send_invoice",
       days_until_due: 7,
       application_fee_percent: feePercent,
+      ...(params.taxRateId && {
+        default_tax_rates: [params.taxRateId],
+      }),
       metadata: {
         space_id: params.spaceId,
         plan_id: params.planId,

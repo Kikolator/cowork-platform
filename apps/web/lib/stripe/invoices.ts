@@ -6,6 +6,8 @@ export interface InvoiceRow {
   id: string;
   number: string | null;
   date: number;
+  subtotal: number;
+  taxAmount: number;
   amountDue: number;
   currency: string;
   status: string | null;
@@ -20,6 +22,8 @@ function mapInvoice(inv: Stripe.Invoice): InvoiceRow {
     id: inv.id,
     number: inv.number ?? null,
     date: inv.created,
+    subtotal: inv.subtotal,
+    taxAmount: inv.tax ?? 0,
     amountDue: inv.amount_due,
     currency: inv.currency,
     status: inv.status ?? null,
