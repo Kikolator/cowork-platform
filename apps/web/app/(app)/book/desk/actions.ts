@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
 import { getDeskAvailabilityRange, getClosures } from "@/lib/booking/availability";
 import { notifyBookingConfirmation } from "@/lib/email/notifications";
+import { recordEvent } from "@/lib/events";
 import {
   validateDeskBookingDate,
   validateBookingTime,
@@ -209,6 +211,21 @@ export async function bookDesk(
     date,
     startTime,
     endTime,
+  });
+
+  // Fire-and-forget event recording
+  const h = await headers();
+  recordEvent({
+    spaceId,
+    tenantId: user.app_metadata?.tenant_id as string | undefined,
+    actorId: user.id,
+    actorType: "member",
+    eventType: "booking.created",
+    resourceType: "booking",
+    resourceId: bookingId as string,
+    metadata: { desk_name: desk.name, date, start_time: startTime, end_time: endTime },
+    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim(),
+    userAgent: h.get("user-agent") ?? undefined,
   });
 
   return {
