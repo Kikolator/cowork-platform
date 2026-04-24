@@ -17,6 +17,7 @@ import {
   Package,
   Upload,
   Gift,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ export const navItems: NavItem[] = [
   { label: "Profile", href: "/profile", icon: User },
   { label: "Access", href: "/access", icon: KeyRound },
   { label: "Referrals", href: "/referrals", icon: Gift },
+  { label: "Activity", href: "/activity", icon: Activity },
 
   {
     label: "Members",
@@ -81,6 +83,12 @@ export const navItems: NavItem[] = [
     label: "Referrals",
     href: "/admin/referrals",
     icon: Gift,
+    adminOnly: true,
+  },
+  {
+    label: "Activity Log",
+    href: "/admin/activity",
+    icon: Activity,
     adminOnly: true,
   },
   {
