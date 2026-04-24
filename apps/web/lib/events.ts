@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@cowork/db";
 
 interface EventInput {
   spaceId: string;
@@ -10,7 +11,7 @@ interface EventInput {
   eventType: string;
   resourceType?: string;
   resourceId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, Json>;
   ip?: string;
   userAgent?: string;
 }
