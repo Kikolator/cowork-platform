@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -1762,6 +1757,7 @@ export type Database = {
           daypass_enabled: boolean
           daypass_price_cents: number | null
           daypass_stripe_price_id: string | null
+          default_iva_rate: number
           default_locale: string
           favicon_url: string | null
           features: Json
@@ -1776,7 +1772,9 @@ export type Database = {
           primary_color: string | null
           require_fiscal_id: boolean | null
           slug: string
+          stripe_tax_rate_id: string | null
           supported_fiscal_id_types: Json | null
+          tax_inclusive: boolean
           tenant_id: string
           timezone: string
           updated_at: string | null
@@ -1797,6 +1795,7 @@ export type Database = {
           daypass_enabled?: boolean
           daypass_price_cents?: number | null
           daypass_stripe_price_id?: string | null
+          default_iva_rate?: number
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1811,7 +1810,9 @@ export type Database = {
           primary_color?: string | null
           require_fiscal_id?: boolean | null
           slug: string
+          stripe_tax_rate_id?: string | null
           supported_fiscal_id_types?: Json | null
+          tax_inclusive?: boolean
           tenant_id: string
           timezone?: string
           updated_at?: string | null
@@ -1832,6 +1833,7 @@ export type Database = {
           daypass_enabled?: boolean
           daypass_price_cents?: number | null
           daypass_stripe_price_id?: string | null
+          default_iva_rate?: number
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1846,7 +1848,9 @@ export type Database = {
           primary_color?: string | null
           require_fiscal_id?: boolean | null
           slug?: string
+          stripe_tax_rate_id?: string | null
           supported_fiscal_id_types?: Json | null
+          tax_inclusive?: boolean
           tenant_id?: string
           timezone?: string
           updated_at?: string | null
@@ -2322,3 +2326,4 @@ export const Constants = {
     },
   },
 } as const
+

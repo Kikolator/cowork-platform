@@ -289,19 +289,18 @@ export async function addMember(input: unknown) {
     try {
       const { data: space } = await admin
         .from("spaces")
-        .select("tenant_id, default_iva_rate, tax_inclusive" as "tenant_id")
+        .select("tenant_id, default_iva_rate, tax_inclusive")
         .eq("id", spaceId)
         .single();
 
       if (!space?.tenant_id) throw new Error("Space has no tenant");
 
-      const spaceRow = space as Record<string, unknown>;
       const { stripeAccountId } = await (await import("@/lib/stripe/connect")).verifyStripeReady(space.tenant_id);
       const taxRateId = await ensureStripeTaxRateExists({
         spaceId,
         connectedAccountId: stripeAccountId,
-        ivaRate: (spaceRow.default_iva_rate as number) ?? 21,
-        inclusive: (spaceRow.tax_inclusive as boolean) ?? true,
+        ivaRate: space.default_iva_rate ?? 21,
+        inclusive: space.tax_inclusive ?? true,
       }) ?? undefined;
 
       await provisionSubscription({
@@ -534,7 +533,7 @@ export async function switchToStripeBilling(input: unknown) {
 
   const { data: space } = await admin
     .from("spaces")
-    .select("tenant_id, default_iva_rate, tax_inclusive" as "tenant_id")
+    .select("tenant_id, default_iva_rate, tax_inclusive")
     .eq("id", spaceId)
     .single();
 
@@ -543,13 +542,12 @@ export async function switchToStripeBilling(input: unknown) {
   }
 
   try {
-    const spaceRow2 = space as Record<string, unknown>;
     const { stripeAccountId: saId } = await (await import("@/lib/stripe/connect")).verifyStripeReady(space.tenant_id);
     const taxRateId = await ensureStripeTaxRateExists({
       spaceId,
       connectedAccountId: saId,
-      ivaRate: (spaceRow2.default_iva_rate as number) ?? 21,
-      inclusive: (spaceRow2.tax_inclusive as boolean) ?? true,
+      ivaRate: space.default_iva_rate ?? 21,
+      inclusive: space.tax_inclusive ?? true,
     }) ?? undefined;
 
     await provisionSubscription({

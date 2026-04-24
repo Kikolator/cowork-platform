@@ -22,15 +22,14 @@ export async function ensureStripeTaxRateExists(params: {
   const admin = createAdminClient();
   const stripe = getStripe();
 
-  // Check cached TaxRate ID (column not yet in generated types)
-  const { data: spaceData } = await admin
+  // Check cached TaxRate ID
+  const { data: space } = await admin
     .from("spaces")
-    .select("stripe_tax_rate_id" as "id")
+    .select("stripe_tax_rate_id")
     .eq("id", params.spaceId)
     .single();
-  const space = spaceData as Record<string, unknown> | null;
 
-  const cachedId = space?.stripe_tax_rate_id as string | null;
+  const cachedId = space?.stripe_tax_rate_id ?? null;
   if (cachedId) {
     try {
       const existing = await stripe.taxRates.retrieve(
@@ -67,7 +66,7 @@ export async function ensureStripeTaxRateExists(params: {
 
   await admin
     .from("spaces")
-    .update({ stripe_tax_rate_id: taxRate.id } as Record<string, unknown>)
+    .update({ stripe_tax_rate_id: taxRate.id })
     .eq("id", params.spaceId);
 
   return taxRate.id;

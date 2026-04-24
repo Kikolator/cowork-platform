@@ -32,12 +32,8 @@ export function FiscalForm({ space }: FiscalFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [requireFiscalId, setRequireFiscalId] = useState(space.require_fiscal_id ?? false);
-  const [defaultIvaRate, setDefaultIvaRate] = useState(
-    (space as Record<string, unknown>).default_iva_rate as number ?? 21,
-  );
-  const [taxInclusive, setTaxInclusive] = useState(
-    (space as Record<string, unknown>).tax_inclusive as boolean ?? true,
-  );
+  const [defaultIvaRate, setDefaultIvaRate] = useState(space.default_iva_rate ?? 21);
+  const [taxInclusive, setTaxInclusive] = useState(space.tax_inclusive ?? true);
 
   const initialTypes = Array.isArray(space.supported_fiscal_id_types)
     ? (space.supported_fiscal_id_types as string[])

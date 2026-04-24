@@ -45,13 +45,12 @@ export async function POST(request: NextRequest) {
     .eq("id", spaceId)
     .single();
 
-  // Fetch tax config (new columns not yet in generated types)
+  // Fetch tax config
   const { data: taxCfg } = await admin
     .from("spaces")
-    .select("default_iva_rate, tax_inclusive" as "id")
+    .select("default_iva_rate, tax_inclusive")
     .eq("id", spaceId)
     .single();
-  const taxRow = taxCfg as Record<string, unknown> | null;
 
   if (!space) {
     return NextResponse.json({ error: "Space not found" }, { status: 404 });
@@ -77,8 +76,8 @@ export async function POST(request: NextRequest) {
   );
 
   // Resolve tax rate for this space
-  const defaultIvaRate = (taxRow?.default_iva_rate as number) ?? 21;
-  const taxInclusive = (taxRow?.tax_inclusive as boolean) ?? true;
+  const defaultIvaRate = taxCfg?.default_iva_rate ?? 21;
+  const taxInclusive = taxCfg?.tax_inclusive ?? true;
   const taxRateId = await ensureStripeTaxRateExists({
     spaceId,
     connectedAccountId,

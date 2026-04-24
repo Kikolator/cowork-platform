@@ -53,13 +53,12 @@ export default async function PlanPage({
   // Get space tax config
   const { data: spaceConfig } = await supabase
     .from("spaces")
-    .select("default_iva_rate, tax_inclusive" as "id")
+    .select("default_iva_rate, tax_inclusive")
     .eq("id", spaceId)
     .single();
-  const spaceRow = spaceConfig as Record<string, unknown> | null;
   const taxConfig = {
-    ivaRate: (spaceRow?.default_iva_rate as number) ?? 21,
-    taxInclusive: (spaceRow?.tax_inclusive as boolean) ?? true,
+    ivaRate: spaceConfig?.default_iva_rate ?? 21,
+    taxInclusive: spaceConfig?.tax_inclusive ?? true,
   };
 
   // Get all active plans with credit config and space capacity

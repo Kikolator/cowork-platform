@@ -99,15 +99,14 @@ export async function subscribeToPlan(
       .eq("id", spaceId)
       .single();
 
-    // Fetch tax config (new columns not yet in generated types)
+    // Fetch tax config
     const { data: taxConfig } = await admin
       .from("spaces")
-      .select("default_iva_rate, tax_inclusive" as "id")
+      .select("default_iva_rate, tax_inclusive")
       .eq("id", spaceId)
       .single();
-    const spaceRow = taxConfig as Record<string, unknown> | null;
-    const defaultIvaRate = (spaceRow?.default_iva_rate as number) ?? 21;
-    const taxInclusive = (spaceRow?.tax_inclusive as boolean) ?? true;
+    const defaultIvaRate = taxConfig?.default_iva_rate ?? 21;
+    const taxInclusive = taxConfig?.tax_inclusive ?? true;
 
     if (space?.require_fiscal_id) {
       const hasFiscalId = existingMember?.fiscal_id || fiscalData?.fiscalId;

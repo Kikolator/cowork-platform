@@ -188,17 +188,16 @@ export async function purchasePass(
     const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
     // Resolve tax rate
-    const { data: taxRow } = await admin
+    const { data: taxCfg } = await admin
       .from("spaces")
-      .select("default_iva_rate, tax_inclusive" as "id")
+      .select("default_iva_rate, tax_inclusive")
       .eq("id", spaceId)
       .single();
-    const taxData = taxRow as Record<string, unknown> | null;
     const taxRateId = await ensureStripeTaxRateExists({
       spaceId,
       connectedAccountId: stripeAccountId,
-      ivaRate: (taxData?.default_iva_rate as number) ?? 21,
-      inclusive: (taxData?.tax_inclusive as boolean) ?? true,
+      ivaRate: taxCfg?.default_iva_rate ?? 21,
+      inclusive: taxCfg?.tax_inclusive ?? true,
     }) ?? undefined;
 
     // Get or create customer (reuse member from visibility check above)
@@ -335,17 +334,16 @@ export async function purchaseProduct(
     const feePercent = getEffectiveFeePercent(platformPlan, platformFeePercent);
 
     // Resolve tax rate
-    const { data: taxRow2 } = await admin
+    const { data: taxCfg2 } = await admin
       .from("spaces")
-      .select("default_iva_rate, tax_inclusive" as "id")
+      .select("default_iva_rate, tax_inclusive")
       .eq("id", spaceId)
       .single();
-    const taxData2 = taxRow2 as Record<string, unknown> | null;
     const taxRateId = await ensureStripeTaxRateExists({
       spaceId,
       connectedAccountId: stripeAccountId,
-      ivaRate: (taxData2?.default_iva_rate as number) ?? 21,
-      inclusive: (taxData2?.tax_inclusive as boolean) ?? true,
+      ivaRate: taxCfg2?.default_iva_rate ?? 21,
+      inclusive: taxCfg2?.tax_inclusive ?? true,
     }) ?? undefined;
 
     const customerId = await findOrCreateCustomer({
