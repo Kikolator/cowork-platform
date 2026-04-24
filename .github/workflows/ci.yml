@@ -346,3 +346,44 @@ jobs:
       - name: Summary
         if: always()
         run: echo "### Migration Dry Run ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── Verify database types are up to date ───────────────────
+  verify-db-types:
+    name: Verify DB Types
+    needs: [changes]
+    if: needs.changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase (db + API)
+        run: supabase start -x realtime,storage,imgproxy,inbucket,studio,edge-runtime,logflare,vector,supavisor
+        working-directory: packages/db
+
+      - name: Reset DB (replay all migrations)
+        run: supabase db reset
+        working-directory: packages/db
+
+      - name: Generate types and compare
+        working-directory: packages/db
+        run: |
+          supabase gen types typescript --local > /tmp/database.ts
+          if ! diff -q /tmp/database.ts types/database.ts > /dev/null 2>&1; then
+            echo "::error::types/database.ts is out of date. Run 'npm run db:types' in packages/db and commit the result."
+            diff /tmp/database.ts types/database.ts || true
+            exit 1
+          fi
+          echo "types/database.ts is up to date"
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+        working-directory: packages/db
+
+      - name: Summary
+        if: always()
+        run: echo "### Verify DB Types ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"

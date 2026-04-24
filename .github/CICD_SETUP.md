@@ -7,7 +7,7 @@ Complete setup instructions for the GitHub Actions CI/CD pipeline.
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | **CI** | PR to `main` or `dev` | Lint, type-check, build, test, E2E, DB validation |
-| **Deploy Dev** | Push to `dev` | Push migrations + regenerate types for dev Supabase |
+| **Deploy Dev** | Push to `dev` | Push migrations + deploy edge functions to staging Supabase |
 | **Deploy Prod** | Push to `main` | Migration preflight, manual approval gate, push, smoke test |
 
 > **Vercel** handles all application deploys via its native GitHub integration — the workflows above only manage Supabase migrations and code quality.
@@ -71,7 +71,7 @@ Go to **Settings → Branches → Add rule** for `main`:
   - [x] Require at least 1 approval
   - [x] Dismiss stale pull request approvals when new commits are pushed
 - [x] **Require status checks to pass before merging**
-  - Add these required checks: `Lint`, `Type-check`, `Build`, `DB Lint`, `Migration Dry Run`
+  - Add these required checks: `Lint`, `Type-check`, `Build`, `DB Lint`, `Migration Dry Run`, `Verify DB Types`
 - [x] **Require linear history** (enforces squash/rebase merges)
 - [x] **Do not allow force pushes**
 - [x] **Do not allow deletions**
@@ -128,7 +128,8 @@ cd packages/db
 supabase migration new my_change        # Create new migration
 # Edit the migration file in supabase/migrations/
 supabase db reset                       # Test locally
-supabase gen types typescript --local > types/database.ts  # Regen types
+npm run db:types                        # Regen types/database.ts
+git add supabase/migrations/ types/database.ts
 cd ../..
 
 # Feature branch workflow
@@ -152,5 +153,5 @@ git push -u origin feat/my-feature
 | `supabase db push` fails | Check DB password secret, ensure project ref is correct |
 | Schema drift detected | Someone changed the remote DB directly — create a migration to match |
 | Smoke test skipped | Set the `PRODUCTION_URL` variable in GitHub |
-| Type generation fails | Verify `SUPABASE_ACCESS_TOKEN` has access to the project |
+| Verify DB Types fails | Run `npm run db:types` in `packages/db` (requires local Supabase running) and commit the result |
 | Migration dry run fails | Check Docker is available on the runner (ubuntu-latest includes it) |
