@@ -350,3 +350,61 @@ export async function disconnectStripe(): Promise<
     };
   }
 }
+
+/* ── Closure management ──────────────────────────────────────── */
+
+export async function addClosure(
+  date: string,
+  reason: string | null,
+): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  try {
+    const { supabase, spaceId } = await getSpaceId();
+
+    const { data, error } = await supabase
+      .from("space_closures")
+      .insert({ space_id: spaceId, date, reason, all_day: true })
+      .select("id")
+      .single();
+
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "This date is already marked as closed" };
+      }
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/settings");
+    return { success: true, id: data.id };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to add closure",
+    };
+  }
+}
+
+export async function removeClosure(
+  closureId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const { supabase, spaceId } = await getSpaceId();
+
+    const { error } = await supabase
+      .from("space_closures")
+      .delete()
+      .eq("id", closureId)
+      .eq("space_id", spaceId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to remove closure",
+    };
+  }
+}

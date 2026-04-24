@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
 import ReactMarkdown from "react-markdown";
 import {
   Dialog,
@@ -14,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { purchasePass, getDateAvailability } from "./actions";
+import { purchasePass, getDateAvailability, getClosedDates } from "./actions";
 
 interface PassPurchaseDialogProps {
   open: boolean;
@@ -38,10 +39,6 @@ function formatPrice(cents: number, currency: string): string {
   return `${symbol}${amount.toFixed(amount % 1 === 0 ? 0 : 2)}`;
 }
 
-function getTodayString(): string {
-  return new Date().toISOString().split("T")[0]!;
-}
-
 export function PassPurchaseDialog({
   open,
   onOpenChange,
@@ -51,7 +48,7 @@ export function PassPurchaseDialog({
   onError,
 }: PassPurchaseDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [selectedDate, setSelectedDate] = useState(getTodayString());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isGuest, setIsGuest] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
@@ -66,13 +63,27 @@ export function PassPurchaseDialog({
   const [rulesExpanded, setRulesExpanded] = useState(false);
   const hasRules = !!communityRulesText?.trim();
 
-  // Check availability when date changes
+  // Closed dates for calendar disabling
+  const [closureDates, setClosureDates] = useState<Date[]>([]);
+  const [closedWeekdays, setClosedWeekdays] = useState<number[]>([]);
+
+  // Fetch closed dates on dialog open
   useEffect(() => {
-    if (!open || !selectedDate) return;
+    if (!open) return;
+    getClosedDates().then(({ closureDates: dates, closedWeekdays: days }) => {
+      setClosureDates(dates.map((d) => new Date(d + "T12:00:00Z")));
+      setClosedWeekdays(days);
+    });
+  }, [open]);
+
+  // Check availability when date changes
+  const selectedDateStr = selectedDate?.toISOString().split("T")[0] ?? null;
+  useEffect(() => {
+    if (!open || !selectedDateStr) return;
 
     let cancelled = false;
 
-    getDateAvailability(selectedDate).then((result) => {
+    getDateAvailability(selectedDateStr).then((result) => {
       if (!cancelled) {
         setAvailability(result);
         setCheckingAvailability(false);
@@ -82,17 +93,17 @@ export function PassPurchaseDialog({
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, open]);
+  }, [selectedDateStr, open]);
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setSelectedDate(getTodayString());
+      setSelectedDate(undefined);
       setIsGuest(false);
       setGuestName("");
       setGuestEmail("");
       setError(null);
       setAvailability(null);
-      setCheckingAvailability(true);
+      setCheckingAvailability(false);
       setRulesAccepted(false);
       setRulesExpanded(false);
     }
@@ -125,10 +136,12 @@ export function PassPurchaseDialog({
       return;
     }
 
+    const dateStr = selectedDate.toISOString().split("T")[0]!;
+
     startTransition(async () => {
       const result = await purchasePass(
         product.id,
-        selectedDate,
+        dateStr,
         isGuest,
         isGuest ? guestName.trim() : undefined,
         isGuest ? guestEmail.trim() : undefined,
@@ -147,15 +160,29 @@ export function PassPurchaseDialog({
 
   if (!product) return null;
 
+  // Build disabled dates matcher for calendar
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const disabledMatcher = [
+    { before: today },
+    ...closureDates,
+    ...(closedWeekdays.length > 0
+      ? [{ dayOfWeek: closedWeekdays }]
+      : []),
+  ];
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {product.name} — {formatPrice(product.price_cents, product.currency)}
           </DialogTitle>
           <DialogDescription>
-            Select a start date for your pass.
+            Select a start date for your pass. Greyed out dates are unavailable.
           </DialogDescription>
         </DialogHeader>
 
@@ -166,19 +193,22 @@ export function PassPurchaseDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="pass-date">Start Date</Label>
-            <Input
-              id="pass-date"
-              type="date"
-              value={selectedDate}
-              min={getTodayString()}
-              onChange={(e) => { setSelectedDate(e.target.value); setAvailability(null); setCheckingAvailability(true); }}
+          <div className="flex justify-center">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setAvailability(null);
+                setCheckingAvailability(!!date);
+              }}
+              disabled={disabledMatcher}
+              className="rounded-lg border border-border"
             />
           </div>
 
           {checkingAvailability && (
-            <p className="text-sm text-zinc-500">Checking availability...</p>
+            <p className="text-center text-sm text-zinc-500">Checking availability...</p>
           )}
 
           {availability && !checkingAvailability && (
@@ -274,6 +304,7 @@ export function PassPurchaseDialog({
               type="submit"
               disabled={
                 isPending ||
+                !selectedDate ||
                 !availability?.available ||
                 checkingAvailability ||
                 (hasRules && !rulesAccepted)
