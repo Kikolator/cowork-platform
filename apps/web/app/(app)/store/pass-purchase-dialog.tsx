@@ -77,14 +77,13 @@ export function PassPurchaseDialog({
   }, [open]);
 
   // Check availability when date changes
+  const selectedDateStr = selectedDate?.toISOString().split("T")[0] ?? null;
   useEffect(() => {
-    if (!open || !selectedDate) return;
+    if (!open || !selectedDateStr) return;
 
-    const dateStr = selectedDate.toISOString().split("T")[0]!;
-    setCheckingAvailability(true);
     let cancelled = false;
 
-    getDateAvailability(dateStr).then((result) => {
+    getDateAvailability(selectedDateStr).then((result) => {
       if (!cancelled) {
         setAvailability(result);
         setCheckingAvailability(false);
@@ -94,7 +93,7 @@ export function PassPurchaseDialog({
     return () => {
       cancelled = true;
     };
-  }, [selectedDate, open]);
+  }, [selectedDateStr, open]);
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
@@ -201,6 +200,7 @@ export function PassPurchaseDialog({
               onSelect={(date) => {
                 setSelectedDate(date);
                 setAvailability(null);
+                setCheckingAvailability(!!date);
               }}
               disabled={disabledMatcher}
               className="rounded-lg border border-border"
