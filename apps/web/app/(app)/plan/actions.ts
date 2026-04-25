@@ -36,6 +36,7 @@ interface FiscalData {
   billingEntityType: string;
   fiscalIdType: string;
   fiscalId: string;
+  billingName?: string;
   companyName?: string;
   companyTaxId?: string;
   companyTaxIdType?: string;
@@ -121,6 +122,7 @@ export async function subscribeToPlan(
           billing_entity_type: fiscalData.billingEntityType,
           fiscal_id_type: fiscalData.fiscalIdType as "nif" | "nie" | "passport" | "cif" | "eu_vat" | "foreign_tax_id" | "other",
           fiscal_id: fiscalData.fiscalId,
+          billing_name: fiscalData.billingName ?? null,
           billing_company_name: fiscalData.companyName ?? null,
           billing_company_tax_id: fiscalData.companyTaxId ?? null,
           billing_company_tax_id_type: fiscalData.companyTaxIdType

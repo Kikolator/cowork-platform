@@ -46,6 +46,7 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError, referralCode
   const [entityType, setEntityType] = useState("individual");
   const [fiscalIdType, setFiscalIdType] = useState("nif");
   const [fiscalId, setFiscalId] = useState("");
+  const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyTaxIdType, setCompanyTaxIdType] = useState("cif");
   const [companyTaxId, setCompanyTaxId] = useState("");
@@ -74,6 +75,7 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError, referralCode
         billingEntityType: entityType,
         fiscalIdType,
         fiscalId: fiscalId.trim(),
+        billingName: entityType === "individual" ? fullName.trim() || undefined : undefined,
         companyName: entityType === "company" ? companyName.trim() : undefined,
         companyTaxId: entityType === "company" ? companyTaxId.trim() : undefined,
         companyTaxIdType: entityType === "company" ? companyTaxIdType : undefined,
@@ -153,6 +155,18 @@ export function FiscalIdForm({ open, onOpenChange, planId, onError, referralCode
               placeholder="Enter your fiscal ID"
             />
           </div>
+
+          {entityType === "individual" && (
+            <div className="space-y-2">
+              <Label htmlFor="full-name">Full name</Label>
+              <Input
+                id="full-name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="As shown on your ID"
+              />
+            </div>
+          )}
 
           {entityType === "company" && (
             <>

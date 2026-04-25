@@ -11,9 +11,10 @@ interface MobileNavProps {
   logoUrl: string | null;
   logoDarkUrl?: string | null;
   headerLogoMode?: "icon_and_name" | "logo_only";
+  features?: Record<string, boolean>;
 }
 
-export function MobileNav({ spaceRole, spaceName, logoUrl, logoDarkUrl, headerLogoMode }: MobileNavProps) {
+export function MobileNav({ spaceRole, spaceName, logoUrl, logoDarkUrl, headerLogoMode, features }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -48,6 +49,7 @@ export function MobileNav({ spaceRole, spaceName, logoUrl, logoDarkUrl, headerLo
                   logoUrl={logoUrl}
                   logoDarkUrl={logoDarkUrl}
                   headerLogoMode={headerLogoMode}
+                  features={features}
                 />
               </div>
             </div>
