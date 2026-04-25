@@ -26,6 +26,7 @@ export async function updateAccessConfig(input: unknown) {
   const { supabase, spaceId } = await getSpaceId();
   const d = parsed.data;
 
+  // Includes wifi columns from pass_product_config migration — not yet in generated types.
   const row = {
     space_id: spaceId,
     enabled: d.enabled,
@@ -36,6 +37,10 @@ export async function updateAccessConfig(input: unknown) {
     nuki_api_token: d.nukiApiToken || null,
     nuki_smartlock_id: d.nukiSmartlockId || null,
   };
+  Object.assign(row, {
+    wifi_network: d.wifiNetwork || null,
+    wifi_password: d.wifiPassword || null,
+  });
 
   const { error } = await supabase
     .from("space_access_config")

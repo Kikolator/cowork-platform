@@ -25,6 +25,8 @@ export const operationsSchema = z.object({
     ])
   ),
   minBookingMinutes: z.number().int().min(15).max(480),
+  maxPassDesks: z.number().int().min(1).optional().or(z.literal("")),
+  communityRulesText: z.string().max(10000).optional().or(z.literal("")),
 });
 
 export type OperationsFormValues = z.infer<typeof operationsSchema>;
@@ -32,6 +34,8 @@ export type OperationsFormValues = z.infer<typeof operationsSchema>;
 export const fiscalSchema = z.object({
   requireFiscalId: z.boolean(),
   supportedFiscalIdTypes: z.array(z.string()).min(1, "Select at least one fiscal ID type"),
+  defaultIvaRate: z.number().min(0).max(100),
+  taxInclusive: z.boolean(),
 });
 
 export type FiscalFormValues = z.infer<typeof fiscalSchema>;

@@ -34,6 +34,8 @@ interface AccessFormProps {
     nuki_smartlock_id: string | null;
     nuki_last_sync_at: string | null;
     nuki_sync_error: string | null;
+    wifi_network: string | null;
+    wifi_password: string | null;
   } | null;
 }
 
@@ -62,6 +64,8 @@ export function AccessForm({ config }: AccessFormProps) {
       codeTwentyFourSeven: config?.code_twenty_four_seven ?? null,
       nukiApiToken: config?.nuki_api_token ?? null,
       nukiSmartlockId: config?.nuki_smartlock_id ?? null,
+      wifiNetwork: config?.wifi_network ?? null,
+      wifiPassword: config?.wifi_password ?? null,
     },
   });
 
@@ -316,6 +320,34 @@ export function AccessForm({ config }: AccessFormProps) {
           )}
         </>
       )}
+
+      {/* ── WiFi ── */}
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          WiFi
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          Shown to pass holders and members in confirmation emails.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="wifiNetwork">Network name</Label>
+            <Input
+              id="wifiNetwork"
+              {...register("wifiNetwork")}
+              placeholder="MySpace-WiFi"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="wifiPassword">Password</Label>
+            <Input
+              id="wifiPassword"
+              {...register("wifiPassword")}
+              placeholder="wifi-password"
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>

@@ -31,6 +31,7 @@ interface PlanCardProps {
   onError: (msg: string) => void;
   onFiscalIdRequired: (planId: string) => void;
   referralCode?: string | null;
+  taxConfig?: { ivaRate: number; taxInclusive: boolean };
 }
 
 const ACCESS_LABELS: Record<string, string> = {
@@ -61,6 +62,7 @@ export function PlanCard({
   onError,
   onFiscalIdRequired,
   referralCode,
+  taxConfig,
 }: PlanCardProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -118,6 +120,13 @@ export function PlanCard({
       <div className="mb-6">
         <span className="text-3xl font-bold">{formatPrice(plan.price_cents, plan.currency)}</span>
         <span className="text-sm text-zinc-500">/mo</span>
+        {taxConfig && taxConfig.ivaRate > 0 && (
+          <p className="mt-1 text-xs text-zinc-500">
+            {taxConfig.taxInclusive
+              ? `incl. ${taxConfig.ivaRate}% IVA`
+              : `+ ${taxConfig.ivaRate}% IVA`}
+          </p>
+        )}
       </div>
 
       <div className="mb-6 flex-1 space-y-3">

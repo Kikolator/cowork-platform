@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { refundPassPayment } from "@/lib/stripe/refunds";
 
 async function getAdminContext() {
   const supabase = await createClient();
@@ -13,6 +14,8 @@ async function getAdminContext() {
   if (!user) throw new Error("Not authenticated");
   const spaceId = user.app_metadata?.space_id as string | undefined;
   if (!spaceId) throw new Error("No space context");
+  const role = user.app_metadata?.space_role as string | undefined;
+  if (role !== "admin" && role !== "owner") throw new Error("Not authorized");
   return { user, spaceId };
 }
 
@@ -31,8 +34,9 @@ export async function cancelPass(
       .single();
 
     if (!pass) return { success: false, error: "Pass not found" };
-    if (pass.status !== "active") {
-      return { success: false, error: "Only active passes can be cancelled" };
+    // "upcoming" not yet in generated types
+    if (pass.status !== "active" && (pass.status as string) !== "upcoming") {
+      return { success: false, error: "Only active or upcoming passes can be cancelled" };
     }
 
     await admin
@@ -54,6 +58,88 @@ export async function cancelPass(
   }
 }
 
+export async function refundPass(
+  passId: string,
+  reason?: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const { spaceId } = await getAdminContext();
+    const admin = createAdminClient();
+    const logger = createLogger({ component: "passes/actions", spaceId });
+
+    const { data: pass } = await admin
+      .from("passes")
+      .select("id, status, space_id, stripe_session_id, amount_cents")
+      .eq("id", passId)
+      .eq("space_id", spaceId)
+      .single();
+
+    if (!pass) return { success: false, error: "Pass not found" };
+    if (pass.status !== "active" && (pass.status as string) !== "upcoming") {
+      return { success: false, error: "Only active or upcoming passes can be refunded" };
+    }
+    if (!pass.stripe_session_id) {
+      return { success: false, error: "No payment found for this pass (manual pass)" };
+    }
+    // Guard against double-refund
+    if ((pass as Record<string, unknown>).stripe_refund_id) {
+      return { success: false, error: "This pass has already been refunded" };
+    }
+
+    // Resolve connected account
+    const { data: space } = await admin
+      .from("spaces")
+      .select("tenant_id")
+      .eq("id", spaceId)
+      .single();
+
+    if (!space) return { success: false, error: "Space not found" };
+
+    const { data: tenant } = await admin
+      .from("tenants")
+      .select("stripe_account_id")
+      .eq("id", space.tenant_id)
+      .single();
+
+    if (!tenant?.stripe_account_id) {
+      return { success: false, error: "Stripe not connected" };
+    }
+
+    // Issue Stripe refund
+    const { refundId, amountRefunded } = await refundPassPayment({
+      stripeSessionId: pass.stripe_session_id,
+      connectedAccountId: tenant.stripe_account_id,
+    });
+
+    // Update pass record
+    const updateData = {
+      status: "cancelled" as const,
+      assigned_desk_id: null,
+      updated_at: new Date().toISOString(),
+    };
+    Object.assign(updateData, {
+      refunded_at: new Date().toISOString(),
+      refund_amount_cents: amountRefunded,
+      stripe_refund_id: refundId,
+      cancellation_reason: reason || "admin_request",
+    });
+
+    await admin
+      .from("passes")
+      .update(updateData)
+      .eq("id", passId);
+
+    logger.info("Pass refunded", { passId, refundId, amountRefunded });
+    revalidatePath("/admin/passes");
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Refund failed",
+    };
+  }
+}
+
 export async function createManualPass(
   userId: string,
   passType: "day" | "week",
@@ -70,14 +156,17 @@ export async function createManualPass(
       endDate = start.toISOString().split("T")[0]!;
     }
 
-    // Create pass
+    // Create pass — set upcoming if start date is in the future
+    const today = new Date().toISOString().split("T")[0]!;
+    const passStatus = startDate > today ? "upcoming" : "active";
+
     const { data: pass, error: insertError } = await admin
       .from("passes")
       .insert({
         space_id: spaceId,
         user_id: userId,
         pass_type: passType,
-        status: "active",
+        status: passStatus as "active", // upcoming not yet in generated types
         start_date: startDate,
         end_date: endDate,
         amount_cents: 0,

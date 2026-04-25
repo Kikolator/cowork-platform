@@ -11,6 +11,7 @@ interface HeaderProps {
   userEmail: string;
   spaceRole: string;
   userAvatarUrl: string | null;
+  features?: Record<string, boolean>;
 }
 
 export function Header({
@@ -21,6 +22,7 @@ export function Header({
   userEmail,
   spaceRole,
   userAvatarUrl,
+  features,
 }: HeaderProps) {
   return (
     <header className="relative z-30 flex h-14 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-heavy)] px-4 backdrop-blur-xl">
@@ -31,6 +33,7 @@ export function Header({
           logoUrl={logoUrl}
           logoDarkUrl={logoDarkUrl}
           headerLogoMode={headerLogoMode}
+          features={features}
         />
         <span className="text-sm font-semibold text-foreground lg:hidden">
           {spaceName}

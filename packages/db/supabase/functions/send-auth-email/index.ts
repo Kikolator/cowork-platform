@@ -16,7 +16,7 @@
  */
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
+import { Webhook } from "npm:standardwebhooks@1.0.0";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 

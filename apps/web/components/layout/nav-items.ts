@@ -17,6 +17,7 @@ import {
   Package,
   Upload,
   Gift,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,18 +26,22 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  /** Feature flag key — item is hidden when this feature is disabled */
+  featureFlag?: string;
 }
 
 export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Book", href: "/book", icon: CalendarPlus },
   { label: "My Bookings", href: "/bookings", icon: CalendarDays },
-  { label: "Store", href: "/store", icon: ShoppingBag },
+  { label: "My Passes", href: "/passes", icon: Ticket, featureFlag: "passes" },
+  { label: "Store", href: "/store", icon: ShoppingBag, featureFlag: "passes" },
   { label: "My Plan", href: "/plan", icon: CreditCard },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Profile", href: "/profile", icon: User },
   { label: "Access", href: "/access", icon: KeyRound },
-  { label: "Referrals", href: "/referrals", icon: Gift },
+  { label: "Referrals", href: "/referrals", icon: Gift, featureFlag: "referrals" },
+  { label: "Activity", href: "/activity", icon: Activity },
 
   {
     label: "Members",
@@ -80,6 +85,12 @@ export const navItems: NavItem[] = [
     label: "Referrals",
     href: "/admin/referrals",
     icon: Gift,
+    adminOnly: true,
+  },
+  {
+    label: "Activity Log",
+    href: "/admin/activity",
+    icon: Activity,
     adminOnly: true,
   },
   {

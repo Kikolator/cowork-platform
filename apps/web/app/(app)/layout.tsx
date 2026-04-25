@@ -49,6 +49,7 @@ export default async function AppLayout({
   let primaryColor = "#000000";
   let accentColor = "#3b82f6";
   let headerLogoMode: "icon_and_name" | "logo_only" = "icon_and_name";
+  let features: Record<string, boolean> = {};
 
   if (spaceId) {
     const { data: space } = await supabase
@@ -65,6 +66,7 @@ export default async function AppLayout({
       // header_logo_mode is added by migration; not yet in generated types
       const mode = (space as Record<string, unknown>).header_logo_mode;
       if (mode === "logo_only") headerLogoMode = "logo_only";
+      features = (space.features as Record<string, boolean> | null) ?? {};
     }
   }
 
@@ -93,6 +95,7 @@ export default async function AppLayout({
           logoUrl={logoUrl}
           logoDarkUrl={logoDarkUrl}
           headerLogoMode={headerLogoMode}
+          features={features}
         />
       </div>
 
@@ -106,6 +109,7 @@ export default async function AppLayout({
           userEmail={user.email ?? ""}
           spaceRole={spaceRole}
           userAvatarUrl={profile?.avatar_url ?? null}
+          features={features}
         />
         <main className="flex-1 overflow-y-auto p-6">
           {children}

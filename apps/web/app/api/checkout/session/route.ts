@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { getEffectiveFeePercent, calculateApplicationFee } from "@/lib/stripe/fees";
 import { ensureStripePriceExists } from "@/lib/stripe/subscriptions";
+import { ensureOneTimePriceExists } from "@/lib/stripe/checkout";
+import { isSpaceClosedOnDate, calculatePassEndDate } from "@/lib/space/closures";
+import { ensureStripeTaxRateExists } from "@/lib/stripe/tax-rates";
+import type { BusinessHours } from "@/lib/booking/format";
 import { checkoutSessionSchema } from "../schemas";
 import { getOrigin } from "@/lib/url";
 
@@ -29,7 +33,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { type, email, name, plan_slug } = parsed.data;
+  const { type, email, name, plan_slug, product_slug, start_date, community_rules_accepted } = parsed.data;
   const admin = createAdminClient();
 
   // Resolve tenant + Stripe account
@@ -38,6 +42,13 @@ export async function POST(request: NextRequest) {
     .select(
       "tenant_id, daypass_enabled, daypass_daily_limit, daypass_price_cents, daypass_currency, daypass_stripe_price_id, slug",
     )
+    .eq("id", spaceId)
+    .single();
+
+  // Fetch tax config
+  const { data: taxCfg } = await admin
+    .from("spaces")
+    .select("default_iva_rate, tax_inclusive")
     .eq("id", spaceId)
     .single();
 
@@ -64,8 +75,152 @@ export async function POST(request: NextRequest) {
     tenant.platform_fee_percent,
   );
 
+  // Resolve tax rate for this space
+  const defaultIvaRate = taxCfg?.default_iva_rate ?? 21;
+  const taxInclusive = taxCfg?.tax_inclusive ?? true;
+  const taxRateId = await ensureStripeTaxRateExists({
+    spaceId,
+    connectedAccountId,
+    ivaRate: defaultIvaRate,
+    inclusive: taxInclusive,
+  });
+
   const origin = getOrigin(request.headers);
   const slugParam = spaceSlug ? `?space=${spaceSlug}` : "";
+
+  if (type === "product") {
+    // Product-based pass checkout — pass is created in the webhook after payment,
+    // matching the existing daypass guest flow (no pre-created pass record needed).
+    const logger = createLogger({ component: "checkout/session", spaceId });
+
+    const { data: product } = await admin
+      .from("products")
+      .select("id, name, slug, price_cents, currency, category, stripe_price_id, stripe_product_id, pass_type, duration_days")
+      .eq("space_id", spaceId)
+      .eq("slug", product_slug!)
+      .eq("active", true)
+      .single();
+
+    if (!product || product.category !== "pass") {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const row = product as Record<string, unknown>;
+    const passType = row.pass_type as string | null;
+    const durationDays = (row.duration_days as number | null) ?? 1;
+
+    if (!passType) {
+      return NextResponse.json({ error: "Product not configured" }, { status: 400 });
+    }
+
+    // Validate start_date format
+    const startDate = start_date!;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || isNaN(new Date(startDate + "T12:00:00Z").getTime())) {
+      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+    }
+
+    // Reject past dates
+    const today = new Date().toISOString().split("T")[0]!;
+    if (startDate < today) {
+      return NextResponse.json({ error: "Start date must not be in the past" }, { status: 400 });
+    }
+
+    // Fetch space config for closure + business hours checks
+    const { data: spaceConfig } = await admin
+      .from("spaces")
+      .select("*") // includes max_pass_desks, business_hours, timezone (some not yet in generated types)
+      .eq("id", spaceId)
+      .single();
+
+    const spaceRow = spaceConfig as Record<string, unknown> | null;
+    const maxPassDesks = (spaceRow?.max_pass_desks as number | null) ?? null;
+    const businessHours = (spaceConfig?.business_hours ?? {}) as BusinessHours;
+    const timezone = spaceConfig?.timezone ?? "UTC";
+
+    // Block closed days (weekends + closures)
+    const closedCheck = await isSpaceClosedOnDate(admin, spaceId, startDate, businessHours, timezone);
+    if (closedCheck.closed) {
+      return NextResponse.json(
+        { error: closedCheck.reason ?? "Space is closed on this day" },
+        { status: 409 },
+      );
+    }
+
+    // Calculate end date skipping weekends AND closures
+    const endDate = await calculatePassEndDate(
+      admin, spaceId, startDate, durationDays, businessHours, timezone,
+    );
+
+    if (maxPassDesks !== null) {
+      const { count } = await admin
+        .from("passes")
+        .select("id", { count: "exact", head: true })
+        .eq("space_id", spaceId)
+        .in("status", ["active", "upcoming" as "active"]) // upcoming not yet in generated types
+        .lte("start_date", endDate)
+        .gte("end_date", startDate);
+
+      if ((count ?? 0) >= maxPassDesks) {
+        return NextResponse.json(
+          { error: "No spots available for this date" },
+          { status: 409 },
+        );
+      }
+    }
+
+    try {
+      // Ensure Stripe price exists
+      const priceId = await ensureOneTimePriceExists(
+        product,
+        connectedAccountId,
+        spaceId,
+      );
+
+      const session = await getStripe().checkout.sessions.create(
+        {
+          mode: "payment",
+          customer_email: email,
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+              ...(taxRateId && { tax_rates: [taxRateId] }),
+            },
+          ],
+          invoice_creation: { enabled: true },
+          payment_intent_data: {
+            application_fee_amount: calculateApplicationFee(
+              product.price_cents,
+              feePercent,
+            ),
+          },
+          success_url: `${origin}/checkout/confirmation?session_id={CHECKOUT_SESSION_ID}${slugParam ? `&space=${spaceSlug}` : ""}`,
+          cancel_url: `${origin}/checkout/product?slug=${product.slug}${slugParam ? `&space=${spaceSlug}` : ""}`,
+          metadata: {
+            type: "product",
+            guest_checkout: "true",
+            space_id: spaceId,
+            product_id: product.id,
+            product_category: "pass",
+            pass_type: passType,
+            start_date: startDate,
+            end_date: endDate,
+            email,
+            ...(name ? { name } : {}),
+            ...(community_rules_accepted ? { community_rules_accepted: "true" } : {}),
+          },
+        },
+        { stripeAccount: connectedAccountId },
+      );
+
+      return NextResponse.json({ url: session.url });
+    } catch (err) {
+      logger.error("Product checkout failed", {
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
+    }
+  }
 
   if (type === "daypass") {
     // Re-validate availability
@@ -127,7 +282,14 @@ export async function POST(request: NextRequest) {
         {
           mode: "payment",
           customer_email: email,
-          line_items: [{ price: priceId, quantity: 1 }],
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+              ...(taxRateId && { tax_rates: [taxRateId] }),
+            },
+          ],
+          invoice_creation: { enabled: true },
           payment_intent_data: {
             application_fee_amount: calculateApplicationFee(
               space.daypass_price_cents,
@@ -200,9 +362,16 @@ export async function POST(request: NextRequest) {
       {
         mode: "subscription",
         customer_email: email,
-        line_items: [{ price: priceId, quantity: 1 }],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+            ...(taxRateId && { tax_rates: [taxRateId] }),
+          },
+        ],
         subscription_data: {
           application_fee_percent: feePercent,
+          ...(taxRateId && { default_tax_rates: [taxRateId] }),
           metadata: {
             space_id: spaceId,
             plan_id: plan.id,
@@ -218,6 +387,7 @@ export async function POST(request: NextRequest) {
           plan_id: plan.id,
           email,
           ...(name ? { name } : {}),
+          ...(community_rules_accepted ? { community_rules_accepted: "true" } : {}),
         },
       },
       { stripeAccount: connectedAccountId },

@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -289,6 +284,30 @@ export type Database = {
           },
         ]
       }
+      event_types: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          is_tenant_visible: boolean
+          slug: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          is_tenant_visible?: boolean
+          slug: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          is_tenant_visible?: boolean
+          slug?: string
+        }
+        Relationships: []
+      }
       import_jobs: {
         Row: {
           admin_id: string
@@ -465,6 +484,7 @@ export type Database = {
           billing_state_province: string | null
           cancel_requested_at: string | null
           cancelled_at: string | null
+          community_rules_accepted_at: string | null
           company: string | null
           created_at: string | null
           custom_price_cents: number | null
@@ -505,6 +525,7 @@ export type Database = {
           billing_state_province?: string | null
           cancel_requested_at?: string | null
           cancelled_at?: string | null
+          community_rules_accepted_at?: string | null
           company?: string | null
           created_at?: string | null
           custom_price_cents?: number | null
@@ -545,6 +566,7 @@ export type Database = {
           billing_state_province?: string | null
           cancel_requested_at?: string | null
           cancelled_at?: string | null
+          community_rules_accepted_at?: string | null
           company?: string | null
           created_at?: string | null
           custom_price_cents?: number | null
@@ -760,16 +782,22 @@ export type Database = {
         Row: {
           amount_cents: number
           assigned_desk_id: string | null
+          cancellation_reason: string | null
+          community_rules_accepted_at: string | null
           created_at: string | null
           end_date: string
           external_id: string | null
           id: string
           is_guest: boolean
           pass_type: Database["public"]["Enums"]["pass_type"]
+          product_id: string | null
           purchased_by: string | null
+          refund_amount_cents: number | null
+          refunded_at: string | null
           space_id: string
           start_date: string
           status: Database["public"]["Enums"]["pass_status"]
+          stripe_refund_id: string | null
           stripe_session_id: string | null
           updated_at: string | null
           user_id: string
@@ -777,16 +805,22 @@ export type Database = {
         Insert: {
           amount_cents: number
           assigned_desk_id?: string | null
+          cancellation_reason?: string | null
+          community_rules_accepted_at?: string | null
           created_at?: string | null
           end_date: string
           external_id?: string | null
           id?: string
           is_guest?: boolean
           pass_type: Database["public"]["Enums"]["pass_type"]
+          product_id?: string | null
           purchased_by?: string | null
+          refund_amount_cents?: number | null
+          refunded_at?: string | null
           space_id: string
           start_date: string
           status?: Database["public"]["Enums"]["pass_status"]
+          stripe_refund_id?: string | null
           stripe_session_id?: string | null
           updated_at?: string | null
           user_id: string
@@ -794,16 +828,22 @@ export type Database = {
         Update: {
           amount_cents?: number
           assigned_desk_id?: string | null
+          cancellation_reason?: string | null
+          community_rules_accepted_at?: string | null
           created_at?: string | null
           end_date?: string
           external_id?: string | null
           id?: string
           is_guest?: boolean
           pass_type?: Database["public"]["Enums"]["pass_type"]
+          product_id?: string | null
           purchased_by?: string | null
+          refund_amount_cents?: number | null
+          refunded_at?: string | null
           space_id?: string
           start_date?: string
           status?: Database["public"]["Enums"]["pass_status"]
+          stripe_refund_id?: string | null
           stripe_session_id?: string | null
           updated_at?: string | null
           user_id?: string
@@ -814,6 +854,13 @@ export type Database = {
             columns: ["assigned_desk_id"]
             isOneToOne: false
             referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
@@ -1022,17 +1069,87 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          event_type: string
+          id: string
+          ip: unknown
+          metadata: Json
+          resource_id: string | null
+          resource_type: string | null
+          space_id: string
+          tenant_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ip?: unknown
+          metadata?: Json
+          resource_id?: string | null
+          resource_type?: string | null
+          space_id: string
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip?: unknown
+          metadata?: Json
+          resource_id?: string | null
+          resource_type?: string | null
+          space_id?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_events_event_type_fkey"
+            columns: ["event_type"]
+            isOneToOne: false
+            referencedRelation: "event_types"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "platform_events_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null
           category: Database["public"]["Enums"]["product_category"]
+          consecutive_days: boolean
           created_at: string | null
           credit_grant_config: Json | null
           currency: string
           description: string | null
+          duration_days: number | null
           id: string
           iva_rate: number
           name: string
+          pass_type: Database["public"]["Enums"]["pass_type"] | null
           plan_id: string | null
           price_cents: number
           purchase_flow: string
@@ -1047,13 +1164,16 @@ export type Database = {
         Insert: {
           active?: boolean | null
           category: Database["public"]["Enums"]["product_category"]
+          consecutive_days?: boolean
           created_at?: string | null
           credit_grant_config?: Json | null
           currency?: string
           description?: string | null
+          duration_days?: number | null
           id?: string
           iva_rate?: number
           name: string
+          pass_type?: Database["public"]["Enums"]["pass_type"] | null
           plan_id?: string | null
           price_cents: number
           purchase_flow?: string
@@ -1068,13 +1188,16 @@ export type Database = {
         Update: {
           active?: boolean | null
           category?: Database["public"]["Enums"]["product_category"]
+          consecutive_days?: boolean
           created_at?: string | null
           credit_grant_config?: Json | null
           currency?: string
           description?: string | null
+          duration_days?: number | null
           id?: string
           iva_rate?: number
           name?: string
+          pass_type?: Database["public"]["Enums"]["pass_type"] | null
           plan_id?: string | null
           price_cents?: number
           purchase_flow?: string
@@ -1587,6 +1710,8 @@ export type Database = {
           nuki_sync_error: string | null
           space_id: string
           updated_at: string
+          wifi_network: string | null
+          wifi_password: string | null
         }
         Insert: {
           code_business_hours?: string | null
@@ -1601,6 +1726,8 @@ export type Database = {
           nuki_sync_error?: string | null
           space_id: string
           updated_at?: string
+          wifi_network?: string | null
+          wifi_password?: string | null
         }
         Update: {
           code_business_hours?: string | null
@@ -1615,6 +1742,8 @@ export type Database = {
           nuki_sync_error?: string | null
           space_id?: string
           updated_at?: string
+          wifi_network?: string | null
+          wifi_password?: string | null
         }
         Relationships: [
           {
@@ -1709,6 +1838,7 @@ export type Database = {
           address: string | null
           business_hours: Json
           city: string | null
+          community_rules_text: string | null
           country_code: string
           created_at: string | null
           currency: string
@@ -1718,6 +1848,7 @@ export type Database = {
           daypass_enabled: boolean
           daypass_price_cents: number | null
           daypass_stripe_price_id: string | null
+          default_iva_rate: number
           default_locale: string
           favicon_url: string | null
           features: Json
@@ -1725,12 +1856,16 @@ export type Database = {
           id: string
           logo_dark_url: string | null
           logo_url: string | null
+          max_pass_desks: number | null
           min_booking_minutes: number
           name: string
+          pass_cancel_before_hours: number | null
           primary_color: string | null
           require_fiscal_id: boolean | null
           slug: string
+          stripe_tax_rate_id: string | null
           supported_fiscal_id_types: Json | null
+          tax_inclusive: boolean
           tenant_id: string
           timezone: string
           updated_at: string | null
@@ -1741,6 +1876,7 @@ export type Database = {
           address?: string | null
           business_hours?: Json
           city?: string | null
+          community_rules_text?: string | null
           country_code?: string
           created_at?: string | null
           currency?: string
@@ -1750,6 +1886,7 @@ export type Database = {
           daypass_enabled?: boolean
           daypass_price_cents?: number | null
           daypass_stripe_price_id?: string | null
+          default_iva_rate?: number
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1757,12 +1894,16 @@ export type Database = {
           id?: string
           logo_dark_url?: string | null
           logo_url?: string | null
+          max_pass_desks?: number | null
           min_booking_minutes?: number
           name: string
+          pass_cancel_before_hours?: number | null
           primary_color?: string | null
           require_fiscal_id?: boolean | null
           slug: string
+          stripe_tax_rate_id?: string | null
           supported_fiscal_id_types?: Json | null
+          tax_inclusive?: boolean
           tenant_id: string
           timezone?: string
           updated_at?: string | null
@@ -1773,6 +1914,7 @@ export type Database = {
           address?: string | null
           business_hours?: Json
           city?: string | null
+          community_rules_text?: string | null
           country_code?: string
           created_at?: string | null
           currency?: string
@@ -1782,6 +1924,7 @@ export type Database = {
           daypass_enabled?: boolean
           daypass_price_cents?: number | null
           daypass_stripe_price_id?: string | null
+          default_iva_rate?: number
           default_locale?: string
           favicon_url?: string | null
           features?: Json
@@ -1789,12 +1932,16 @@ export type Database = {
           id?: string
           logo_dark_url?: string | null
           logo_url?: string | null
+          max_pass_desks?: number | null
           min_booking_minutes?: number
           name?: string
+          pass_cancel_before_hours?: number | null
           primary_color?: string | null
           require_fiscal_id?: boolean | null
           slug?: string
+          stripe_tax_rate_id?: string | null
           supported_fiscal_id_types?: Json | null
+          tax_inclusive?: boolean
           tenant_id?: string
           timezone?: string
           updated_at?: string | null
@@ -2068,6 +2215,7 @@ export type Database = {
       member_status: "active" | "paused" | "past_due" | "cancelling" | "churned"
       pass_status:
         | "pending_payment"
+        | "upcoming"
         | "active"
         | "used"
         | "cancelled"
@@ -2249,6 +2397,7 @@ export const Constants = {
       member_status: ["active", "paused", "past_due", "cancelling", "churned"],
       pass_status: [
         "pending_payment",
+        "upcoming",
         "active",
         "used",
         "cancelled",
@@ -2268,3 +2417,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -126,12 +126,20 @@ export async function createOneTimeCheckoutSession(params: {
   successUrl: string;
   cancelUrl: string;
   extraMetadata?: Record<string, string>;
+  taxRateId?: string;
 }): Promise<Stripe.Checkout.Session> {
   return getStripe().checkout.sessions.create(
     {
       mode: "payment",
       customer: params.customerId,
-      line_items: [{ price: params.priceId, quantity: 1 }],
+      line_items: [
+        {
+          price: params.priceId,
+          quantity: 1,
+          ...(params.taxRateId && { tax_rates: [params.taxRateId] }),
+        },
+      ],
+      invoice_creation: { enabled: true },
       payment_intent_data: {
         application_fee_amount: calculateApplicationFee(
           params.amountCents,

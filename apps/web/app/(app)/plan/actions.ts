@@ -17,6 +17,7 @@ import {
 } from "@/lib/stripe/subscriptions";
 import { validateReferralCode } from "@/lib/referrals/validate";
 import { createReferralCoupon } from "@/lib/stripe/coupons";
+import { ensureStripeTaxRateExists } from "@/lib/stripe/tax-rates";
 
 async function getSpaceContext() {
   const supabase = await createClient();
@@ -35,6 +36,7 @@ interface FiscalData {
   billingEntityType: string;
   fiscalIdType: string;
   fiscalId: string;
+  billingName?: string;
   companyName?: string;
   companyTaxId?: string;
   companyTaxIdType?: string;
@@ -91,12 +93,21 @@ export async function subscribeToPlan(
       }
     }
 
-    // Check fiscal ID requirement
+    // Check fiscal ID requirement + tax config
     const { data: space } = await admin
       .from("spaces")
       .select("require_fiscal_id")
       .eq("id", spaceId)
       .single();
+
+    // Fetch tax config
+    const { data: taxConfig } = await admin
+      .from("spaces")
+      .select("default_iva_rate, tax_inclusive")
+      .eq("id", spaceId)
+      .single();
+    const defaultIvaRate = taxConfig?.default_iva_rate ?? 21;
+    const taxInclusive = taxConfig?.tax_inclusive ?? true;
 
     if (space?.require_fiscal_id) {
       const hasFiscalId = existingMember?.fiscal_id || fiscalData?.fiscalId;
@@ -111,6 +122,7 @@ export async function subscribeToPlan(
           billing_entity_type: fiscalData.billingEntityType,
           fiscal_id_type: fiscalData.fiscalIdType as "nif" | "nie" | "passport" | "cif" | "eu_vat" | "foreign_tax_id" | "other",
           fiscal_id: fiscalData.fiscalId,
+          billing_name: fiscalData.billingName ?? null,
           billing_company_name: fiscalData.companyName ?? null,
           billing_company_tax_id: fiscalData.companyTaxId ?? null,
           billing_company_tax_id_type: fiscalData.companyTaxIdType
@@ -214,6 +226,14 @@ export async function subscribeToPlan(
       }
     }
 
+    // Resolve Stripe tax rate
+    const taxRateId = await ensureStripeTaxRateExists({
+      spaceId,
+      connectedAccountId: stripeAccountId,
+      ivaRate: defaultIvaRate,
+      inclusive: taxInclusive,
+    }) ?? undefined;
+
     // Build URLs
     const h = await headers();
     const { data: spaceData } = await admin
@@ -238,6 +258,7 @@ export async function subscribeToPlan(
       cancelUrl,
       couponId,
       referralId,
+      taxRateId,
     });
 
     if (!session.url) {

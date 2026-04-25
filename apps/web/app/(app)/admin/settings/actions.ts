@@ -142,6 +142,8 @@ export async function updateSpaceOperations(input: unknown) {
 
   const { supabase, spaceId } = await getSpaceId();
 
+  // Includes new columns (max_pass_desks, wifi_*, community_rules_text) from
+  // pass_product_config migration — not yet in generated types, cast needed.
   const { error } = await supabase
     .from("spaces")
     .update({
@@ -150,7 +152,9 @@ export async function updateSpaceOperations(input: unknown) {
       default_locale: parsed.data.defaultLocale,
       business_hours: parsed.data.businessHours,
       min_booking_minutes: parsed.data.minBookingMinutes,
-    })
+      max_pass_desks: typeof parsed.data.maxPassDesks === "number" ? parsed.data.maxPassDesks : null,
+      community_rules_text: parsed.data.communityRulesText || null,
+    } as Record<string, unknown>)
     .eq("id", spaceId);
 
   if (error) return { success: false as const, error: error.message };
@@ -167,11 +171,24 @@ export async function updateSpaceFiscal(input: unknown) {
 
   const { supabase, spaceId } = await getSpaceId();
 
+  // Check if tax config changed — invalidate cached Stripe TaxRate if so
+  const { data: current } = await supabase
+    .from("spaces")
+    .select("default_iva_rate, tax_inclusive")
+    .eq("id", spaceId)
+    .single();
+  const rateChanged =
+    current?.default_iva_rate !== parsed.data.defaultIvaRate ||
+    current?.tax_inclusive !== parsed.data.taxInclusive;
+
   const { error } = await supabase
     .from("spaces")
     .update({
       require_fiscal_id: parsed.data.requireFiscalId,
       supported_fiscal_id_types: parsed.data.supportedFiscalIdTypes,
+      default_iva_rate: parsed.data.defaultIvaRate,
+      tax_inclusive: parsed.data.taxInclusive,
+      ...(rateChanged && { stripe_tax_rate_id: null }),
     })
     .eq("id", spaceId);
 
@@ -343,6 +360,64 @@ export async function disconnectStripe(): Promise<
     return {
       success: false,
       error: err instanceof Error ? err.message : "Failed to disconnect Stripe",
+    };
+  }
+}
+
+/* ── Closure management ──────────────────────────────────────── */
+
+export async function addClosure(
+  date: string,
+  reason: string | null,
+): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  try {
+    const { supabase, spaceId } = await getSpaceId();
+
+    const { data, error } = await supabase
+      .from("space_closures")
+      .insert({ space_id: spaceId, date, reason, all_day: true })
+      .select("id")
+      .single();
+
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "This date is already marked as closed" };
+      }
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/settings");
+    return { success: true, id: data.id };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to add closure",
+    };
+  }
+}
+
+export async function removeClosure(
+  closureId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const { supabase, spaceId } = await getSpaceId();
+
+    const { error } = await supabase
+      .from("space_closures")
+      .delete()
+      .eq("id", closureId)
+      .eq("space_id", spaceId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to remove closure",
     };
   }
 }
