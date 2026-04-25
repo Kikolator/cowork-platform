@@ -10,13 +10,17 @@ interface SidebarProps {
   logoUrl: string | null;
   logoDarkUrl?: string | null;
   headerLogoMode?: "icon_and_name" | "logo_only";
+  features?: Record<string, boolean>;
 }
 
-export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl, headerLogoMode = "icon_and_name" }: SidebarProps) {
+export function Sidebar({ spaceRole, spaceName, logoUrl, logoDarkUrl, headerLogoMode = "icon_and_name", features = {} }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = spaceRole === "admin" || spaceRole === "owner";
 
-  const memberItems = navItems.filter((item) => !item.adminOnly);
+  const memberItems = navItems.filter((item) =>
+    !item.adminOnly &&
+    (!item.featureFlag || features[item.featureFlag] !== false)
+  );
   const adminItems = navItems.filter((item) => item.adminOnly);
 
   return (
