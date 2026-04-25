@@ -14,10 +14,9 @@ ALTER TABLE products
   ADD COLUMN duration_days   integer CHECK (duration_days > 0),
   ADD COLUMN consecutive_days boolean NOT NULL DEFAULT true;
 
--- Enforce pass_type and duration_days are set when category is 'pass'
-ALTER TABLE products
-  ADD CONSTRAINT chk_pass_requires_config
-  CHECK (category <> 'pass' OR (pass_type IS NOT NULL AND duration_days IS NOT NULL));
+-- NOTE: chk_pass_requires_config constraint moved to backfill migration
+-- (20260422175946) to avoid violating existing pass products that lack
+-- pass_type/duration_days before they are backfilled.
 
 COMMENT ON COLUMN products.pass_type IS 'day or week — required when category = pass';
 COMMENT ON COLUMN products.duration_days IS 'Number of business days for the pass (1 for day pass, 5 for week pass)';

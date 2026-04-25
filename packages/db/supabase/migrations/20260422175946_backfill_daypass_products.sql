@@ -55,6 +55,18 @@ SET max_pass_desks = daypass_daily_limit
 WHERE daypass_daily_limit IS NOT NULL
   AND max_pass_desks IS NULL;
 
+-- 3. Backfill any existing pass products that are missing pass_type/duration_days.
+--    These may have been created before the pass_product_config migration.
+UPDATE products
+SET pass_type = 'day', duration_days = 1
+WHERE category = 'pass'
+  AND pass_type IS NULL;
+
+-- 4. Now safe to add the constraint (moved from pass_product_config migration).
+ALTER TABLE products
+  ADD CONSTRAINT chk_pass_requires_config
+  CHECK (category <> 'pass' OR (pass_type IS NOT NULL AND duration_days IS NOT NULL));
+
 -- ============================================================================
 -- Rollback (reverse the backfill — only deletes auto-created products)
 -- ============================================================================
