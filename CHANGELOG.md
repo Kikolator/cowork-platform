@@ -7,6 +7,35 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-25
+
+### Added
+- Complete pass checkout system with lifecycle, refunds, and admin tools (#192)
+- Platform events infrastructure and activity feeds — admin activity log with filters, member activity page (#210)
+- Admin closures UI and calendar date picker for member store pass purchases (#208)
+- VAT/IVA tax rates on invoices — space-level tax config, Stripe TaxRate integration, invoice tax breakdown (#214)
+- Revenue summary cards (Total Revenue / Tax Collected / Net Revenue) on admin invoices page (#214)
+- Edge function CI/CD deployment in deploy-dev and deploy-prod workflows (#202)
+- Unit tests for pass system — closures, schemas, refunds (61 tests) (#194)
+
+### Fixed
+- Credits now granted immediately on subscription creation instead of waiting for invoice.paid (#218, closes #217)
+- Race condition: invoice.paid arriving before checkout.session.completed no longer causes permanent credit loss (#218)
+- Admin-provisioned members (send_invoice) now receive credits immediately instead of waiting for manual payment (#218)
+- Nav items for disabled features (passes, referrals) now hidden from member sidebar (#220, closes #215)
+- Fiscal ID form now includes "Full name" field for individual entity type (#220, closes #216)
+- Checkout confirmation emails now reliably sent — awaited in webhook handler (#205)
+- Magic link in pass confirmation email uses token_hash URL instead of Supabase action_link (#206)
+- Product-type pass purchases now send confirmation email (#204)
+- Consolidated pass confirmation email with embedded magic link (#203)
+- Pass checkout queries include pass_type and duration_days columns (#198, #199)
+- Invoice generation enabled for all one-off purchases (#209)
+- Edge function `send-auth-email` uses `npm:` specifier instead of `esm.sh` CDN to prevent cold-start failures (#214)
+
+### Changed
+- Supabase types generation moved to local developer workflow — CI verifies types are up-to-date instead of auto-generating (#211)
+- Deploy workflows no longer auto-commit types back to branches (#211)
+
 ## [0.10.0] - 2026-04-22
 
 ### Added
