@@ -190,6 +190,26 @@ async function handleSubscriptionCheckout(
     { onConflict: "user_id,space_id", ignoreDuplicates: true },
   );
 
+  // Grant initial credits immediately — don't wait for invoice.paid.
+  // Race condition: invoice.paid can arrive before this handler commits
+  // the member row, causing credits to be permanently skipped.
+  // Uses a synthetic invoice ID; if invoice.paid also fires, grant_credits
+  // ON CONFLICT DO NOTHING prevents double-granting.
+  try {
+    await grantMonthlyCredits({
+      spaceId,
+      userId,
+      planId,
+      stripeInvoiceId: `checkout_initial_${subscriptionId}`,
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (creditErr) {
+    // Log but don't fail — invoice.paid can still grant as fallback
+    logger.error("Failed to grant initial credits in checkout handler", {
+      error: creditErr instanceof Error ? creditErr.message : String(creditErr),
+    });
+  }
+
   // Handle referral completion if this checkout was referred
   const referralId = session.metadata?.referral_id;
   if (referralId) {

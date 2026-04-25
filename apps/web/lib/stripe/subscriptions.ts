@@ -4,6 +4,7 @@ import { getStripe } from "./client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyStripeReady } from "./connect";
 import { getEffectiveFeePercent } from "./fees";
+import { grantMonthlyCredits } from "@/lib/credits/grant";
 
 /**
  * Ensure a Stripe Product + Price exists for a plan on the connected account.
@@ -324,4 +325,20 @@ export async function provisionSubscription(params: {
       `Member record update failed after Stripe subscription created (sub: ${subscription.id}): ${updateError.message}`,
     );
   }
+
+  // Grant initial credits immediately — send_invoice subscriptions create
+  // a draft invoice, so invoice.paid won't fire until the customer pays.
+  // Without this, admin-provisioned members have 0 credits.
+  const periodEnd = subscription.items.data[0]?.current_period_end;
+  const validUntil = periodEnd
+    ? new Date(periodEnd * 1000)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await grantMonthlyCredits({
+    spaceId: params.spaceId,
+    userId: params.userId,
+    planId: params.planId,
+    stripeInvoiceId: `provision_initial_${subscription.id}`,
+    validUntil,
+  });
 }
