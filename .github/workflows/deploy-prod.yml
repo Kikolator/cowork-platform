@@ -178,24 +178,57 @@ jobs:
         if: always()
         run: echo "### Edge Functions ${{ job.status == 'success' && '✅' || '❌' }}" >> "$GITHUB_STEP_SUMMARY"
 
+  # ─── Back-merge main → dev ─────────────────────────────────────
+  back-merge:
+    name: Back-merge to dev
+    needs: [migrate, deploy-functions]
+    if: always() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') && needs.deploy-functions.result != 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge main into dev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout dev
+          git merge main --no-edit
+          git push origin dev
+
+      - name: Summary
+        if: always()
+        run: echo "### Back-merge to dev — done" >> "$GITHUB_STEP_SUMMARY"
+
   # ─── Summary ──────────────────────────────────────────────────
   summary:
     name: Summary
-    needs: [preflight, migrate, smoke-test, deploy-functions]
+    needs: [preflight, migrate, smoke-test, deploy-functions, back-merge]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Deployment summary
+        env:
+          PREFLIGHT: ${{ needs.preflight.result }}
+          MIGRATE: ${{ needs.migrate.result }}
+          FUNCTIONS: ${{ needs.deploy-functions.result }}
+          SMOKE: ${{ needs.smoke-test.result }}
+          BACKMERGE: ${{ needs.back-merge.result }}
+          HAS_MIGRATIONS: ${{ needs.preflight.outputs.has_new_migrations }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           ## Production Deploy Summary
 
           | Job | Status |
           |-----|--------|
-          | Preflight | ${{ needs.preflight.result }} |
-          | Migrations | ${{ needs.migrate.result }} |
-          | Edge Functions | ${{ needs.deploy-functions.result }} |
-          | Smoke Test | ${{ needs.smoke-test.result }} |
+          | Preflight | ${PREFLIGHT} |
+          | Migrations | ${MIGRATE} |
+          | Edge Functions | ${FUNCTIONS} |
+          | Smoke Test | ${SMOKE} |
+          | Back-merge | ${BACKMERGE} |
 
-          **New migrations:** ${{ needs.preflight.outputs.has_new_migrations }}
+          **New migrations:** ${HAS_MIGRATIONS}
           EOF
