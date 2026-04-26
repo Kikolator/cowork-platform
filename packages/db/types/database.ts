@@ -1850,6 +1850,7 @@ export type Database = {
           daypass_stripe_price_id: string | null
           default_iva_rate: number
           default_locale: string
+          domain_status: string | null
           favicon_url: string | null
           features: Json
           header_logo_mode: string
@@ -1888,6 +1889,7 @@ export type Database = {
           daypass_stripe_price_id?: string | null
           default_iva_rate?: number
           default_locale?: string
+          domain_status?: string | null
           favicon_url?: string | null
           features?: Json
           header_logo_mode?: string
@@ -1926,6 +1928,7 @@ export type Database = {
           daypass_stripe_price_id?: string | null
           default_iva_rate?: number
           default_locale?: string
+          domain_status?: string | null
           favicon_url?: string | null
           features?: Json
           header_logo_mode?: string

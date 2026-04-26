@@ -6,7 +6,7 @@ import { createLogger } from "@cowork/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSpaceUrlFromHeaders } from "@/lib/url";
-import { brandingSchema, operationsSchema, fiscalSchema } from "./schemas";
+import { brandingSchema, operationsSchema, fiscalSchema, domainSchema } from "./schemas";
 import { isReservedSlug } from "@/lib/reserved-slugs";
 import {
   getOrCreateConnectAccount,
@@ -420,4 +420,113 @@ export async function removeClosure(
       error: err instanceof Error ? err.message : "Failed to remove closure",
     };
   }
+}
+
+/* ── Custom domain management ──────────────────────────────────── */
+
+export async function connectCustomDomain(input: unknown) {
+  const parsed = domainSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: parsed.error.issues[0]?.message ?? "Invalid domain" };
+  }
+
+  const { supabase, spaceId } = await getSpaceId();
+  const domain = parsed.data.domain.toLowerCase();
+
+  // Check domain is not already used by another space
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("spaces")
+    .select("id")
+    .eq("custom_domain", domain)
+    .neq("id", spaceId)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false as const, error: "This domain is already connected to another space" };
+  }
+
+  // Add domain to Vercel project
+  const { addDomainToProject } = await import("@/lib/vercel/domains");
+  const result = await addDomainToProject(domain);
+  if (!result.success) {
+    return { success: false as const, error: result.error };
+  }
+
+  // Save to DB
+  const { error } = await supabase
+    .from("spaces")
+    .update({
+      custom_domain: domain,
+      domain_status: result.verified ? "active" : "pending",
+    } as Record<string, unknown>)
+    .eq("id", spaceId);
+
+  if (error) return { success: false as const, error: error.message };
+
+  revalidatePath("/admin/settings");
+  return { success: true as const, verified: result.verified };
+}
+
+export async function checkDomainStatus(): Promise<{
+  status: "pending" | "active" | "error" | null;
+  configured: boolean;
+  configuredBy: string | null;
+}> {
+  const { supabase, spaceId } = await getSpaceId();
+
+  const { data: space } = await supabase
+    .from("spaces")
+    .select("custom_domain")
+    .eq("id", spaceId)
+    .single();
+
+  if (!space?.custom_domain) {
+    return { status: null, configured: false, configuredBy: null };
+  }
+
+  const { getDomainConfig } = await import("@/lib/vercel/domains");
+  const config = await getDomainConfig(space.custom_domain);
+
+  const newStatus = config.configured ? "active" : "pending";
+
+  await supabase
+    .from("spaces")
+    .update({ domain_status: newStatus } as Record<string, unknown>)
+    .eq("id", spaceId);
+
+  revalidatePath("/admin/settings");
+  return {
+    status: newStatus as "pending" | "active",
+    configured: config.configured,
+    configuredBy: config.configuredBy,
+  };
+}
+
+export async function disconnectCustomDomain() {
+  const { supabase, spaceId } = await getSpaceId();
+
+  const { data: space } = await supabase
+    .from("spaces")
+    .select("custom_domain")
+    .eq("id", spaceId)
+    .single();
+
+  if (space?.custom_domain) {
+    const { removeDomainFromProject } = await import("@/lib/vercel/domains");
+    await removeDomainFromProject(space.custom_domain);
+  }
+
+  const { error } = await supabase
+    .from("spaces")
+    .update({
+      custom_domain: null,
+      domain_status: null,
+    } as Record<string, unknown>)
+    .eq("id", spaceId);
+
+  if (error) return { success: false as const, error: error.message };
+
+  revalidatePath("/admin/settings");
+  return { success: true as const };
 }

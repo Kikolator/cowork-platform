@@ -8,9 +8,10 @@ import { FeaturesForm } from "./features-form";
 import { AccessForm } from "./access-form";
 import { ClosuresForm } from "./closures-form";
 import { StripeConnect } from "./stripe-connect";
+import { DomainForm } from "./domain-form";
 import { getEffectiveFeePercent } from "@/lib/stripe/fees";
 
-const VALID_TABS = ["branding", "operations", "closures", "fiscal", "features", "access", "payments"] as const;
+const VALID_TABS = ["branding", "domain", "operations", "closures", "fiscal", "features", "access", "payments"] as const;
 
 export default async function SettingsPage({
   searchParams,
@@ -88,6 +89,7 @@ export default async function SettingsPage({
       <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="domain">Domain</TabsTrigger>
           <TabsTrigger value="operations">Operations</TabsTrigger>
           <TabsTrigger value="closures">Closures</TabsTrigger>
           <TabsTrigger value="fiscal">Fiscal</TabsTrigger>
@@ -103,6 +105,13 @@ export default async function SettingsPage({
               // header_logo_mode added by migration; not yet in generated types
               header_logo_mode: (space as Record<string, unknown>).header_logo_mode as string | null ?? null,
             }}
+          />
+        </TabsContent>
+
+        <TabsContent value="domain" className="mt-6">
+          <DomainForm
+            customDomain={space.custom_domain}
+            domainStatus={(space as Record<string, unknown>).domain_status as string | null ?? null}
           />
         </TabsContent>
 

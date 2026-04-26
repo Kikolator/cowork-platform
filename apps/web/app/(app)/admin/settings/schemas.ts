@@ -39,3 +39,20 @@ export const fiscalSchema = z.object({
 });
 
 export type FiscalFormValues = z.infer<typeof fiscalSchema>;
+
+export const domainSchema = z.object({
+  domain: z
+    .string()
+    .min(4)
+    .max(253)
+    .regex(
+      /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/,
+      "Must be a valid domain (e.g. cowork.example.com)",
+    )
+    .refine(
+      (d) => !d.endsWith(".vercel.app") && !d.endsWith(".vercel-dns.com"),
+      "Cannot use Vercel system domains",
+    ),
+});
+
+export type DomainFormValues = z.infer<typeof domainSchema>;
