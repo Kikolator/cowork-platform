@@ -7,6 +7,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-04-26
+
+### Fixed
+- CI: schema-drift detection in `deploy-prod` (preflight + post-push verify) and `deploy-dev` no longer false-positives on stderr noise (NOTICE messages, connection strings) from the Supabase CLI. Captures stdout only and checks for real DDL after stripping comments/blanks. Caused the v0.12.0 prod deploy to fail despite the migration applying cleanly. (#226)
+
 ## [0.12.0] - 2026-04-26
 
 ### Added
