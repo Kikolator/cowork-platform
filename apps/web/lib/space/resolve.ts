@@ -1,8 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import { createLogger } from "@cowork/shared";
 import type { Database } from "@cowork/db";
 import type { SpaceContext } from "./types";
 
 const PLATFORM_DOMAIN = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "localhost:3000";
+
+const logger = createLogger({ component: "space/resolve" });
 
 const cache = new Map<string, { space: SpaceContext | null; expiresAt: number }>();
 const TTL_MS = 60_000;
@@ -53,7 +56,7 @@ async function lookupSpace(hostname: string): Promise<SpaceContext | null> {
     .eq("active", true);
 
   const query = isCustomDomain
-    ? base.eq("custom_domain", hostname)
+    ? base.eq("custom_domain", hostnameBase)
     : slug
       ? base.eq("slug", slug)
       : null;
@@ -61,6 +64,26 @@ async function lookupSpace(hostname: string): Promise<SpaceContext | null> {
   if (!query) return null;
 
   const { data, error } = await query.limit(1).single();
+
+  // Diagnostic logging for custom-domain resolution. Remove once verified.
+  let supabaseHost: string | null = null;
+  try {
+    supabaseHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").host || null;
+  } catch {
+    supabaseHost = null;
+  }
+  logger.info("space lookup", {
+    hostname,
+    hostnameBase,
+    platformDomainBase,
+    isCustomDomain,
+    slug,
+    supabaseHost,
+    found: !!data,
+    errorCode: error?.code ?? null,
+    errorMessage: error?.message ?? null,
+  });
+
   if (error || !data) return null;
 
   return toSpaceContext(data);
