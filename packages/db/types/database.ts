@@ -284,6 +284,30 @@ export type Database = {
           },
         ]
       }
+      event_types: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          is_tenant_visible: boolean
+          slug: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          is_tenant_visible?: boolean
+          slug: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          is_tenant_visible?: boolean
+          slug?: string
+        }
+        Relationships: []
+      }
       import_jobs: {
         Row: {
           admin_id: string
@@ -1045,6 +1069,73 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          created_at: string
+          event_type: string
+          id: string
+          ip: unknown
+          metadata: Json
+          resource_id: string | null
+          resource_type: string | null
+          space_id: string
+          tenant_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ip?: unknown
+          metadata?: Json
+          resource_id?: string | null
+          resource_type?: string | null
+          space_id: string
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip?: unknown
+          metadata?: Json
+          resource_id?: string | null
+          resource_type?: string | null
+          space_id?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_events_event_type_fkey"
+            columns: ["event_type"]
+            isOneToOne: false
+            referencedRelation: "event_types"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "platform_events_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null
@@ -1759,6 +1850,7 @@ export type Database = {
           daypass_stripe_price_id: string | null
           default_iva_rate: number
           default_locale: string
+          domain_status: string | null
           favicon_url: string | null
           features: Json
           header_logo_mode: string
@@ -1797,6 +1889,7 @@ export type Database = {
           daypass_stripe_price_id?: string | null
           default_iva_rate?: number
           default_locale?: string
+          domain_status?: string | null
           favicon_url?: string | null
           features?: Json
           header_logo_mode?: string
@@ -1835,6 +1928,7 @@ export type Database = {
           daypass_stripe_price_id?: string | null
           default_iva_rate?: number
           default_locale?: string
+          domain_status?: string | null
           favicon_url?: string | null
           features?: Json
           header_logo_mode?: string
