@@ -61,12 +61,18 @@ jobs:
 
       - name: Check for schema drift
         run: |
-          OUTPUT=$(supabase db diff --linked 2>&1) || true
-          if [ -n "$OUTPUT" ] && [ "$OUTPUT" != "No changes found" ]; then
+          # `supabase db diff` writes the SQL diff to stdout and progress/notices to
+          # stderr. Capture stdout only, then strip comments and blank lines to detect
+          # real schema differences. Comparing the combined stream to a literal "No
+          # changes found" string is fragile (the actual CLI message is "No schema
+          # changes found", and stderr noise breaks the comparison anyway).
+          DIFF_SQL=$(supabase db diff --linked 2>/dev/null || true)
+          REAL_DIFF=$(echo "$DIFF_SQL" | grep -vE '^\s*(--|$)' || true)
+          if [ -n "$REAL_DIFF" ]; then
             echo "::warning::Schema drift detected against staging project"
             echo "### Schema Drift Detected" >> "$GITHUB_STEP_SUMMARY"
             echo '```sql' >> "$GITHUB_STEP_SUMMARY"
-            echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo "$DIFF_SQL" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           else
             echo "### Schema Drift — None" >> "$GITHUB_STEP_SUMMARY"
