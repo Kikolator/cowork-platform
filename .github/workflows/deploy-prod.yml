@@ -50,9 +50,13 @@ jobs:
             exit 0
           fi
 
-          OUTPUT=$(supabase db diff --linked 2>&1)
-          # Detect actual drift by checking for SQL statements (contain semicolons)
-          if echo "$OUTPUT" | grep -q ';'; then
+          # `supabase db diff` writes the SQL diff to stdout and progress/notices to
+          # stderr. Capture stdout only, then strip comments and blank lines to detect
+          # real schema differences. Greping the combined stream for ";" produces false
+          # positives whenever the CLI logs a NOTICE or connection string.
+          DIFF_SQL=$(supabase db diff --linked 2>/dev/null || true)
+          REAL_DIFF=$(echo "$DIFF_SQL" | grep -vE '^\s*(--|$)' || true)
+          if [ -n "$REAL_DIFF" ]; then
             echo "has_new_migrations=true" >> "$GITHUB_OUTPUT"
             echo "### New migrations detected 🔄" >> "$GITHUB_STEP_SUMMARY"
           else
@@ -96,12 +100,13 @@ jobs:
 
       - name: Verify no schema drift after push
         run: |
-          OUTPUT=$(supabase db diff --linked 2>&1)
-          # Detect remaining drift by checking for SQL statements (contain semicolons)
-          if echo "$OUTPUT" | grep -q ';'; then
+          # See preflight step for rationale on stdout-only capture + comment stripping.
+          DIFF_SQL=$(supabase db diff --linked 2>/dev/null || true)
+          REAL_DIFF=$(echo "$DIFF_SQL" | grep -vE '^\s*(--|$)' || true)
+          if [ -n "$REAL_DIFF" ]; then
             echo "::error::Schema drift remains after push — production may have manual changes"
             echo '```sql' >> "$GITHUB_STEP_SUMMARY"
-            echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo "$DIFF_SQL" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
