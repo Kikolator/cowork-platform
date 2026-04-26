@@ -7,6 +7,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-04-26
+
+### Fixed
+- CI: prod deploy back-merge to `dev` now uses `git merge --ff-only main` instead of creating a merge commit, satisfying dev's `required_linear_history` rule. Switches the checkout token from the default `GITHUB_TOKEN` (which acts as the GitHub Actions integration and cannot bypass a personal repo's ruleset) to a Repository Admin PAT (`GH_BACKMERGE_TOKEN`), which IS in the bypass list. (#229)
+
+## [0.12.1] - 2026-04-26
+
+### Fixed
+- CI: schema-drift detection in `deploy-prod` (preflight + post-push verify) and `deploy-dev` no longer false-positives on stderr noise (NOTICE messages, connection strings) from the Supabase CLI. Captures stdout only and checks for real DDL after stripping comments/blanks. Caused the v0.12.0 prod deploy to fail despite the migration applying cleanly. (#226)
+
 ## [0.12.0] - 2026-04-26
 
 ### Added
