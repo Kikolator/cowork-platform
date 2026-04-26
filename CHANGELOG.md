@@ -7,6 +7,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-04-26
+
+### Added
+- Self-service custom domain management — admin UI to connect, verify, and remove custom domains with automated DNS verification and SSL provisioning via the Vercel Domains API; tracks `domain_status` (pending/active/error) on `spaces` (#223)
+- Diagnostic logging in custom-domain resolution (`apps/web/lib/space/resolve.ts`) — logs hostname, Supabase host, and lookup result for debugging space resolution issues (#224)
+
+### Fixed
+- Custom-domain query now uses port-stripped hostname (`hostnameBase` instead of raw `hostname`) — no behavior change in production, unblocks local custom-domain testing (#224)
+- Move pass constraint after backfill to prevent prod deploy failure (2bee056)
+
+### Changed
+- CI auto-back-merges `main` to `dev` after every prod deploy to keep version and changelog in sync (9acf67a)
+
 ## [0.11.0] - 2026-04-25
 
 ### Added
