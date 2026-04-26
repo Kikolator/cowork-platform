@@ -194,14 +194,24 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # PAT scoped to this repo; the default GITHUB_TOKEN acts as the
+          # GitHub Actions integration which can't be added to a personal
+          # repo's ruleset bypass list. The PAT acts as a Repository Admin,
+          # which IS in the bypass list, so the push to dev succeeds.
+          token: ${{ secrets.GH_BACKMERGE_TOKEN }}
 
-      - name: Merge main into dev
+      - name: Fast-forward dev to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout dev
-          git merge main --no-edit
+          # After a regular `dev → main` release merge, main is a fast-forward
+          # of dev: the release merge commit has dev's tip as a parent, so dev
+          # can advance its pointer with no new commit. This keeps dev linear
+          # (required_linear_history rule) and avoids bot-authored merge
+          # commits. If main has diverged in a way that can't fast-forward,
+          # fail loudly so we resolve manually instead of silently merging.
+          git merge --ff-only main
           git push origin dev
 
       - name: Summary
