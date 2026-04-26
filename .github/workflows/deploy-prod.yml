@@ -194,7 +194,11 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # PAT scoped to this repo; the default GITHUB_TOKEN acts as the
+          # GitHub Actions integration which can't be added to a personal
+          # repo's ruleset bypass list. The PAT acts as a Repository Admin,
+          # which IS in the bypass list, so the push to dev succeeds.
+          token: ${{ secrets.GH_BACKMERGE_TOKEN }}
 
       - name: Fast-forward dev to main
         run: |
